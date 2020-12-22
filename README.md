@@ -16,3 +16,11 @@ Also using these:
 - [babylonjs](https://www.babylonjs.com/)
 
 Actual game TBD.
+
+## Dev setup:
+
+Have skaffold and a k8s cluster (I use k3s).
+
+Run `skaffold dev` here.
+
+Somehow route to the HTTP service at megasecond.default.service.cluster.local:80.

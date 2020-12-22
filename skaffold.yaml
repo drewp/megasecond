@@ -11,8 +11,8 @@ build:
     - image: bang5:5000/megasecond_image
       sync:
         infer:
-          - 'src/**'
+          - "src/**"
 deploy:
   kubectl:
     manifests:
-    - deploy.yaml
+      - deploy.yaml

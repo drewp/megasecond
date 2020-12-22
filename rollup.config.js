@@ -1,4 +1,3 @@
-import commonjs from "@rollup/plugin-commonjs";
 import copy from 'rollup-plugin-copy';
 import resolve from "@rollup/plugin-node-resolve";
 import serve from 'rollup-plugin-serve'
@@ -26,7 +25,6 @@ export default {
             preferBuiltins: true,
         }),
         typescript(),
-        commonjs({}),
         serve('dist')
     ]
 }

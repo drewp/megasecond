@@ -49,7 +49,6 @@ export class GamePage extends LitElement {
             // some objs can't
           }
         });
-
       } catch (err) {
         console.log("babylon won't say the error was", err);
         throw err;
