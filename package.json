@@ -8,8 +8,11 @@
   "author": "drewp@bigasterisk.com",
   "license": "MIT",
   "dependencies": {
+    "@babylonjs/core": "^4.2.0",
+    "@babylonjs/loaders": "^4.2.0",
     "@rollup/plugin-commonjs": "^17.0.0",
     "@rollup/plugin-node-resolve": "^11.0.1",
+    "babylonjs": "^4.2.0",
     "lit-element": "^2.4.0",
     "rollup": "^2.35.1",
     "rollup-plugin-copy": "^3.3.0",

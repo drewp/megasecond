@@ -11,9 +11,11 @@ RUN apt-get install -y wget xz-utils && \
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/workspace/nodejs/bin
 RUN node /workspace/nodejs/bin/npm install -g pnpm
 
-COPY package.json pnpm-lock.yaml rollup.config.js tsconfig.json ./
-COPY src ./src
+COPY package.json pnpm-lock.yaml  ./
 RUN pnpm install
 
-CMD ["pnpx", "rollup", "-c"]
+COPY rollup.config.js tsconfig.json ./
+COPY src ./src
+
+CMD ["pnpx", "rollup", "--watch", "-c"]
 

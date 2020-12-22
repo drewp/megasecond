@@ -9,8 +9,9 @@ build:
       timezone: "Local"
   artifacts:
     - image: bang5:5000/megasecond_image
-      # buildpacks:
-      #   builder: "gcr.io/buildpacks/builder:v1"
+      sync:
+        infer:
+          - 'src/**'
 deploy:
   kubectl:
     manifests:
