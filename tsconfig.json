@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "alwaysStrict": true,
+    "types": [],
+    "module": "ES6",
+    "target": "ES6",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "declaration": true,
+    "experimentalDecorators": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "traceResolution": true,
+    "baseUrl": ".",
+    "lib": ["es6", "dom", "ES2019"]
+  },
+  "include": ["src/**/*.ts"]
+}

@@ -1,11 +1,16 @@
 Requirements:
- - quick-to-join multiplayer game (trying https://github.com/colyseus/colyseus
-   for this)
- - no violence; school-appropriate
- - quick-to-build code using [buildpacks](https://buildpacks.io/)
- - web-only (phone support is a plus)
 
-Trying [babylonjs](https://www.babylonjs.com/) again since it worked pretty well
-on another project.
+- quick-to-join multiplayer game (trying https://github.com/colyseus/colyseus
+  for this)
+- no violence; school-appropriate
+- quick-to-build code using [buildpacks](https://buildpacks.io/)
+- web-only (phone support is a plus)
+
+Also using these:
+
+- [pnpm](https://pnpm.js.org/en) - fast and compatible with npm
+- webpack
+- typescript
+- [babylonjs](https://www.babylonjs.com/)
 
 Actual game TBD.
