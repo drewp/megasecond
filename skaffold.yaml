@@ -11,7 +11,10 @@ build:
     - image: bang5:5000/megasecond_image
       sync:
         infer:
-          - "src/**"
+          # Watched by ts-node-dev
+          - "server/**"
+          # Watched by server/ app
+          - "client/**"
 deploy:
   kubectl:
     manifests:

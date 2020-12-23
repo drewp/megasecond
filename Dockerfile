@@ -14,8 +14,9 @@ RUN node /workspace/nodejs/bin/npm install -g pnpm
 COPY package.json pnpm-lock.yaml  ./
 RUN pnpm install
 
-COPY rollup.config.js tsconfig.json ./
-COPY src ./src
+COPY tsconfig.json ./
+COPY client ./client
+COPY server ./server
 
-CMD ["pnpx", "rollup", "--watch", "-c"]
+CMD ["pnpm", "run_server"]
 

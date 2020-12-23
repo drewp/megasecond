@@ -14,10 +14,48 @@ import {
   Texture,
   Vector3,
 } from "@babylonjs/core";
+import { WebSocketClient } from "colyseus/lib/transport/WebSocket/WebSocketClient";
+import { Schema, type, MapSchema } from "@colyseus/schema";
 
 @customElement("game-page")
 export class GamePage extends LitElement {
   firstUpdated(changedProperties: PropertyValues) {
+    // const client = new WebSocketClient('client_id', new WebSocket("wss://bigasterisk.com/megasecond/"));
+
+    // class StateHandler extends Schema {}
+
+    // client.joinOrCreate<StateHandler>("game").then((room) => {
+    //   const playerViews: { [id: string]: Mesh } = {};
+
+      // room.state.players.onAdd = function(player, key) {
+      //     // Our built-in 'sphere' shape. Params: name, subdivs, size, scene
+      //     playerViews[key] = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
+
+      //     // Move the sphere upward 1/2 its height
+      //     playerViews[key].position.set(player.position.x, player.position.y, player.position.z);
+
+      //     // Update player position based on changes from the server.
+      //     player.position.onChange = () => {
+      //         playerViews[key].position.set(player.position.x, player.position.y, player.position.z);
+      //     };
+
+      //     // Set camera to follow current player
+      //     if (key === room.sessionId) {
+      //         camera.setTarget(playerViews[key].position);
+      //     }
+      //     room.send('key', 'hi');
+      // };
+
+      // room.state.players.onRemove = function(player, key) {
+      //     scene.removeMesh(playerViews[key]);
+      //     delete playerViews[key];
+      // };
+
+      // room.onStateChange((state) => {
+      //   console.log("New room state:", state.toJSON());
+      // });
+    // });
+
     const canvas = this.shadowRoot?.getElementById("renderCanvas") as HTMLCanvasElement;
     const engine = new Engine(canvas, true);
     const scene = new Scene(engine);
