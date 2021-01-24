@@ -12,7 +12,7 @@ import {
   // StandardMaterial,
   // Texture,
   Vector3,
-} from "@babylonjs/core";
+} from "babylonjs";
 // import { Schema, type, MapSchema } from "@colyseus/schema";
 import * as Colyseus from "colyseus.js";
 

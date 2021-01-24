@@ -9,14 +9,14 @@ const staticSourceFiles = ["client/index.html", "client/asset"];
 const destDir = "dist";
 
 export default {
-    external: ["@babylonjs/core", "colyseus.js"],
+    external: ["babylonjs", "colyseus.js"],
     input: "client/index.ts",
     output: {
         sourcemap: !production,
         format: "iife",
         name: "bundle",
         file: `${destDir}/bundle.js`,
-        globals: { "@babylonjs/core": "BABYLON", "colyseus.js": "Colyseus" }
+        globals: { "babylonjs": "BABYLON", "colyseus.js": "Colyseus" }
     },
     plugins: [
         resolve({
@@ -37,4 +37,7 @@ export default {
             ],
         }),
     ],
+    watch: {
+        include: "client/**"
+    }
 };

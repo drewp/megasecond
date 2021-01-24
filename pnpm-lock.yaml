@@ -1,5 +1,4 @@
 dependencies:
-  '@babylonjs/core': 4.2.0
   '@babylonjs/loaders': 4.2.0
   '@colyseus/loadtest': 0.14.2
   '@colyseus/monitor': 0.14.0_colyseus@0.14.6
@@ -10,6 +9,7 @@ dependencies:
   '@rollup/plugin-typescript': 8.1.0_197d81323e2bd4007f1f08e0d668f722
   '@types/cors': 2.8.9
   '@types/express': 4.17.9
+  babylonjs: 4.2.0
   colyseus: 0.14.6
   colyseus.js: 0.14.1
   cors: 2.8.5
@@ -448,6 +448,10 @@ packages:
     dev: false
     resolution:
       integrity: sha512-Fn/ThxwZWP9kEAqk+9FX9CAeF4ah/I0/8wzAZR8MQuYqlYpEfM+E/IztJ+4LoOOxQYMWNs5lgj8OXSkX0tqc4g==
+  /babylonjs/4.2.0:
+    dev: false
+    resolution:
+      integrity: sha512-4hniJzWRkV0tDTTYGEHPk1lnfWn0HIw7HOvNWPK0rpUIbJooyeD9E5uVyHnslDedt0mtrA7QZu4i2Cz1DEmSsA==
   /balanced-match/1.0.0:
     dev: false
     resolution:
@@ -2652,7 +2656,6 @@ packages:
     resolution:
       integrity: sha512-Ux4ygGWsu2c7isFWe8Yu1YluJmqVhxqK2cLXNQA5AcC3QfbGNpM7fu0Y8b/z16pXLnFxZYvWhd3fhBY9DLmC6Q==
 specifiers:
-  '@babylonjs/core': ^4.2.0
   '@babylonjs/loaders': ^4.2.0
   '@colyseus/loadtest': ^0.14.2
   '@colyseus/monitor': ^0.14.0
@@ -2663,6 +2666,7 @@ specifiers:
   '@rollup/plugin-typescript': ^8.1.0
   '@types/cors': ^2.8.6
   '@types/express': ^4.17.1
+  babylonjs: ^4.2.0
   colyseus: ^0.14.6
   colyseus.js: 0.14.1
   cors: ^2.8.5
