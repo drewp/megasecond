@@ -99,6 +99,7 @@ export class GamePage extends LitElement {
   }
 
   render() {
-    return html` <div id="game"><canvas id="renderCanvas"></canvas></div>`;
+    return html` <div><img src="asset/logo1.png" style="width: 70%" /></div>
+      <div id="game"><canvas id="renderCanvas"></canvas></div>`;
   }
 }
