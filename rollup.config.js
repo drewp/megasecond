@@ -4,15 +4,15 @@ import resolve from "@rollup/plugin-node-resolve";
 import typescript from "@rollup/plugin-typescript";
 
 
-const production = !process.env.ROLLUP_WATCH;
 const staticSourceFiles = ["client/index.html", "client/asset"];
 const destDir = "dist";
+const sourcemap = true;
 
 export default {
     external: ["babylonjs", "colyseus.js"],
     input: "client/index.ts",
     output: {
-        sourcemap: !production,
+        sourcemap: sourcemap,
         format: "iife",
         name: "bundle",
         file: `${destDir}/bundle.js`,
@@ -21,14 +21,14 @@ export default {
     plugins: [
         resolve({
             extensions: [".js", ".ts"],
-
-            browser: true, preferBuiltins: true,
+            browser: true, 
+            preferBuiltins: true,
 
         }),
         commonjs(),
         typescript({
-            sourceMap: !production,
-            inlineSources: !production,
+            sourceMap: sourcemap,
+            inlineSources: false,
         }),
         copy({
             targets: [
