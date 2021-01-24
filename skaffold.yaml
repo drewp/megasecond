@@ -13,7 +13,7 @@ build:
         infer:
           # Watched by ts-node-dev
           - "server/**"
-          # Watched by server/ app
+          # Watched by server/ app (except index.html which won't trigger a rebuild)
           - "client/**"
 deploy:
   kubectl:

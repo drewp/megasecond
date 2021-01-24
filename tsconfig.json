@@ -13,7 +13,7 @@
     "module": "commonjs",
     "target": "ES6",
     "moduleResolution": "node",
-    "declaration": true,
+    "declaration": false,
     "experimentalDecorators": true,
     "esModuleInterop": true,
     "traceResolution": true,

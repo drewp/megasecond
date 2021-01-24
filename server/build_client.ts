@@ -1,17 +1,19 @@
-import resolve from "@rollup/plugin-node-resolve";
-import path from "path";
 import { OutputOptions, RollupWatcherEvent, watch as rollup_watch } from "rollup";
-import copy from "rollup-plugin-copy";
-import typescript from "rollup-plugin-typescript2";
 import commonjs from "@rollup/plugin-commonjs";
+import copy from "rollup-plugin-copy";
+import path from "path";
+import resolve from "@rollup/plugin-node-resolve";
+import svelte from "rollup-plugin-svelte";
+import sveltePreprocess from "svelte-preprocess";
+import typescript from '@rollup/plugin-typescript';
 
 export function watchAndRebuildClientBundle() {
-  const sourceRoot = "client/index.ts";
+  const sourceRoot = "client/main.ts";
   const staticSourceFiles = ["client/index.html", "client/asset"];
-  const outBundleDir = "dist";
+  const destDir = "dist";
 
   const outOptions: OutputOptions = {
-    file: path.join(__dirname, "..", outBundleDir, "bundle.js"),
+    file: path.join(__dirname, "..", destDir, "bundle.js"),
     format: "iife",
     name: "bundle",
     globals: { "@babylonjs/core": "BABYLON" },
@@ -23,20 +25,43 @@ export function watchAndRebuildClientBundle() {
     external: ["@babylonjs/core"],
     plugins: [
       copy({
-        targets: staticSourceFiles.map((f) => ({ src: f, dest: outBundleDir })),
+        targets: staticSourceFiles.map((f) => ({ src: f, dest: destDir })),
       }),
+
+      svelte({
+        preprocess: sveltePreprocess({}),
+        customElement: false,
+      }),
+
       resolve({
         extensions: [".js", ".ts"],
         browser: true,
         preferBuiltins: true,
+        dedupe: ["svelte"],
       }),
       commonjs(),
       typescript({
-        tsconfigOverride: {
-          compilerOptions: {
-            module: "ES2015",
-          },
-        },
+        "moduleResolution": "node",
+        "target": "es2017",
+        /** 
+          Svelte Preprocess cannot figure out whether you have a value or a type, so tell TypeScript
+          to enforce using `import type` instead of `import` for Types.
+         */
+        "importsNotUsedAsValues": "error",
+
+        "isolatedModules": true,
+        "sourceMap": true,
+
+        /** Requests the runtime types from the svelte modules by default. Needed for TS files or else you get errors. */
+        "types": ["svelte"],
+    
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,    
+        "module": "ESNEXT",    
+        "noEmit": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "strictNullChecks": true
       }),
     ],
   };

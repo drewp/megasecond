@@ -1,4 +1,5 @@
-import { customElement, html, LitElement, PropertyValues } from "lit-element";
+<script lang="ts">
+import { onMount } from "svelte";
 import {
   Color3,
   Color4,
@@ -17,11 +18,12 @@ import {
 // import { Schema, type, MapSchema } from "@colyseus/schema";
 import * as Colyseus from "colyseus.js"; 
 
-@customElement("game-page")
-export class GamePage extends LitElement {
-  firstUpdated(changedProperties: PropertyValues) {
-    console.log('connect C client')
+let renderCanvas: HTMLElement;
+
+    onMount(() =>{ 
+        console.log('connect C client')
     const client = new Colyseus.Client("wss://bigasterisk.com/megasecond/");
+
 
     // class StateHandler extends Schema {}
 
@@ -31,33 +33,28 @@ export class GamePage extends LitElement {
     // room.state.players.onAdd = function(player, key) {
     //     // Our built-in 'sphere' shape. Params: name, subdivs, size, scene
     //     playerViews[key] = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
-
     //     // Move the sphere upward 1/2 its height
     //     playerViews[key].position.set(player.position.x, player.position.y, player.position.z);
-
     //     // Update player position based on changes from the server.
     //     player.position.onChange = () => {
     //         playerViews[key].position.set(player.position.x, player.position.y, player.position.z);
     //     };
-
     //     // Set camera to follow current player
     //     if (key === room.sessionId) {
     //         camera.setTarget(playerViews[key].position);
     //     }
     //     room.send('key', 'hi');
     // };
-
     // room.state.players.onRemove = function(player, key) {
     //     scene.removeMesh(playerViews[key]);
     //     delete playerViews[key];
     // };
-
     // room.onStateChange((state) => {
     //   console.log("New room state:", state.toJSON());
     // });
     });
 
-    const canvas = this.shadowRoot?.getElementById("renderCanvas") as HTMLCanvasElement;
+    const canvas = renderCanvas as HTMLCanvasElement;
     const engine = new Engine(canvas, true);
     const scene = new Scene(engine);
     scene.clearColor = new Color4(0, 0, 0, 0);
@@ -97,10 +94,8 @@ export class GamePage extends LitElement {
     engine.runRenderLoop(() => {
       scene.render();
     });
-  }
+    });
+</script>
 
-  render() {
-    return html` <div><img src="asset/logo1.png" style="width: 70%" /></div>
-      <div id="game"><canvas id="renderCanvas"></canvas></div>`;
-  }
-}
+<div><img alt="Megasecond" src="asset/logo1.png" style="width: 70%" /></div>
+<div id="game"><canvas bind:this={renderCanvas} id="renderCanvas"></canvas></div>
