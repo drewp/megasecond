@@ -3,6 +3,7 @@ import path from "path";
 import { OutputOptions, RollupWatcherEvent, watch as rollup_watch } from "rollup";
 import copy from "rollup-plugin-copy";
 import typescript from "rollup-plugin-typescript2";
+import commonjs from "@rollup/plugin-commonjs";
 
 export function watchAndRebuildClientBundle() {
   const sourceRoot = "client/index.ts";
@@ -29,6 +30,7 @@ export function watchAndRebuildClientBundle() {
         browser: true,
         preferBuiltins: true,
       }),
+      commonjs(),
       typescript({
         tsconfigOverride: {
           compilerOptions: {
