@@ -2,9 +2,13 @@ FROM marketplace.gcr.io/google/ubuntu1804
 
 WORKDIR /workspace
 
+ENV TZ=America/Los_Angeles
+ENV LANG=en_US.UTF-8
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 RUN apt-get update
-RUN apt-get install -y wget xz-utils && \
-    wget --output-document=node.tar.xz https://nodejs.org/dist/v14.15.3/node-v14.15.3-linux-x64.tar.xz && \
+RUN apt-get install -y wget xz-utils vim less && \
+    wget --output-document=node.tar.xz https://nodejs.org/dist/v14.15.4/node-v14.15.4-linux-x64.tar.xz && \
     tar xf node.tar.xz && \
     ln -s node*x64 nodejs
 
