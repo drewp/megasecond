@@ -2,25 +2,26 @@ dependencies:
   '@babylonjs/core': 4.2.0
   '@babylonjs/loaders': 4.2.0
   '@colyseus/loadtest': 0.14.2
-  '@colyseus/monitor': 0.12.2_colyseus@0.14.6
-  '@colyseus/schema': 1.0.6
-  '@colyseus/social': 0.10.9_express-jwt@5.3.3+express@4.17.1
-  '@rollup/plugin-commonjs': 17.0.0_rollup@2.35.1
-  '@rollup/plugin-json': 4.1.0_rollup@2.35.1
-  '@rollup/plugin-node-resolve': 11.0.1_rollup@2.35.1
+  '@colyseus/monitor': 0.14.0_colyseus@0.14.6
+  '@colyseus/schema': 1.0.10
+  '@colyseus/social': 0.11.6_express-jwt@5.3.3+express@4.17.1
+  '@rollup/plugin-commonjs': 17.0.0_rollup@2.37.1
+  '@rollup/plugin-json': 4.1.0_rollup@2.37.1
+  '@rollup/plugin-node-resolve': 11.0.1_rollup@2.37.1
   '@types/cors': 2.8.9
   '@types/express': 4.17.9
   colyseus: 0.14.6
+  colyseus.js: 0.14.1
   cors: 2.8.5
   express: 4.17.1
   express-jwt: 5.3.3
   lit-element: 2.4.0
-  rollup: 2.35.1
+  rollup: 2.37.1
   rollup-plugin-copy: 3.3.0
   rollup-plugin-serve: 1.1.0
-  rollup-plugin-typescript2: 0.29.0_rollup@2.35.1+typescript@4.1.3
+  rollup-plugin-typescript2: 0.29.0_rollup@2.37.1+typescript@4.1.3
   ts-node-dev: 1.1.1_typescript@4.1.3
-  tslib: 2.0.3
+  tslib: 2.1.0
   typescript: 4.1.3
 lockfileVersion: 5.2
 packages:
@@ -57,23 +58,24 @@ packages:
     hasBin: true
     resolution:
       integrity: sha512-nMIhG/lMGIkxtkc0at0PQsLCnEKKEjBoOXWkdADs5XGL1A07OtGfoyiDJvQyB7ThQIY3EC16Lr4fIRFSZfDdvw==
-  /@colyseus/monitor/0.12.2_colyseus@0.14.6:
+  /@colyseus/monitor/0.14.0_colyseus@0.14.6:
     dependencies:
       colyseus: 0.14.6
       express: 4.17.1
       node-os-utils: 1.3.2
     dev: false
     peerDependencies:
-      colyseus: ^0.11.0
+      colyseus: ^0.14.0
     resolution:
-      integrity: sha512-48oZxz4uVZszhyWf2NqCNXw3mlIGhRgUYOwBu6/e6XGD82qS0VQRdfOg5neplJLPvZSSNyKnEz3G5mVzc7iYsQ==
-  /@colyseus/schema/1.0.6:
+      integrity: sha512-yhtfueYcrIhc25N45TrnTurBwyzobqoyYglI8MvhafCcwkA4wlHcFIbTZ80r1zzsdNFaKuHa7qgs2gpFlv9TEQ==
+  /@colyseus/schema/1.0.10:
     dev: false
     hasBin: true
     resolution:
-      integrity: sha512-xnTnTyAs4oZD5g/a4Ct/kXkbemEsNHbXS2m5ZKHZTzMU4g9qAK6bvkAXKWdWnS3s+hqcULuBHzTeTjbRDDh9iw==
-  /@colyseus/social/0.10.9_express-jwt@5.3.3+express@4.17.1:
+      integrity: sha512-T1+Og7eEzuu9dfD81d8DSjQHk0cPsYyrZe71bAnB//7X8ZvRE1b1zc9af4G1oJuIAl2jPy+owqOkaNuBzpm8hg==
+  /@colyseus/social/0.11.6_express-jwt@5.3.3+express@4.17.1:
     dependencies:
+      '@types/mongoose': 5.10.3
       debug: 4.3.1
       express: 4.17.1
       express-jwt: 5.3.3
@@ -83,12 +85,13 @@ packages:
       nanoid: 2.1.11
       node-pushnotifications: 1.5.0
       oauth: 0.9.15
+      strong-events: 1.0.7
     dev: false
     peerDependencies:
       express: ^4.16.4
       express-jwt: ^5.3.1
     resolution:
-      integrity: sha512-hUSNa6g0TQ+QHpECFIT0Vn0Fj2dT0NJq79OSBoJTgjA2/ueKNv4y2dtiSxh78VyiLbyJSd36WfvTu1+3dmw38A==
+      integrity: sha512-BNZaf2elZzcR92yw14rLQ9LKfyfwQQ7peBvBaK2jxyNbEIKWe4Y4lAi1igNY/2qpmsaosxmvnji8QOKUm5aI2g==
   /@gamestdio/clock/1.1.9:
     dev: false
     resolution:
@@ -148,16 +151,16 @@ packages:
       node: '>= 8.9.1'
     resolution:
       integrity: sha512-/Zhz7+AfwuMeBn9kpENF5qbWDG1+0xLBOlAb7O34BhR9R5BSjAKkMxqWmTz3R3nvlsod4XrZ8NuRMUOXVrCCFQ==
-  /@rollup/plugin-commonjs/17.0.0_rollup@2.35.1:
+  /@rollup/plugin-commonjs/17.0.0_rollup@2.37.1:
     dependencies:
-      '@rollup/pluginutils': 3.1.0_rollup@2.35.1
+      '@rollup/pluginutils': 3.1.0_rollup@2.37.1
       commondir: 1.0.1
       estree-walker: 2.0.2
       glob: 7.1.6
       is-reference: 1.2.1
       magic-string: 0.25.7
       resolve: 1.19.0
-      rollup: 2.35.1
+      rollup: 2.37.1
     dev: false
     engines:
       node: '>= 8.0.0'
@@ -165,24 +168,24 @@ packages:
       rollup: ^2.30.0
     resolution:
       integrity: sha512-/omBIJG1nHQc+bgkYDuLpb/V08QyutP9amOrJRUSlYJZP+b/68gM//D8sxJe3Yry2QnYIr3QjR3x4AlxJEN3GA==
-  /@rollup/plugin-json/4.1.0_rollup@2.35.1:
+  /@rollup/plugin-json/4.1.0_rollup@2.37.1:
     dependencies:
-      '@rollup/pluginutils': 3.1.0_rollup@2.35.1
-      rollup: 2.35.1
+      '@rollup/pluginutils': 3.1.0_rollup@2.37.1
+      rollup: 2.37.1
     dev: false
     peerDependencies:
       rollup: ^1.20.0 || ^2.0.0
     resolution:
       integrity: sha512-yfLbTdNS6amI/2OpmbiBoW12vngr5NW2jCJVZSBEz+H5KfUJZ2M7sDjk0U6GOOdCWFVScShte29o9NezJ53TPw==
-  /@rollup/plugin-node-resolve/11.0.1_rollup@2.35.1:
+  /@rollup/plugin-node-resolve/11.0.1_rollup@2.37.1:
     dependencies:
-      '@rollup/pluginutils': 3.1.0_rollup@2.35.1
+      '@rollup/pluginutils': 3.1.0_rollup@2.37.1
       '@types/resolve': 1.17.1
       builtin-modules: 3.2.0
       deepmerge: 4.2.2
       is-module: 1.0.0
       resolve: 1.19.0
-      rollup: 2.35.1
+      rollup: 2.37.1
     dev: false
     engines:
       node: '>= 10.0.0'
@@ -190,12 +193,12 @@ packages:
       rollup: ^1.20.0||^2.0.0
     resolution:
       integrity: sha512-ltlsj/4Bhwwhb+Nb5xCz/6vieuEj2/BAkkqVIKmZwC7pIdl8srmgmglE4S0jFlZa32K4qvdQ6NHdmpRKD/LwoQ==
-  /@rollup/pluginutils/3.1.0_rollup@2.35.1:
+  /@rollup/pluginutils/3.1.0_rollup@2.37.1:
     dependencies:
       '@types/estree': 0.0.39
       estree-walker: 1.0.1
       picomatch: 2.2.2
-      rollup: 2.35.1
+      rollup: 2.37.1
     dev: false
     engines:
       node: '>= 8.0.0'
@@ -279,6 +282,13 @@ packages:
     dev: false
     resolution:
       integrity: sha512-6YNqGP1hk5bjUFaim+QoFFuI61WjHiHE1BNeB41TA00Xd2K7zG4lcWyLLq/XtIp36uMavvS5hoAUJ+1u/GcX2Q==
+  /@types/mongoose/5.10.3:
+    dependencies:
+      '@types/mongodb': 3.6.3
+      '@types/node': 14.14.14
+    dev: false
+    resolution:
+      integrity: sha512-VfdnaFImXEJZZiuL2ID/ysZs4inOIjxwrAnUgkr5eum2O2BLhFkiSI0i87AwignVva1qWTJ3H3DyM0Rf4USJ4A==
   /@types/node/10.17.49:
     dev: false
     resolution:
@@ -579,7 +589,7 @@ packages:
   /colyseus.js/0.14.1:
     dependencies:
       '@colyseus/http': 2.0.0
-      '@colyseus/schema': 1.0.6
+      '@colyseus/schema': 1.0.10
       '@gamestdio/signals': 1.0.0
       '@gamestdio/state-listener': 3.1.0
       '@gamestdio/websocket': 0.3.2
@@ -594,7 +604,7 @@ packages:
       integrity: sha512-AFdqXmnI7dH235+VCOk3GU+SRBe6moQ6GLuEnaGbA6uLnKbpMhO9UZ6FaORUTlKcjoLXYY0ejev/OAHQXarKzw==
   /colyseus/0.14.6:
     dependencies:
-      '@colyseus/schema': 1.0.6
+      '@colyseus/schema': 1.0.10
       '@gamestdio/timer': 1.3.2
       '@types/redis': 2.8.28
       '@types/ws': 6.0.4
@@ -1075,7 +1085,7 @@ packages:
     resolution:
       integrity: sha1-FQStJSMVjKpA20onh8sBQRmU6k8=
   /fsevents/2.1.3:
-    deprecated: Please update to v 2.2.x
+    deprecated: '"Please update to latest v2.3 or v2.2"'
     dev: false
     engines:
       node: ^8.16.0 || ^10.6.0 || >=11.0.0
@@ -2193,7 +2203,7 @@ packages:
       tough-cookie: 2.3.4
       tunnel-agent: 0.6.0
       uuid: 3.4.0
-    deprecated: 'request has been deprecated, see https://github.com/request/request/issues/3142'
+    deprecated: request has been deprecated, see https://github.com/request/request/issues/3142
     dev: false
     engines:
       node: '>= 4'
@@ -2258,13 +2268,13 @@ packages:
     dev: false
     resolution:
       integrity: sha512-pYkSsuA0/psKqhhictkJw1c2klya5b+LlCvipWqI9OE1aG2M97mRumZCbBlry5CMEOzYBBgSDgd1694sNbmyIw==
-  /rollup-plugin-typescript2/0.29.0_rollup@2.35.1+typescript@4.1.3:
+  /rollup-plugin-typescript2/0.29.0_rollup@2.37.1+typescript@4.1.3:
     dependencies:
-      '@rollup/pluginutils': 3.1.0_rollup@2.35.1
+      '@rollup/pluginutils': 3.1.0_rollup@2.37.1
       find-cache-dir: 3.3.1
       fs-extra: 8.1.0
       resolve: 1.17.0
-      rollup: 2.35.1
+      rollup: 2.37.1
       tslib: 2.0.1
       typescript: 4.1.3
     dev: false
@@ -2273,7 +2283,7 @@ packages:
       typescript: '>=2.4.0'
     resolution:
       integrity: sha512-YytahBSZCIjn/elFugEGQR5qTsVhxhUwGZIsA9TmrSsC88qroGo65O5HZP/TTArH2dm0vUmYWhKchhwi2wL9bw==
-  /rollup/2.35.1:
+  /rollup/2.37.1:
     dev: false
     engines:
       node: '>=10.0.0'
@@ -2281,7 +2291,7 @@ packages:
     optionalDependencies:
       fsevents: 2.1.3
     resolution:
-      integrity: sha512-q5KxEyWpprAIcainhVy6HfRttD9kutQpHbeqDTWnqAFNJotiojetK6uqmcydNMymBEtC4I8bCYR+J3mTMqeaUA==
+      integrity: sha512-V3ojEeyGeSdrMSuhP3diBb06P+qV4gKQeanbDv+Qh/BZbhdZ7kHV0xAt8Yjk4GFshq/WjO7R4c7DFM20AwTFVQ==
   /run-parallel/1.1.10:
     dev: false
     resolution:
@@ -2603,10 +2613,10 @@ packages:
     dev: false
     resolution:
       integrity: sha512-SgIkNheinmEBgx1IUNirK0TUD4X9yjjBRTqqjggWCU3pUEqIk3/Uwl3yRixYKT6WjQuGiwDv4NomL3wqRCj+CQ==
-  /tslib/2.0.3:
+  /tslib/2.1.0:
     dev: false
     resolution:
-      integrity: sha512-uZtkfKblCEQtZKBF6EBXVZeQNl82yqtDQdv+eck8u7tdPxjLu2/lp5/uPW+um2tpuxINHWy3GhiccY7QgEaVHQ==
+      integrity: sha512-hcVC3wYEziELGGmEEXue7D75zbwIIVUMWAVbHItGPx0ziyXxrOMQx4rQEVEV45Ut/1IotuEvwqPopzIOkDMf0A==
   /tunnel-agent/0.6.0:
     dependencies:
       safe-buffer: 5.2.1
@@ -2766,24 +2776,25 @@ packages:
 specifiers:
   '@babylonjs/core': ^4.2.0
   '@babylonjs/loaders': ^4.2.0
-  '@colyseus/loadtest': ^0.14.0
-  '@colyseus/monitor': ^0.12.2
-  '@colyseus/schema': ^1.0.0
-  '@colyseus/social': ^0.10.9
+  '@colyseus/loadtest': ^0.14.2
+  '@colyseus/monitor': ^0.14.0
+  '@colyseus/schema': ^1.0.10
+  '@colyseus/social': ^0.11.6
   '@rollup/plugin-commonjs': ^17.0.0
   '@rollup/plugin-json': ^4.1.0
   '@rollup/plugin-node-resolve': ^11.0.1
   '@types/cors': ^2.8.6
   '@types/express': ^4.17.1
-  colyseus: ^0.14.0
+  colyseus: ^0.14.6
+  colyseus.js: 0.14.1
   cors: ^2.8.5
   express: ^4.16.4
   express-jwt: ^5.3.1
   lit-element: ^2.4.0
-  rollup: ^2.35.1
+  rollup: ^2.37.1
   rollup-plugin-copy: ^3.3.0
   rollup-plugin-serve: ^1.1.0
   rollup-plugin-typescript2: ^0.29.0
   ts-node-dev: ^1.1.1
-  tslib: ^2.0.3
+  tslib: ^2.1.0
   typescript: ^4.1.3
