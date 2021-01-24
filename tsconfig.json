@@ -10,7 +10,7 @@
     "strictPropertyInitialization": true,
     "alwaysStrict": true,
     "types": [],
-    "module": "commonjs",
+    // "module": "commonjs",
     "target": "ES6",
     "moduleResolution": "node",
     "declaration": false,
@@ -18,6 +18,10 @@
     "esModuleInterop": true,
     "traceResolution": true,
     "baseUrl": ".",
+    "sourceMap": true,
+
+    "skipLibCheck": true,
+
     "lib": ["es5", "es6", "dom", "ES2019"]
   },
   "include": ["client/**/*.ts"]

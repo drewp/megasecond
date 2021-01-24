@@ -12,10 +12,20 @@ spec:
       labels:
         app: megasecond
     spec:
+      volumes:
+        - { name: dist, emptyDir: {} }
       containers:
         - name: megasecond
           image: bang5:5000/megasecond_image
+          volumeMounts:
+            - { name: dist, mountPath: /workspace/dist }
           ports: [{ containerPort: 10001 }]
+        - name: rebuild-client
+          image: bang5:5000/megasecond_image
+          volumeMounts:
+            - { name: dist, mountPath: /workspace/dist }
+          command: ["pnpm", "rebuild_client_forever"]
+
 ---
 apiVersion: v1
 kind: Service

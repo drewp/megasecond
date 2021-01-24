@@ -14,7 +14,7 @@ RUN node /workspace/nodejs/bin/npm install -g pnpm
 COPY package.json pnpm-lock.yaml  ./
 RUN pnpm install
 
-COPY tsconfig.json ./
+COPY tsconfig.json rollup.config.js ./
 COPY client ./client
 COPY server ./server
 
