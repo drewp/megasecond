@@ -97,7 +97,7 @@ async function go() {
   const scene = new Scene(engine);
   scene.clearColor = new Color4(0, 0, 0, 0);
 
-  SceneLoader.Append("./asset/", "mystery_door.gltf", scene, (scene) => {
+  SceneLoader.Append("./asset/", "mystery_door.glb", scene, (scene) => {
     (window as any).scene = scene;
     scene.switchActiveCamera(scene.cameras[0]);
     console.log("loaded gltf");
