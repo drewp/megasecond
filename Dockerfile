@@ -17,12 +17,19 @@ RUN apt-get install -y wget xz-utils vim less && \
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/workspace/nodejs/bin
 RUN node /workspace/nodejs/bin/npm install -g pnpm
 
+RUN mkdir -p dist/
+
 COPY package.json pnpm-lock.yaml  ./
 RUN pnpm install
 
 COPY tsconfig.json rollup.config.js ./
+
+
 COPY client ./client
 COPY server ./server
+COPY shared ./shared
+
+COPY client/index.html dist/
 
 CMD ["pnpm", "run_server"]
 

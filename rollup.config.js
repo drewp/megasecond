@@ -13,6 +13,7 @@ export default {
     input: "client/index.ts",
     output: {
         sourcemap: sourcemap,
+        sourcemapPathTransform: (p) => p.replace(/^.../, "src/"),
         format: "iife",
         name: "bundle",
         file: `${destDir}/bundle.js`,
@@ -34,6 +35,7 @@ export default {
             targets: [
                 ...staticSourceFiles.map((f) => ({ src: f, dest: destDir })), //
                 { src: "node_modules/colyseus.js/dist/colyseus.js", dest: `${destDir}/lib/` },
+                { src: "client/index.ts", dest: `${destDir}/src/client/`}, // for sourcemap to use
             ],
         }),
     ],

@@ -15,12 +15,15 @@
     "declaration": false,
     "experimentalDecorators": true,
     "esModuleInterop": true,
-    "baseUrl": ".",
     "allowSyntheticDefaultImports": true,
-
     "skipLibCheck": true,
-
     "lib": ["es5", "es6", "dom", "ES2019"]
   },
-  "include": ["client/**/*.ts", "node_modules/babylonjs/*.ts"]
+  "include": [
+    //
+    "client/**/*.ts",
+    "server/**/*.ts",
+    "shared/**/*.ts",
+    "node_modules/babylonjs/*.ts"
+  ]
 }
