@@ -96,6 +96,7 @@ async function go() {
   const engine = new Engine(canvas, /*antialias=*/ true);
   const scene = new Scene(engine);
   scene.clearColor = new Color4(0, 0, 0, 0);
+	window.addEventListener("resize", function(){engine.resize();});
 
   SceneLoader.Append("./asset/", "mystery_door.glb", scene, (scene) => {
     (window as any).scene = scene;

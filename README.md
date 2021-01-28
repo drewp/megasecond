@@ -24,3 +24,8 @@ Have skaffold and a k8s cluster (I use k3s).
 Run `skaffold dev` here.
 
 Somehow route to the HTTP service at megasecond.default.service.cluster.local:80.
+
+
+## Attributions
+
+"Abandoned factory" (https://skfb.ly/6TzYN) by Rixael is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).

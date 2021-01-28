@@ -30,7 +30,7 @@ COPY server ./server
 COPY shared ./shared
 
 COPY client/index.html dist/
-COPY client/asset/mystery_door.glb dist/asset/
+COPY client/asset/ dist/asset/
 
 CMD ["pnpm", "run_server"]
 
