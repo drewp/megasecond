@@ -13,6 +13,7 @@ import {
   SceneLoader,
   ShadowGenerator,
   SpotLight,
+  TransformNode,
   Vector3,
 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
@@ -31,20 +32,28 @@ class Net {
   client: Colyseus.Client;
   world?: Colyseus.Room<WorldRoom>;
   worldState?: WorldState;
-  mySessionId: string;
+  myDisplayName: string;
+  private lastSent: { x: number; z: number } | undefined;
   constructor(private status: StatusLine) {
     this.status.setPlayer("...");
     this.status.setConnection("connecting...");
     this.client = new Colyseus.Client("wss://bigasterisk.com/megasecond/");
-    this.mySessionId = "p" + Math.round(Math.random() * 10000);
-    this.status.setPlayer(this.mySessionId);
+    this.myDisplayName = "p" + Math.round(Math.random() * 10000);
+    this.status.setPlayer(this.myDisplayName);
   }
   async joinWorld() {
-    this.world = await this.client.joinOrCreate<WorldRoom>("world", { name: this.mySessionId });
+    this.world = await this.client.joinOrCreate<WorldRoom>("world", { name: this.myDisplayName });
     this.status.setConnection("connected.");
 
     (window as any).world = this.world;
     this.worldState = (this.world.state as unknown) as any;
+  }
+  uploadMe(me: PlayerMotion) {
+    if (this.lastSent !== undefined && this.lastSent.x == me.pos.x && this.lastSent.z == me.pos.z) {
+      return;
+    }
+    this.lastSent = { x: me.pos.x, z: me.pos.z };
+    this.world!.send("playerMove", this.lastSent);
   }
 }
 
@@ -59,8 +68,11 @@ class FollowCam {
     this.cam.rotationOffset = 180;
     scene.switchActiveCamera(this.cam);
   }
-  setTarget(me: AbstractMesh) {
-    this.cam.lockedTarget = me;
+  setTarget(me: TransformNode) {
+    this.cam.lockedTarget = me as AbstractMesh;
+  }
+  step(dt: number) {
+    // try to get behind player, don't crash walls
   }
 }
 
@@ -139,27 +151,38 @@ class UserInput {
 
 class PlayerView {
   // makes one player from base models. owns scene objects. low-level controls.
-  body?: InstancedMesh;
+  //
+  // X=left, Y=up, Z=fwd
+  private body?: InstancedMesh;
+  private aimAt?: TransformNode;
   constructor(private scene: Scene, private name: string) {
     this.makeInstance();
   }
-  setPos(p: Vector3) {
-    this.body?.position.copyFrom(p);
-  }
   makeInstance() {
     const playerReferenceModel = this.scene.getMeshByName("player");
-    if (!playerReferenceModel) {
+    const refAim = this.scene.getTransformNodeByName("player_aim")!;
+    if (!playerReferenceModel || !refAim) {
       throw new Error("no ref yet");
     }
     this.body = (playerReferenceModel as Mesh).createInstance(`${this.name}-body`);
+    this.aimAt = new TransformNode(`${this.name}-aim`);
+    this.aimAt.parent = this.body;
+
+    const refOffset = refAim.position.subtract(playerReferenceModel.position);
+    this.aimAt.position = this.body.position.add(refOffset);
     const sunCaster = (window as any).gen as ShadowGenerator; // todo
     sunCaster.addShadowCaster(this.body);
   }
   dispose() {
     this.body?.dispose();
   }
-  getCamTarget(): AbstractMesh {
-    return this.body!;
+  setPose(pos: Vector3, facing: Vector3) {
+    const b = this.body!;
+    b.position.copyFrom(pos);
+    b.lookAt(b.position.add(facing)); // todo: maybe with animation
+  }
+  getCamTarget(): TransformNode {
+    return this.aimAt!;
   }
 }
 
@@ -180,12 +203,24 @@ function setupScene(canvasId: string): Scene {
   return scene;
 }
 
-class Game {
-  playerViews: Map<string, PlayerView>;
-  fcam: FollowCam;
+class PlayerMotion {
+  // inputs->motion, physics, etc. Might move to server side.
 
+  pos = Vector3.Zero();
+  vel = Vector3.Zero();
+  facing = Vector3.Forward(); // unit
+  step(dt: number) {
+    this.pos.addInPlace(this.vel.scale(dt));
+    // fric, grav, coll
+  }
+}
+
+class Game {
+  playerViews = new Map<string, PlayerView>();
+  playerMotions = new Map<string, PlayerMotion>();
+  fcam: FollowCam;
+  me?: PlayerMotion;
   constructor(private scene: Scene) {
-    this.playerViews = new Map();
     this.fcam = new FollowCam(scene);
   }
   async loadEnv() {
@@ -214,10 +249,13 @@ class Game {
   }
   addPlayer(name: string, me: boolean) {
     const pv = new PlayerView(this.scene, name);
-    pv.setPos(new Vector3(1, 0, 0));
     this.playerViews.set(name, pv);
+    const pm = new PlayerMotion();
+    this.playerMotions.set(name, pm);
     if (me) {
       this.fcam.setTarget(pv.getCamTarget());
+      (window as any).me = pv;
+      this.me = pm;
     }
   }
   removePlayer(name: string) {
@@ -228,13 +266,22 @@ class Game {
     pv.dispose();
     this.playerViews.delete(name);
   }
-
+  getMe(): PlayerMotion {
+    return this.me!;
+  }
   setPlayerPos(name: string, pos: Vector3) {
-    const pv = this.playerViews.get(name);
-    if (pv === undefined) {
+    const pm = this.playerMotions.get(name);
+    if (pm === undefined) {
       return;
     }
-    pv.setPos(pos);
+    pm.pos = pos;
+  }
+  updatePlayerViews() {
+    for (let [name, pm] of this.playerMotions.entries()) {
+      const pv = this.playerViews.get(name);
+      if (pv === undefined) continue;//throw new Error("missing view for " + name);
+      pv.setPose(pm.pos, pm.facing);
+    }
   }
 }
 
@@ -248,11 +295,10 @@ async function go() {
   const game = new Game(scene);
   await game.loadEnv();
 
-  let me: PlayerView;
-  let kx = 0,
-    ky = 0;
-
-  game.addPlayer(net.mySessionId, /*me=*/ true);
+  for (let [sess, data] of net.worldState!.players.entries()) {
+    console.log("ws player", sess, "and i  am", net.world?.sessionId);
+    game.addPlayer(sess, /*me=*/ sess == net.world?.sessionId);
+  }
 
   net.worldState!.players.onAdd = (player: any, sessionId: any) => {
     if (net.world!.sessionId === sessionId) {
@@ -285,22 +331,20 @@ async function go() {
     scene,
     function onMouse(dx, dy) {},
     function onStick(x, y) {
-      kx = x;
-      ky = y;
+      game.getMe().vel = new Vector3(x, 0, -y);
+      // console.log(x, y, game.getMe().vel.toString())
     },
     function onAction(name) {}
   );
 
   scene.getEngine().runRenderLoop(() => {
-    const body = game.playerViews.get(net.mySessionId)!.body;
-    if (!body) {
-      return;
-    }
-    if (kx != 0 || ky != 0) {
-      body.position.x += kx * 0.05;
-      body.position.z += ky * 0.05;
-      net.world!.send("playerMove", { x: body.position.x, z: body.position.z });
-    }
+    const dt = scene.getEngine().getDeltaTime() / 1000.0;
+    const me = game.getMe();
+    me.step(dt);
+    net.uploadMe(me);
+
+    game.updatePlayerViews();
+
     scene.render();
   });
 }
