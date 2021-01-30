@@ -1,15 +1,38 @@
 // game environment, not code environment
 
-import { AbstractMesh, Color4, DirectionalLight, Effect, Mesh, Scene, SceneLoader, ShaderMaterial, ShadowGenerator } from "babylonjs";
-import { ShadowOnlyMaterial } from "babylonjs-materials";
+import {
+  AbstractMesh,
+  Color3,
+  Color4,
+  DirectionalLight,
+  Effect,
+  Material,
+  Mesh,
+  Scene,
+  SceneLoader,
+  ShaderMaterial,
+  ShadowGenerator,
+  StandardMaterial,
+} from "babylonjs";
+import { GridMaterial, ShadowOnlyMaterial } from "babylonjs-materials";
 
 export async function loadEnv(scene: Scene) {
   return new Promise<void>((resolve, reject) => {
     SceneLoader.Append("./asset/wrap/", "wrap.glb", scene, (_scene) => {
       console.log("loaded gltf");
       scene.clearColor = new Color4(0.419, 0.517, 0.545, 1);
-      hideReferencePlayer(scene); //hide
-      scene.getMeshByName("navmesh")!.visibility = 0;
+
+      scene.getMeshByName("player")!.isVisible = false;
+      scene.getMeshByName("navmesh")!.isVisible = false;
+
+      const grid = new GridMaterial("grid", scene);
+      grid.gridRatio = 0.1;
+      grid.majorUnitFrequency = 5;
+      grid.mainColor = new Color3(0.3, 0.3, 0.3);
+      grid.backFaceCulling = false;
+      grid.wireframe = true; // maybe
+      scene.getMeshByName("navmesh")!.material = grid;
+
       setupSunShadows(scene);
 
       const gnd = scene.getMeshByName("gnd")!;
@@ -23,6 +46,17 @@ export async function loadEnv(scene: Scene) {
       resolve();
     });
   });
+}
+
+export function toggleNavmeshView(scene: Scene) {
+  const n = scene.getMeshByName("navmesh")!;
+  n.isVisible = !n.isVisible;
+
+  for (let m of scene.meshes) {
+    if (["gnd", "stair", "buildings"].indexOf(m.name) != -1) {
+      m.isVisible = !n.isVisible;
+    }
+  }
 }
 
 function addGndOverlayShadow(scene: Scene, gnd: AbstractMesh) {
@@ -90,9 +124,4 @@ function setupSunShadows(scene: Scene) {
       // some objs can't
     }
   });
-}
-
-function hideReferencePlayer(scene: Scene) {
-  const playerRefModel = scene.getMeshByName("player") as Mesh;
-  playerRefModel.position.y = -100;
 }

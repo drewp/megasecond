@@ -55,7 +55,7 @@ class Game {
   addPlayer(name: string, me: boolean) {
     const pv = new PlayerView(this.scene, name);
     this.playerViews.set(name, pv);
-    const pm = new PlayerMotion();
+    const pm = new PlayerMotion(this.scene);
     this.playerMotions.set(name, pm);
     if (me) {
       this.fcam.setTarget(pv.getCamTarget());
@@ -74,7 +74,7 @@ class Game {
   getMe(): PlayerMotion {
     return this.me!;
   }
-  setPlayerPos(name: string, pos: Vector3) {
+  setPlayerPosFromNet(name: string, pos: Vector3) {
     const pm = this.playerMotions.get(name);
     if (pm === undefined) {
       return;
@@ -122,27 +122,26 @@ async function go() {
   };
 
   net.world!.onMessage("playerMove", (msg: any) => {
-    const pl = game.setPlayerPos(msg[0], new Vector3(msg[1].x, msg[1].y, msg[1].z));
+    const pl = game.setPlayerPosFromNet(msg[0], new Vector3(msg[1].x, msg[1].y, msg[1].z));
   });
 
   const userInput = new UserInput(
     scene,
     function onMouse(dx, dy) {
+      // x turns player (and that turns cam); y is cam-only (player doesn't care)
       game.getMe().onMouseX(dx);
       game.fcam.onMouseY(dy);
     },
     function onStick(x, y) {
-      const me = game.getMe();
-      const forwardComp = me.facing.scale(-2.5 * y);
-      const sidewaysComp = me.facing.cross(Vector3.Up()).scale(-2 * x);
-      const yComp = me.vel.multiplyByFloats(0, 1, 0);
-      me.vel = forwardComp.add(sidewaysComp).add(yComp);
+      game.getMe().onStick(x, y);
     },
     function onAction(name: Actions) {
       if (name == Actions.Jump) {
-        const me = game.getMe();
-        me.requestJump();
+        game.getMe().requestJump();
+      } else if (name == Actions.ToggleNavmeshView) {
+        Env.toggleNavmeshView(scene);
       }
+
     }
   );
 

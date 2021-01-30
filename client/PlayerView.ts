@@ -1,4 +1,4 @@
-import { InstancedMesh, Mesh, Scene, ShadowGenerator, TransformNode, Vector3 } from "babylonjs";
+import { AxesViewer, InstancedMesh, Mesh, Scene, ShadowGenerator, TransformNode, Vector3 } from "babylonjs";
 import { FollowCam } from "./FollowCam";
 
 export class PlayerView {
@@ -24,6 +24,7 @@ export class PlayerView {
     this.aimAt.position = this.body.position.add(refOffset);
     const sunCaster = (window as any).gen as ShadowGenerator; // todo
     sunCaster.addShadowCaster(this.body);
+
   }
   dispose() {
     this.body?.dispose();

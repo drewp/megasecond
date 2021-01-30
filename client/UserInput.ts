@@ -3,6 +3,7 @@ import { ActionManager, ExecuteCodeAction, PickingInfo, PointerEventTypes, Actio
 export enum Actions {
   Jump,
   Activate,
+  ToggleNavmeshView,
 }
 
 export class UserInput {
@@ -18,7 +19,7 @@ export class UserInput {
     private onAction: (name: Actions) => void
   ) {
     this.stickPressFunc = {
-      ArrowUp: () => (this.stickY = -1),
+      ArrowUp: () => (this.stickY = -1), // these could have a little analog ramp-up
       w: () => (this.stickY = -1),
       ArrowDown: () => (this.stickY = 1),
       s: () => (this.stickY = 1),
@@ -54,11 +55,16 @@ export class UserInput {
       func();
       this.onStick(this.stickX, this.stickY);
     }
-    if (ev.sourceEvent.key == " ") {
-      this.onAction(Actions.Jump);
-    }
-    if (ev.sourceEvent.key == "e") {
-      this.onAction(Actions.Activate);
+    switch (ev.sourceEvent.key) {
+      case " ":
+        this.onAction(Actions.Jump);
+        break;
+      case "e":
+        this.onAction(Actions.Activate);
+        break;
+      case "n":
+        this.onAction(Actions.ToggleNavmeshView);
+        break;
     }
   }
   onKeyUp(ev: ActionEvent) {
