@@ -35,7 +35,7 @@ export default {
             targets: [
                 ...staticSourceFiles.map((f) => ({ src: f, dest: destDir })), //
                 { src: "node_modules/colyseus.js/dist/colyseus.js", dest: `${destDir}/lib/` },
-                { src: "client/index.ts", dest: `${destDir}/src/client/`}, // for sourcemap to use
+                { src: "client/*.ts", dest: `${destDir}/src/client/`}, // for sourcemap to use
             ],
         }),
     ],

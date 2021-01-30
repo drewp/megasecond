@@ -1,45 +1,10 @@
-import { ShadowOnlyMaterial } from "babylonjs-materials";
-
-import {
-  AbstractMesh,
-  ActionEvent,
-  ActionManager,
-  AddBlock,
-  AnimatedInputBlockTypes,
-  Color4,
-  DirectionalLight,
-  Engine,
-  ExecuteCodeAction,
-  FollowCamera,
-  FragmentOutputBlock,
-  InputBlock,
-  InstancedMesh,
-  Mesh,
-  ModBlock,
-  NodeMaterial,
-  NodeMaterialSystemValues,
-  PickingInfo,
-  PointerEventTypes,
-  Quaternion,
-  RawTexture2DArray,
-  ScaleBlock,
-  Scene,
-  SceneLoader,
-  ShaderMaterial,
-  ShadowDepthWrapper,
-  ShadowGenerator,
-  SpotLight,
-  TransformBlock,
-  TransformNode,
-  TrigonometryBlock,
-  TrigonometryBlockOperations,
-  Vector3,
-  VectorSplitterBlock,
-  VertexOutputBlock,
-} from "babylonjs";
+import { Color4, Engine, InstancedMesh, Mesh, Quaternion, Scene, ShadowGenerator, TransformNode, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import { WorldRoom, WorldState } from "../shared/WorldRoom";
-import { throws } from "assert";
+import { AddBabylonExplorer } from "./Debug";
+import * as Env from "./Env";
+import { FollowCam } from "./FollowCam";
+import { Actions, UserInput } from "./UserInput";
 
 class StatusLine {
   setPlayer(player: string) {
@@ -76,118 +41,6 @@ class Net {
     }
     this.lastSent = { x: me.pos.x, z: me.pos.z };
     this.world!.send("playerMove", this.lastSent);
-  }
-}
-
-class FollowCam {
-  private cam: FollowCamera;
-  constructor(scene: Scene) {
-    this.cam = new FollowCamera("cam", new Vector3(-1.4, 1.5, -4), scene);
-    this.cam.inputs.clear();
-    this.cam.radius = 2;
-    this.cam.heightOffset = 1;
-    this.cam.fov = 1.2;
-    this.cam.rotationOffset = 180;
-    this.cam.cameraAcceleration = 0.5;
-    scene.switchActiveCamera(this.cam);
-  }
-  setTarget(me: TransformNode) {
-    this.cam.lockedTarget = me as AbstractMesh;
-  }
-  onMouseY(movementY: number) {
-    this.cam.heightOffset += 0.001 * movementY;
-  }
-  step(dt: number, pos: Vector3, facing: Vector3) {
-    // try to get behind player, don't crash walls
-    let heading = (360 / 6.28) * Math.atan2(-facing.z, facing.x) + 270;
-    while (Math.abs(heading - 360 - this.cam.rotationOffset) < Math.abs(heading - this.cam.rotationOffset)) {
-      heading -= 360;
-    }
-    this.cam.rotationOffset += (dt * 20 * (heading - this.cam.rotationOffset)) % 360;
-  }
-}
-
-function AddBabylonExplorer(scene: Scene) {
-  scene.debugLayer
-    .show({
-      overlay: true,
-      handleResize: true,
-      globalRoot: document.querySelector("#game")! as HTMLElement,
-    })
-    .then(() => {
-      scene.debugLayer.onPropertyChangedObservable.add((result: any) => {
-        console.log(result.object.name, result.property, result.value);
-      });
-    });
-}
-
-enum Actions {
-  Jump,
-  Activate,
-}
-
-class UserInput {
-  private stickX = 0;
-  private stickY = 0;
-  private stickPressFunc: { [keyName: string]: () => void };
-  private stickReleaseFunc: { [keyName: string]: () => void };
-
-  constructor(
-    private scene: Scene,
-    private onMouse: (dx: number, dy: number) => void,
-    private onStick: (x: number, y: number) => void,
-    private onAction: (name: Actions) => void
-  ) {
-    this.stickPressFunc = {
-      ArrowUp: () => (this.stickY = -1),
-      w: () => (this.stickY = -1),
-      ArrowDown: () => (this.stickY = 1),
-      s: () => (this.stickY = 1),
-      ArrowLeft: () => (this.stickX = -1),
-      a: () => (this.stickX = -1),
-      ArrowRight: () => (this.stickX = 1),
-      d: () => (this.stickX = 1),
-    };
-    this.stickReleaseFunc = {
-      ArrowUp: () => (this.stickY = 0),
-      w: () => (this.stickY = 0),
-      ArrowDown: () => (this.stickY = 0),
-      s: () => (this.stickY = 0),
-      ArrowLeft: () => (this.stickX = 0),
-      a: () => (this.stickX = 0),
-      ArrowRight: () => (this.stickX = 0),
-      d: () => (this.stickX = 0),
-    };
-    scene.actionManager = new ActionManager(scene);
-    scene.actionManager.registerAction(new ExecuteCodeAction({ trigger: ActionManager.OnKeyDownTrigger }, this.onKeyDown.bind(this)));
-    scene.actionManager.registerAction(new ExecuteCodeAction({ trigger: ActionManager.OnKeyUpTrigger }, this.onKeyUp.bind(this)));
-    scene.onPointerMove = this.onMove.bind(this);
-  }
-  onMove(ev: PointerEvent, pickInfo: PickingInfo, type: PointerEventTypes) {
-    if (!document.pointerLockElement) {
-      return;
-    }
-    this.onMouse(ev.movementX, ev.movementY);
-  }
-  onKeyDown(ev: ActionEvent) {
-    const func = this.stickPressFunc[ev.sourceEvent.key as string];
-    if (func) {
-      func();
-      this.onStick(this.stickX, this.stickY);
-    }
-    if (ev.sourceEvent.key == " ") {
-      this.onAction(Actions.Jump);
-    }
-    if (ev.sourceEvent.key == "e") {
-      this.onAction(Actions.Activate);
-    }
-  }
-  onKeyUp(ev: ActionEvent) {
-    const func = this.stickReleaseFunc[ev.sourceEvent.key as string];
-    if (func) {
-      func();
-      this.onStick(this.stickX, this.stickY);
-    }
   }
 }
 
@@ -283,87 +136,7 @@ class Game {
   constructor(private scene: Scene) {
     this.fcam = new FollowCam(scene);
   }
-  async loadEnv() {
-    return new Promise<void>((resolve, reject) => {
-      SceneLoader.Append("./asset/wrap/", "wrap.glb", this.scene, (_scene) => {
-        console.log("loaded gltf");
-        this.scene.clearColor = new Color4(0.419, 0.517, 0.545, 1);
-        const playerRefModel = this.scene.getMeshByName("player") as Mesh;
-        playerRefModel.position.y = -100; //hide
-        this.scene.getMeshByName("navmesh")!.visibility = 0;
-        const light = this.scene.getLightByName("Light") as DirectionalLight;
-        light.autoCalcShadowZBounds = true;
-        const gen = new ShadowGenerator(4096, light);
-        (window as any).gen = gen;
-        gen.bias = 0.001;
-        gen.filter = 4;
-        this.scene.meshes.forEach((m) => {
-          try {
-            m.receiveShadows = true;
-          } catch (e) {
-            // some objs can't
-          }
-        });
 
-        BABYLON.Effect.ShadersStore["aVertexShader"] = `
-        precision highp float;
-
-        attribute vec3 position;
-        attribute vec2 uv;
-        
-        uniform mat4 world;
-        uniform mat4 worldViewProjection;
-        
-        varying vec2 v_uv;
-        void main(void) {
-            vec4 output1 = world * vec4(position, 1.0);
-            vec4 output0 = worldViewProjection * output1;
-            gl_Position = output0;
-            v_uv = position.xz;
-        }
-        
-        `;
-
-        BABYLON.Effect.ShadersStore["aFragmentShader"] = `
-        precision highp float;
-       
-        uniform mat4 world;
-        uniform mat4 worldViewProjection;
-        varying vec2 v_uv;
-
- 
-        void main(void) {
-            float sz= 3.;
-            float v  = (mod(v_uv.x, sz) > sz/2. ^^ mod(v_uv.y, sz) > sz/2.) ? .3 : .5;
-            gl_FragColor = vec4(v, v, v, 1.0);
-        }
-        
-    `;
-
-        var shaderMaterial = new ShaderMaterial("a", this.scene, "a", {
-          attributes: ["position", "uv"],
-          uniforms: ["world", "worldViewProjection"],
-        });
-
-        shaderMaterial.backFaceCulling = false;
-
-        const gnd = this.scene.getMeshByName("gnd")!;
-        gnd.material = shaderMaterial;
-
-        const shadow = gnd.clone("shad", null) as Mesh;
-        shadow.position.y += 0.01;
-        shadow.material = new ShadowOnlyMaterial("g", this.scene);
-        shadow.receiveShadows = true;
-
-        // const shadowDepthWrapper = new ShadowDepthWrapper(shaderMaterial, this.scene);
-        // shaderMaterial.shadowDepthWrapper = shadowDepthWrapper;
-
-        // gen.getShadowMap()?.renderList?.push(gnd);
-
-        resolve();
-      });
-    });
-  }
   addPlayer(name: string, me: boolean) {
     const pv = new PlayerView(this.scene, name);
     this.playerViews.set(name, pv);
@@ -410,7 +183,7 @@ async function go() {
 
   const scene = setupScene("renderCanvas");
   const game = new Game(scene);
-  await game.loadEnv();
+  await Env.loadEnv(scene);
 
   for (let [sess, data] of net.worldState!.players.entries()) {
     game.addPlayer(sess, /*me=*/ sess == net.world?.sessionId);
