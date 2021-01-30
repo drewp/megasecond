@@ -1,19 +1,12 @@
-import { Color4, Engine, InstancedMesh, Mesh, Quaternion, Scene, ShadowGenerator, TransformNode, Vector3 } from "babylonjs";
+import { Scene, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import { WorldRoom, WorldState } from "../shared/WorldRoom";
-import { AddBabylonExplorer } from "./Debug";
+import { setupScene, StatusLine } from "./BrowserWindow";
 import * as Env from "./Env";
 import { FollowCam } from "./FollowCam";
+import { PlayerMotion } from "./PlayerMotion";
+import { PlayerView } from "./PlayerView";
 import { Actions, UserInput } from "./UserInput";
-
-class StatusLine {
-  setPlayer(player: string) {
-    (document.querySelector("#me")! as HTMLElement).innerText = player;
-  }
-  setConnection(c: string) {
-    (document.querySelector("#connection")! as HTMLElement).innerText = c;
-  }
-}
 
 class Net {
   client: Colyseus.Client;
@@ -40,91 +33,8 @@ class Net {
       return;
     }
     this.lastSent = { x: me.pos.x, z: me.pos.z };
+    // surely this isn't supposed to be a new message, just some kind of set on the room state object
     this.world!.send("playerMove", this.lastSent);
-  }
-}
-
-class PlayerView {
-  // makes one player from base models. owns scene objects. low-level controls.
-  //
-  // X=left, Y=up, Z=fwd
-  private body?: InstancedMesh;
-  private aimAt?: TransformNode;
-  constructor(private scene: Scene, private name: string) {
-    this.makeInstance();
-  }
-  makeInstance() {
-    const playerReferenceModel = this.scene.getMeshByName("player");
-    const refAim = this.scene.getTransformNodeByName("player_aim")!;
-    if (!playerReferenceModel || !refAim) {
-      throw new Error("no ref yet");
-    }
-    this.body = (playerReferenceModel as Mesh).createInstance(`${this.name}-body`);
-    this.aimAt = new TransformNode(`${this.name}-aim`);
-    this.aimAt.parent = this.body;
-
-    const refOffset = refAim.position.subtract(playerReferenceModel.position);
-    this.aimAt.position = this.body.position.add(refOffset);
-    const sunCaster = (window as any).gen as ShadowGenerator; // todo
-    sunCaster.addShadowCaster(this.body);
-  }
-  dispose() {
-    this.body?.dispose();
-  }
-  step(dt: number, pos: Vector3, facing: Vector3, fcam: FollowCam | undefined) {
-    const b = this.body!;
-    b.position.copyFrom(pos);
-    b.lookAt(b.position.add(facing)); // todo: maybe with animation
-    if (fcam) {
-      fcam.step(dt, pos, facing);
-    }
-  }
-  getCamTarget(): TransformNode {
-    return this.aimAt!;
-  }
-}
-
-function setupScene(canvasId: string): Scene {
-  const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-  const engine = new Engine(canvas, /*antialias=*/ true);
-  const scene = new Scene(engine);
-  (window as any).scene = scene;
-  scene.clearColor = new Color4(0, 0, 0, 0);
-  window.addEventListener("resize", function () {
-    engine.resize();
-  });
-
-  if (location.hash.indexOf("explor") != -1) {
-    AddBabylonExplorer(scene);
-  }
-  canvas.addEventListener("pointerdown", (ev) => {
-    engine.enterPointerlock();
-  });
-
-  return scene;
-}
-
-class PlayerMotion {
-  // inputs->motion, physics, etc. Might move to server side.
-
-  pos = Vector3.Zero();
-  vel = Vector3.Zero();
-  facing = Vector3.Forward(); // unit
-  step(dt: number) {
-    this.pos.addInPlace(this.vel.scale(dt));
-    if (this.pos.y > 0) {
-      this.vel.y -= dt * 9.8;
-    } else this.vel.y = 0;
-    // fric, grav, coll
-  }
-  onMouseX(movementX: number) {
-    const nf = Vector3.Zero();
-    const rot = Quaternion.RotationAxis(Vector3.Up(), movementX * 0.001);
-    this.facing.rotateByQuaternionAroundPointToRef(rot, Vector3.Zero(), nf);
-    this.facing.copyFrom(nf);
-
-    this.vel.rotateByQuaternionAroundPointToRef(rot, Vector3.Zero(), nf);
-    this.vel.copyFrom(nf);
   }
 }
 
@@ -223,7 +133,7 @@ async function go() {
     function onAction(name: Actions) {
       if (name == Actions.Jump) {
         const me = game.getMe();
-        me.vel.y = 3;
+        me.requestJump();
       }
     }
   );
