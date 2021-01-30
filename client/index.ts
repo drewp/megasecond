@@ -13,7 +13,7 @@ class Net {
   world?: Colyseus.Room<WorldRoom>;
   worldState?: WorldState;
   myDisplayName: string;
-  private lastSent: { x: number; z: number } | undefined;
+  private lastSent: { x: number; y: number; z: number } | undefined;
   constructor(private status: StatusLine) {
     this.status.setPlayer("...");
     this.status.setConnection("connecting...");
@@ -29,10 +29,15 @@ class Net {
     this.worldState = (this.world.state as unknown) as any;
   }
   uploadMe(me: PlayerMotion) {
-    if (this.lastSent !== undefined && this.lastSent.x == me.pos.x && this.lastSent.z == me.pos.z) {
+    if (
+      this.lastSent !== undefined && //
+      this.lastSent.x == me.pos.x &&
+      this.lastSent.y == me.pos.y &&
+      this.lastSent.z == me.pos.z
+    ) {
       return;
     }
-    this.lastSent = { x: me.pos.x, z: me.pos.z };
+    this.lastSent = { x: me.pos.x, y: me.pos.y, z: me.pos.z };
     // surely this isn't supposed to be a new message, just some kind of set on the room state object
     this.world!.send("playerMove", this.lastSent);
   }
@@ -117,7 +122,7 @@ async function go() {
   };
 
   net.world!.onMessage("playerMove", (msg: any) => {
-    const pl = game.setPlayerPos(msg[0], new Vector3(msg[1].x, 0, msg[1].z));
+    const pl = game.setPlayerPos(msg[0], new Vector3(msg[1].x, msg[1].y, msg[1].z));
   });
 
   const userInput = new UserInput(
@@ -128,7 +133,10 @@ async function go() {
     },
     function onStick(x, y) {
       const me = game.getMe();
-      me.vel = me.facing.scale(-2.5 * y).add(me.facing.cross(Vector3.Up()).scale(-2 * x));
+      const forwardComp = me.facing.scale(-2.5 * y);
+      const sidewaysComp = me.facing.cross(Vector3.Up()).scale(-2 * x);
+      const yComp = me.vel.multiplyByFloats(0, 1, 0);
+      me.vel = forwardComp.add(sidewaysComp).add(yComp);
     },
     function onAction(name: Actions) {
       if (name == Actions.Jump) {
