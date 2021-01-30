@@ -1,23 +1,45 @@
+import { ShadowOnlyMaterial } from "babylonjs-materials";
+
 import {
   AbstractMesh,
   ActionEvent,
   ActionManager,
+  AddBlock,
+  AnimatedInputBlockTypes,
   Color4,
   DirectionalLight,
   Engine,
   ExecuteCodeAction,
   FollowCamera,
+  FragmentOutputBlock,
+  InputBlock,
   InstancedMesh,
   Mesh,
+  ModBlock,
+  NodeMaterial,
+  NodeMaterialSystemValues,
+  PickingInfo,
+  PointerEventTypes,
+  Quaternion,
+  RawTexture2DArray,
+  ScaleBlock,
   Scene,
   SceneLoader,
+  ShaderMaterial,
+  ShadowDepthWrapper,
   ShadowGenerator,
   SpotLight,
+  TransformBlock,
   TransformNode,
+  TrigonometryBlock,
+  TrigonometryBlockOperations,
   Vector3,
+  VectorSplitterBlock,
+  VertexOutputBlock,
 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import { WorldRoom, WorldState } from "../shared/WorldRoom";
+import { throws } from "assert";
 
 class StatusLine {
   setPlayer(player: string) {
@@ -66,13 +88,22 @@ class FollowCam {
     this.cam.heightOffset = 1;
     this.cam.fov = 1.2;
     this.cam.rotationOffset = 180;
+    this.cam.cameraAcceleration = 0.5;
     scene.switchActiveCamera(this.cam);
   }
   setTarget(me: TransformNode) {
     this.cam.lockedTarget = me as AbstractMesh;
   }
-  step(dt: number) {
+  onMouseY(movementY: number) {
+    this.cam.heightOffset += 0.001 * movementY;
+  }
+  step(dt: number, pos: Vector3, facing: Vector3) {
     // try to get behind player, don't crash walls
+    let heading = (360 / 6.28) * Math.atan2(-facing.z, facing.x) + 270;
+    while (Math.abs(heading - 360 - this.cam.rotationOffset) < Math.abs(heading - this.cam.rotationOffset)) {
+      heading -= 360;
+    }
+    this.cam.rotationOffset += (dt * 20 * (heading - this.cam.rotationOffset)) % 360;
   }
 }
 
@@ -90,62 +121,73 @@ function AddBabylonExplorer(scene: Scene) {
     });
 }
 
+enum Actions {
+  Jump,
+  Activate,
+}
+
 class UserInput {
+  private stickX = 0;
+  private stickY = 0;
+  private stickPressFunc: { [keyName: string]: () => void };
+  private stickReleaseFunc: { [keyName: string]: () => void };
+
   constructor(
     private scene: Scene,
     private onMouse: (dx: number, dy: number) => void,
     private onStick: (x: number, y: number) => void,
-    private onAction: (name: "jump" | "activate") => void
+    private onAction: (name: Actions) => void
   ) {
-    let kx = 0,
-      ky = 0;
+    this.stickPressFunc = {
+      ArrowUp: () => (this.stickY = -1),
+      w: () => (this.stickY = -1),
+      ArrowDown: () => (this.stickY = 1),
+      s: () => (this.stickY = 1),
+      ArrowLeft: () => (this.stickX = -1),
+      a: () => (this.stickX = -1),
+      ArrowRight: () => (this.stickX = 1),
+      d: () => (this.stickX = 1),
+    };
+    this.stickReleaseFunc = {
+      ArrowUp: () => (this.stickY = 0),
+      w: () => (this.stickY = 0),
+      ArrowDown: () => (this.stickY = 0),
+      s: () => (this.stickY = 0),
+      ArrowLeft: () => (this.stickX = 0),
+      a: () => (this.stickX = 0),
+      ArrowRight: () => (this.stickX = 0),
+      d: () => (this.stickX = 0),
+    };
     scene.actionManager = new ActionManager(scene);
-    scene.actionManager.registerAction(
-      new ExecuteCodeAction({ trigger: ActionManager.OnKeyDownTrigger }, function (ev: ActionEvent) {
-        if (ev.sourceEvent.key == "ArrowUp") {
-          ky = -1;
-          onStick(kx, ky);
-        }
-        if (ev.sourceEvent.key == "ArrowDown") {
-          ky = 1;
-          onStick(kx, ky);
-        }
-        if (ev.sourceEvent.key == "ArrowLeft") {
-          kx = -1;
-          onStick(kx, ky);
-        }
-        if (ev.sourceEvent.key == "ArrowRight") {
-          kx = 1;
-          onStick(kx, ky);
-        }
-        if (ev.sourceEvent.key == "space") {
-          onAction("jump");
-        }
-        if (ev.sourceEvent.key == "e") {
-          onAction("activate");
-        }
-      })
-    );
-    scene.actionManager.registerAction(
-      new ExecuteCodeAction({ trigger: ActionManager.OnKeyUpTrigger }, function (ev: ActionEvent) {
-        if (ev.sourceEvent.key == "ArrowUp") {
-          ky = 0;
-          onStick(kx, ky);
-        }
-        if (ev.sourceEvent.key == "ArrowDown") {
-          ky = 0;
-          onStick(kx, ky);
-        }
-        if (ev.sourceEvent.key == "ArrowLeft") {
-          kx = 0;
-          onStick(kx, ky);
-        }
-        if (ev.sourceEvent.key == "ArrowRight") {
-          kx = 0;
-          onStick(kx, ky);
-        }
-      })
-    );
+    scene.actionManager.registerAction(new ExecuteCodeAction({ trigger: ActionManager.OnKeyDownTrigger }, this.onKeyDown.bind(this)));
+    scene.actionManager.registerAction(new ExecuteCodeAction({ trigger: ActionManager.OnKeyUpTrigger }, this.onKeyUp.bind(this)));
+    scene.onPointerMove = this.onMove.bind(this);
+  }
+  onMove(ev: PointerEvent, pickInfo: PickingInfo, type: PointerEventTypes) {
+    if (!document.pointerLockElement) {
+      return;
+    }
+    this.onMouse(ev.movementX, ev.movementY);
+  }
+  onKeyDown(ev: ActionEvent) {
+    const func = this.stickPressFunc[ev.sourceEvent.key as string];
+    if (func) {
+      func();
+      this.onStick(this.stickX, this.stickY);
+    }
+    if (ev.sourceEvent.key == " ") {
+      this.onAction(Actions.Jump);
+    }
+    if (ev.sourceEvent.key == "e") {
+      this.onAction(Actions.Activate);
+    }
+  }
+  onKeyUp(ev: ActionEvent) {
+    const func = this.stickReleaseFunc[ev.sourceEvent.key as string];
+    if (func) {
+      func();
+      this.onStick(this.stickX, this.stickY);
+    }
   }
 }
 
@@ -176,10 +218,13 @@ class PlayerView {
   dispose() {
     this.body?.dispose();
   }
-  setPose(pos: Vector3, facing: Vector3) {
+  step(dt: number, pos: Vector3, facing: Vector3, fcam: FollowCam | undefined) {
     const b = this.body!;
     b.position.copyFrom(pos);
     b.lookAt(b.position.add(facing)); // todo: maybe with animation
+    if (fcam) {
+      fcam.step(dt, pos, facing);
+    }
   }
   getCamTarget(): TransformNode {
     return this.aimAt!;
@@ -199,6 +244,9 @@ function setupScene(canvasId: string): Scene {
   if (location.hash.indexOf("explor") != -1) {
     AddBabylonExplorer(scene);
   }
+  canvas.addEventListener("pointerdown", (ev) => {
+    engine.enterPointerlock();
+  });
 
   return scene;
 }
@@ -211,7 +259,19 @@ class PlayerMotion {
   facing = Vector3.Forward(); // unit
   step(dt: number) {
     this.pos.addInPlace(this.vel.scale(dt));
+    if (this.pos.y > 0) {
+      this.vel.y -= dt * 9.8;
+    } else this.vel.y = 0;
     // fric, grav, coll
+  }
+  onMouseX(movementX: number) {
+    const nf = Vector3.Zero();
+    const rot = Quaternion.RotationAxis(Vector3.Up(), movementX * 0.001);
+    this.facing.rotateByQuaternionAroundPointToRef(rot, Vector3.Zero(), nf);
+    this.facing.copyFrom(nf);
+
+    this.vel.rotateByQuaternionAroundPointToRef(rot, Vector3.Zero(), nf);
+    this.vel.copyFrom(nf);
   }
 }
 
@@ -227,6 +287,7 @@ class Game {
     return new Promise<void>((resolve, reject) => {
       SceneLoader.Append("./asset/wrap/", "wrap.glb", this.scene, (_scene) => {
         console.log("loaded gltf");
+        this.scene.clearColor = new Color4(0.419, 0.517, 0.545, 1);
         const playerRefModel = this.scene.getMeshByName("player") as Mesh;
         playerRefModel.position.y = -100; //hide
         this.scene.getMeshByName("navmesh")!.visibility = 0;
@@ -243,6 +304,62 @@ class Game {
             // some objs can't
           }
         });
+
+        BABYLON.Effect.ShadersStore["aVertexShader"] = `
+        precision highp float;
+
+        attribute vec3 position;
+        attribute vec2 uv;
+        
+        uniform mat4 world;
+        uniform mat4 worldViewProjection;
+        
+        varying vec2 v_uv;
+        void main(void) {
+            vec4 output1 = world * vec4(position, 1.0);
+            vec4 output0 = worldViewProjection * output1;
+            gl_Position = output0;
+            v_uv = position.xz;
+        }
+        
+        `;
+
+        BABYLON.Effect.ShadersStore["aFragmentShader"] = `
+        precision highp float;
+       
+        uniform mat4 world;
+        uniform mat4 worldViewProjection;
+        varying vec2 v_uv;
+
+ 
+        void main(void) {
+            float sz= 3.;
+            float v  = (mod(v_uv.x, sz) > sz/2. ^^ mod(v_uv.y, sz) > sz/2.) ? .3 : .5;
+            gl_FragColor = vec4(v, v, v, 1.0);
+        }
+        
+    `;
+
+        var shaderMaterial = new ShaderMaterial("a", this.scene, "a", {
+          attributes: ["position", "uv"],
+          uniforms: ["world", "worldViewProjection"],
+        });
+
+        shaderMaterial.backFaceCulling = false;
+
+        const gnd = this.scene.getMeshByName("gnd")!;
+        gnd.material = shaderMaterial;
+
+        const shadow = gnd.clone("shad", null) as Mesh;
+        shadow.position.y += 0.01;
+        shadow.material = new ShadowOnlyMaterial("g", this.scene);
+        shadow.receiveShadows = true;
+
+        // const shadowDepthWrapper = new ShadowDepthWrapper(shaderMaterial, this.scene);
+        // shaderMaterial.shadowDepthWrapper = shadowDepthWrapper;
+
+        // gen.getShadowMap()?.renderList?.push(gnd);
+
         resolve();
       });
     });
@@ -276,11 +393,11 @@ class Game {
     }
     pm.pos = pos;
   }
-  updatePlayerViews() {
+  updatePlayerViews(dt: number) {
     for (let [name, pm] of this.playerMotions.entries()) {
       const pv = this.playerViews.get(name);
-      if (pv === undefined) continue;//throw new Error("missing view for " + name);
-      pv.setPose(pm.pos, pm.facing);
+      if (pv === undefined) continue; //throw new Error("missing view for " + name);
+      pv.step(dt, pm.pos, pm.facing, pm === this.me ? this.fcam : undefined);
     }
   }
 }
@@ -296,7 +413,6 @@ async function go() {
   await game.loadEnv();
 
   for (let [sess, data] of net.worldState!.players.entries()) {
-    console.log("ws player", sess, "and i  am", net.world?.sessionId);
     game.addPlayer(sess, /*me=*/ sess == net.world?.sessionId);
   }
 
@@ -321,20 +437,22 @@ async function go() {
     const pl = game.setPlayerPos(msg[0], new Vector3(msg[1].x, 0, msg[1].z));
   });
 
-  // fcam.attachControl(true);
-  // see https://github.com/mrdoob/three.js/blob/master/examples/js/controls/PointerLockControls.js
-  // or https://repl.it/talk/learn/3D-Games-with-BabylonJS-A-Starter-Guide/15957
-  // or engine.enterPointerlock(); which doesn't work
-  // https://playground.babylonjs.com/#5X4KX2#11 kind of works
-
   const userInput = new UserInput(
     scene,
-    function onMouse(dx, dy) {},
-    function onStick(x, y) {
-      game.getMe().vel = new Vector3(x, 0, -y);
-      // console.log(x, y, game.getMe().vel.toString())
+    function onMouse(dx, dy) {
+      game.getMe().onMouseX(dx);
+      game.fcam.onMouseY(dy);
     },
-    function onAction(name) {}
+    function onStick(x, y) {
+      const me = game.getMe();
+      me.vel = me.facing.scale(-2.5 * y).add(me.facing.cross(Vector3.Up()).scale(-2 * x));
+    },
+    function onAction(name: Actions) {
+      if (name == Actions.Jump) {
+        const me = game.getMe();
+        me.vel.y = 3;
+      }
+    }
   );
 
   scene.getEngine().runRenderLoop(() => {
@@ -343,7 +461,7 @@ async function go() {
     me.step(dt);
     net.uploadMe(me);
 
-    game.updatePlayerViews();
+    game.updatePlayerViews(dt);
 
     scene.render();
   });
