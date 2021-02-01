@@ -8,11 +8,15 @@ import {
   Effect,
   Material,
   Mesh,
+  PBRBaseSimpleMaterial,
+  PBRMaterial,
+  PBRSpecularGlossinessMaterial,
   Scene,
   SceneLoader,
   ShaderMaterial,
   ShadowGenerator,
   StandardMaterial,
+  Texture,
 } from "babylonjs";
 import { GridMaterial, ShadowOnlyMaterial } from "babylonjs-materials";
 
@@ -36,8 +40,29 @@ export async function loadEnv(scene: Scene) {
       setupSunShadows(scene);
 
       const gnd = scene.getMeshByName("gnd")!;
-      gnd.material = checkerboardMaterial(scene);
-      addGndOverlayShadow(scene, gnd);
+
+      const alb = new Texture("./asset/wrap/gnd_dif.png", scene);
+      alb.vScale = -1;
+
+      const gnd_bake_shadow = new Texture("./asset/wrap/gnd_bake_shadow.png", scene);
+      gnd_bake_shadow.vScale = -1;
+
+      const gnd_bake_combined = new Texture("./asset/wrap/gnd_bake_combined.png", scene);
+      gnd_bake_combined.vScale = -1;
+
+      const mat = gnd.material as PBRMaterial;
+      //   mat.albedoTexture = alb;
+      mat.lightmapTexture = gnd_bake_combined;
+      //   mat.useLightmapAsShadowmap = true;
+      mat.albedoColor = Color3.FromHexString("#2d2d2d");
+
+      const bump = new Texture("./asset/wrap/normal1.png", scene);
+      bump.level = 0.43;
+      bump.uScale = bump.vScale = 1000;
+      mat.bumpTexture = bump
+
+      gnd.material = mat;
+      //addGndOverlayShadow(scene, gnd);
       // const shadowDepthWrapper = new ShadowDepthWrapper(shaderMaterial, scene);
       // shaderMaterial.shadowDepthWrapper = shadowDepthWrapper;
 
