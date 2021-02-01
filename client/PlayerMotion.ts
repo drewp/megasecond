@@ -42,8 +42,9 @@ export class PlayerMotion {
   }
 
   onStick(x: number, y: number) {
-    const forwardComp = this.facing.scale(-2.5 * y);
-    const sidewaysComp = this.facing.cross(Vector3.Up()).scale(-2 * x);
+    const runMult = 1; // todo get shift key
+    const forwardComp = this.facing.scale(-2.5 * y * runMult);
+    const sidewaysComp = this.facing.cross(Vector3.Up()).scale(-2 * x * runMult);
     const xzComp = forwardComp.add(sidewaysComp);
 
     const yComp = this.vel.multiplyByFloats(0, 1, 0);
@@ -78,7 +79,7 @@ export class PlayerMotion {
       this.currentNavFaceId = info.faceId;
       this.pos = tryPos;
       const groundY = info.pickedPoint!.y;
-      if (groundY > tryPos.y) {
+      if (groundY +.01> tryPos.y) {
         this.pos.y = groundY;
         this.grounded = true;
       } else {
