@@ -1,0 +1,11 @@
+{
+    "python.pythonPath": "/home/drewp/blender-git/build/bin/2.92/python/bin/python3.8",
+    "python.autoComplete.extraPaths": [
+      
+            "/home/drewp/blender-git/blender/release/scripts/modules/"
+        ],
+        "python.analysis.extraPaths": [
+            "/home/drewp/blender-git/blender/release/scripts/modules/"
+        ],
+        "python.formatting.yapfPath": "/home/drewp/.venvs/reposync/bin/yapf"
+}

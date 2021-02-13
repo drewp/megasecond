@@ -1,3 +1,4 @@
 node_modules
-dist
 ref
+build
+__pycache__

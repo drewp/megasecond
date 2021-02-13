@@ -13,17 +13,18 @@ spec:
         app: megasecond
     spec:
       volumes:
-        - { name: dist, emptyDir: {} }
+        - { name: rollup-build, emptyDir: {} }
       containers:
         - name: megasecond
           image: bang5:5000/megasecond_image
           volumeMounts:
-            - { name: dist, mountPath: /workspace/dist }
+            - { name: rollup-build, mountPath: /workspace/rollup_build }
           ports: [{ containerPort: 10001 }]
+        # this container reads from client/** and outputs to rollup_build/
         - name: rebuild-client
           image: bang5:5000/megasecond_image
           volumeMounts:
-            - { name: dist, mountPath: /workspace/dist }
+            - { name: rollup-build, mountPath: /workspace/rollup_build }
           command: ["pnpm", "rebuild_client_forever"]
 
 ---

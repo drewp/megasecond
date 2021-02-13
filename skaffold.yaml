@@ -17,6 +17,8 @@ build:
           - "client/**"
           # Watched by both
           - "shared/**" 
+          - "client_root/**"
+          - "build/**"
 deploy:
   kubectl:
     manifests:

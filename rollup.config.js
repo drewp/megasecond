@@ -1,11 +1,9 @@
 import commonjs from "@rollup/plugin-commonjs";
-import copy from "rollup-plugin-copy";
 import resolve from "@rollup/plugin-node-resolve";
 import typescript from "@rollup/plugin-typescript";
 
 
-const staticSourceFiles = ["client/index.html", "client/asset"];
-const destDir = "dist";
+const destDir = "rollup_build";
 const sourcemap = true;
 
 export default {
@@ -30,13 +28,6 @@ export default {
         typescript({
             sourceMap: sourcemap,
             inlineSources: false,
-        }),
-        copy({
-            targets: [
-                ...staticSourceFiles.map((f) => ({ src: f, dest: destDir })), //
-                { src: "node_modules/colyseus.js/dist/colyseus.js", dest: `${destDir}/lib/` },
-                { src: "client/*.ts", dest: `${destDir}/src/client/`}, // for sourcemap to use
-            ],
         }),
     ],
     watch: {

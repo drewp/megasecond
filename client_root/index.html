@@ -3,11 +3,11 @@
   <head>
     <title>megasecond</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="asset/m-icon.png" />
+    <link rel="icon" href="asset_build/m-icon.png" />
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <script src="https://cdn.babylonjs.com/materialsLibrary/babylon.shadowOnlyMaterial.js"></script>
-    <script src="lib/colyseus.js"></script>
+    <script src="lib/colyseus.js/colyseus.js"></script>
     <style>
       body {
         background: #000;
@@ -36,9 +36,9 @@
   <body>
     <canvas id="renderCanvas"></canvas>
     <div id="status">
-      <img alt="Megasecond" src="asset/logo1-crop.jpg" />
+      <img alt="Megasecond" src="asset_build/logo1-crop.jpg" />
       I am player <span id="me"></span>, <span id="connection"></span>
     </div>
-    <script type="module" src="bundle.js"></script>
+    <script type="module" src="rollup_build/bundle.js"></script>
   </body>
 </html>

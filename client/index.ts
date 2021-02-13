@@ -17,7 +17,7 @@ class Net {
   constructor(private status: StatusLine) {
     this.status.setPlayer("...");
     this.status.setConnection("connecting...");
-    this.client = new Colyseus.Client("wss://bigasterisk.com/megasecond/");
+    this.client = new Colyseus.Client("wss://megasecond.club/");
     this.myDisplayName = "p" + Math.round(Math.random() * 10000);
     this.status.setPlayer(this.myDisplayName);
   }
