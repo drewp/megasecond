@@ -6,7 +6,7 @@ import time
 import bpy
 import numpy
 from PIL import Image
-
+sys.path.append(os.path.dirname(__file__))
 from dirs import src, dest
 
 
@@ -24,7 +24,13 @@ def later(sec, func, *args, **kw):
 def write_glb():
     dest.mkdir(parents=True, exist_ok=True)
     glb_out = dest / "wrap.glb"
+    
+    # workaround for gltf export bug, from https://blender.stackexchange.com/questions/200616/script-to-export-gltf-fails-with-context-object-has-no-attribute-active-objec
+    ctx = bpy.context.copy()
+    ctx['active_object'] = None
+
     bpy.ops.export_scene.gltf(
+        ctx,
         filepath=str(glb_out),
         export_all_influences=False,
         export_animations=False,
@@ -111,6 +117,7 @@ class Bake:
         self.nextBake()
 
     def nextBake(self):
+        log.info('nextBake')
         if not self.runs:
             log.info('bake jobs done')
             self.cb()
@@ -119,7 +126,7 @@ class Bake:
 
     def bakeAndSave(self):
         bake_type, out_name, cs = self.runs[0]
-        log.info(f'start {bake_type} bake')
+        log.info(f'bakeAndSave: start {bake_type} bake')
         self.img.colorspace_settings == cs
 
         bpy.context.scene.cycles.bake_type = bake_type
@@ -163,7 +170,7 @@ def image_save(img, path):
 
 
 def main():
-    bpy.ops.wm.open_mainfile(filepath=str(src / 'wrap/wrap.blend')
+    bpy.ops.wm.open_mainfile(filepath=str(src / 'wrap/wrap.blend'))
     write_glb()
     objs = ['rock_arch']
 

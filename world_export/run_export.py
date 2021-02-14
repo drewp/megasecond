@@ -19,13 +19,13 @@ subprocess.check_call([
     'blender',
     # '--disable-autoexec',
     # '--no-window-focus',
-    '--background',
+    # '--background',
     '--debug-python',
     # '--debug-handlers',
     # '--debug-gpu',
-    # '--debug-jobs',
+    '--debug-jobs',
     # '--debug-cycles',
-    '--debug-events',
+    # '--debug-events',
     '--python',
     'run_scene_export.py'
 ])

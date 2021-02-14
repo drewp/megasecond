@@ -34,6 +34,7 @@ def deferBake():
     """run bpy.ops.object.bake('INVOKE_DEFAULT') but fire a deferred when it's done"""
     global currentRun
     currentRun = Deferred()
-    log.info("call the op")
-    bpy.ops.test.bake_and_callback('INVOKE_DEFAULT')
+    log.info("deferBake: call the op")
+    ret =bpy.ops.test.bake_and_callback('INVOKE_SCREEN') 
+    log.info(f'op returned {ret}')
     return currentRun
