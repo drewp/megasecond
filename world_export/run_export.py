@@ -18,12 +18,13 @@ for f in (list(src.glob("*.jpg")) +  #
 subprocess.check_call([
     'blender',
     # '--disable-autoexec',
-    # '--no-window-focus',
-    # '--background',
+    '--no-window-focus',
+    '--window-geometry', '100', '100', '0', '0',
+    # '--background', # ideally, headless mode, but it doesn't work yet.
     '--debug-python',
     # '--debug-handlers',
     # '--debug-gpu',
-    '--debug-jobs',
+    # '--debug-jobs',
     # '--debug-cycles',
     # '--debug-events',
     '--python',

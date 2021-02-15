@@ -1,17 +1,12 @@
 import logging
 import os
 import sys
-import time
 
 import bpy
-import numpy
-from PIL import Image
 sys.path.append(os.path.dirname(__file__))
 from dirs import src, dest
-
-
-sys.path.append(os.path.dirname(__file__))
-from defer_bake import deferBake
+import export_geom
+import image
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
@@ -21,65 +16,16 @@ def later(sec, func, *args, **kw):
     bpy.app.timers.register(lambda: func(*args, **kw), first_interval=sec)
 
 
-def write_glb():
-    dest.mkdir(parents=True, exist_ok=True)
-    glb_out = dest / "wrap.glb"
-    
-    # workaround for gltf export bug, from https://blender.stackexchange.com/questions/200616/script-to-export-gltf-fails-with-context-object-has-no-attribute-active-objec
-    ctx = bpy.context.copy()
-    ctx['active_object'] = None
-
-    bpy.ops.export_scene.gltf(
-        ctx,
-        filepath=str(glb_out),
-        export_all_influences=False,
-        export_animations=False,
-        export_apply=True,
-        export_lights=True,
-        export_cameras=True,
-        export_colors=True,
-        export_current_frame=False,
-        export_def_bones=False,
-        export_displacement=False,
-        export_draco_generic_quantization=12,
-        export_draco_mesh_compression_enable=False,
-        export_draco_mesh_compression_level=6,
-        export_draco_normal_quantization=10,
-        export_draco_position_quantization=14,
-        export_draco_texcoord_quantization=12,
-        export_extras=False,
-        export_force_sampling=True,
-        export_frame_range=False,
-        export_frame_step=1,
-        export_image_format='AUTO',
-        export_materials='EXPORT',
-        export_morph_normal=True,
-        export_morph_tangent=False,
-        export_morph=True,
-        export_nla_strips=True,
-        export_normals=True,
-        export_selected=False,
-        export_skins=True,
-        export_tangents=False,
-        export_texcoords=True,
-        export_texture_dir="",
-        export_yup=True,
-        use_selection=False,
-    )
-    log.info("glb size %.1fKb" % (os.path.getsize(glb_out) / 1024))
-
-
 class Bake:
-    bake_timeout = 10
-
-    def __init__(self, obj_name='gnd', cb=lambda: None):
+    def __init__(self, obj_name='gnd', map_size=1024, cb=lambda: None):
         self.obj_name = obj_name
+        self.map_size = map_size
         self.cb = cb
-        # 'screen' is not immediately ready
-        later(1, self.cont2)
+        # 'screen' context is not immediately ready
+        later(1, self._withScreen)
 
-    def cont2(self):
-        log.info('bake start')
+    def _withScreen(self):
+        log.info(f'{self.obj_name} bake start')
         bpy.context.scene.cycles.use_denoising = True
         bpy.context.scene.cycles.samples = 10
 
@@ -90,10 +36,14 @@ class Bake:
         mat = bpy.data.objects[
             self.obj_name].material_slots.values()[0].material
 
-        self.img = bpy.data.images.new('bake_out', 2048, 2048, alpha=False, is_data=True)
+        self.img = bpy.data.images.new('bake_out',
+                                       self.map_size,
+                                       self.map_size,
+                                       alpha=False,
+                                       is_data=True)
 
         nodes = mat.node_tree.nodes
-        log.info(f'mat had {len(nodes)} nodes')
+        log.info(f'{self.obj_name} mat had {len(nodes)} nodes')
 
         tx = nodes.new('ShaderNodeTexImage')
         tx.image = self.img
@@ -117,7 +67,6 @@ class Bake:
         self.nextBake()
 
     def nextBake(self):
-        log.info('nextBake')
         if not self.runs:
             log.info('bake jobs done')
             self.cb()
@@ -126,63 +75,36 @@ class Bake:
 
     def bakeAndSave(self):
         bake_type, out_name, cs = self.runs[0]
-        log.info(f'bakeAndSave: start {bake_type} bake')
+        log.info(f'{self.obj_name} start {bake_type} bake')
         self.img.colorspace_settings == cs
 
         bpy.context.scene.cycles.bake_type = bake_type
-        d = deferBake()
 
-        def save(*args):
-            image_save(self.img,
-                       dest / f'bake_{self.obj_name}_{out_name}.png')
-            self.runs.pop(0)
-            # sometimes the next bake wouldn't start
-            later(1, self.nextBake)
+        bpy.ops.object.bake(type=bake_type, use_clear=True)
 
-        d.addCallback(save)
-        def err(f):
-            log.error(repr(f))
-        d.addErrback(err)
-
-        log.info(f"waiting for bake image output for {bake_type}")
-
-
-def image_save_builtin(img, path):
-    # having blender save was turning the image back to black!
-    img.filepath = str(path).replace('.png', '-builtinsave.png')
-    img.file_format = "PNG"
-    img.save()
-    log.info(f'wrote {path}')
-
-
-def image_save(img, path):
-    log.info('preparing image data')
-    ar = numpy.array(img.pixels).reshape((img.size[0], img.size[1], 4))
-    ar = ar[::-1, :, :]
-    if img.colorspace_settings.name == 'sRGB':
-        ar = ar**(1 / 2.2)  # unverified
-    img = Image.fromarray((ar * 255).astype(numpy.uint8))
-    log.info('encode+save')
-    img.save(path)
-    log.info(f'wrote {path}')
-    # then use https://github.com/BinomialLLC/basis_universal
-    # then bjs loads with https://doc.babylonjs.com/advanced_topics/mutliPlatTextures#basis-file-format
+        image.save(self.img, dest / f'bake_{self.obj_name}_{out_name}.png')
+        self.runs.pop(0)
+        # sometimes the next bake wouldn't start
+        later(0, self.nextBake)
 
 
 def main():
     bpy.ops.wm.open_mainfile(filepath=str(src / 'wrap/wrap.blend'))
-    write_glb()
+
+    export_geom.write_glb()
+
     objs = ['rock_arch']
+
+    def done():
+        bpy.ops.wm.quit_blender()
 
     def pump():
         if not objs:
+            done()
             return
-        Bake(objs.pop(), pump)
+        Bake(objs.pop(), map_size=512, cb=pump)
 
     pump()
-    # bpy.ops.wm.quit_blender()
-
-    log.info("EOF")
 
 
 main()
