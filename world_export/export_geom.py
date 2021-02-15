@@ -40,8 +40,8 @@ def write_glb():
         export_force_sampling=True,
         export_frame_range=False,
         export_frame_step=1,
-        export_image_format='AUTO',
-        export_materials='EXPORT',
+        export_image_format='JPEG',
+        export_materials='EXPORT', # someday, PLACEHOLDER, to save 15MB+ of glb
         export_morph_normal=True,
         export_morph_tangent=False,
         export_morph=True,
