@@ -41,7 +41,6 @@ export async function loadEnv(scene: Scene) {
 
       const gnd = scene.getMeshByName("gnd")!;
 
-
       const gnd_bake_shadow = new Texture("./asset_build/gnd_bake_shadow.png", scene);
       gnd_bake_shadow.vScale = -1;
 
@@ -50,14 +49,14 @@ export async function loadEnv(scene: Scene) {
 
       const mat = gnd.material as PBRMaterial;
       //   mat.albedoTexture = alb;
-    //   mat.lightmapTexture = gnd_bake_combined;
+      //   mat.lightmapTexture = gnd_bake_combined;
       //   mat.useLightmapAsShadowmap = true;
       mat.albedoTexture = gnd_bake_combined;
 
       const bump = new Texture("./asset_build/normal1.png", scene);
       bump.level = 0.43;
-      bump.uScale = bump.vScale = 1000;
-      mat.bumpTexture = bump
+      bump.uScale = bump.vScale = 400;
+      mat.bumpTexture = bump;
 
       gnd.material = mat;
       //addGndOverlayShadow(scene, gnd);
@@ -65,6 +64,20 @@ export async function loadEnv(scene: Scene) {
       // shaderMaterial.shadowDepthWrapper = shadowDepthWrapper;
 
       // gen.getShadowMap()?.renderList?.push(gnd);
+
+      scene.getLightByName("Spot")!.intensity /= 1000;
+      scene.getLightByName("Spot.001")!.intensity /= 1000;
+      scene.getLightByName("Spot")!.diffuse = Color3.FromHexString("#68534D");
+      scene.getLightByName("Spot.001")!.diffuse = Color3.FromHexString("#730F4C");
+
+      const rock = scene.getMeshByName("rock_arch")!;
+      const rm = rock.material as PBRMaterial;
+      rm.albedoTexture = new Texture("./asset_build/bake_rock_arch_diff.jpg", scene);
+      rm.lightmapTexture = new Texture("./asset_build/bake_rock_arch_shad.jpg", scene);
+      //  = new Texture("./asset_build/bake_rock_arch_ao.jpg", scene);
+      rm.useLightmapAsShadowmap = true;
+
+      // get gnd.024
 
       resolve();
     });
