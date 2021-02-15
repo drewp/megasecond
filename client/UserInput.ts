@@ -4,6 +4,7 @@ export enum Actions {
   Jump,
   Activate,
   ToggleNavmeshView,
+  ToggleBirdsEyeView,
 }
 
 export class UserInput {
@@ -64,6 +65,9 @@ export class UserInput {
         break;
       case "n":
         this.onAction(Actions.ToggleNavmeshView);
+        break;
+      case "b":
+        this.onAction(Actions.ToggleBirdsEyeView);
         break;
     }
   }

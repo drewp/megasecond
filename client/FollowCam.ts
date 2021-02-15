@@ -1,9 +1,8 @@
 import { AbstractMesh, FollowCamera, Scene, TransformNode, Vector3 } from "babylonjs";
 
-
-
 export class FollowCam {
     private cam: FollowCamera;
+    birds_eye_view = false;
     constructor(scene: Scene) {
       this.cam = new FollowCamera("cam", new Vector3(-1.4, 1.5, -4), scene);
       this.cam.inputs.clear();
@@ -17,6 +16,15 @@ export class FollowCam {
     setTarget(me: TransformNode) {
       this.cam.lockedTarget = me as AbstractMesh;
     }
+    toggleBirdsEyeView() {
+      if (!this.birds_eye_view) {
+        this.cam.heightOffset += 100;
+        this.birds_eye_view = true;
+      } else {
+        this.cam.heightOffset -= 100;
+        this.birds_eye_view = false;
+      }
+    }
     onMouseY(movementY: number) {
       this.cam.heightOffset += 0.001 * movementY;
     }
@@ -28,4 +36,4 @@ export class FollowCam {
       }
       this.cam.rotationOffset += (dt * 20 * (heading - this.cam.rotationOffset)) % 360;
     }
-  }
+}

@@ -142,8 +142,9 @@ async function go() {
         game.getMe().requestJump();
       } else if (name == Actions.ToggleNavmeshView) {
         Env.toggleNavmeshView(scene);
+      } else if (name == Actions.ToggleBirdsEyeView) {
+        game.fcam.toggleBirdsEyeView();
       }
-
     }
   );
 
