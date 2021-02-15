@@ -1,4 +1,4 @@
-import { ActionManager, ExecuteCodeAction, PickingInfo, PointerEventTypes, ActionEvent, Scene } from "babylonjs";
+import { ActionManager, ExecuteCodeAction, PickingInfo, PointerEventTypes, ActionEvent, Scene, VirtualJoystick } from "babylonjs";
 
 export enum Actions {
   Jump,
@@ -19,6 +19,7 @@ export class UserInput {
     private onStick: (x: number, y: number) => void,
     private onAction: (name: Actions) => void
   ) {
+    (window as any).ui = this;
     this.stickPressFunc = {
       ArrowUp: () => (this.stickY = -1), // these could have a little analog ramp-up
       w: () => (this.stickY = -1),
@@ -43,6 +44,26 @@ export class UserInput {
     scene.actionManager.registerAction(new ExecuteCodeAction({ trigger: ActionManager.OnKeyDownTrigger }, this.onKeyDown.bind(this)));
     scene.actionManager.registerAction(new ExecuteCodeAction({ trigger: ActionManager.OnKeyUpTrigger }, this.onKeyUp.bind(this)));
     scene.onPointerMove = this.onMove.bind(this);
+
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      this.createMobileSticks();
+    }
+  }
+  createMobileSticks() {
+    const walk = new VirtualJoystick(true);
+    const look = new VirtualJoystick(false);
+    const pollSticks = () => {
+      if (walk.pressed) {
+        this.onStick(walk.deltaPosition.x, -walk.deltaPosition.y);
+      } else {
+        this.onStick(0, 0);
+      }
+      if (look.pressed) {
+        this.onMouse(look.deltaPosition.x * 20, -look.deltaPosition.y * 20);
+      }
+    };
+    setInterval(pollSticks, 60); // todo: share with the main frame loop- no need for this to differ
   }
   onMove(ev: PointerEvent, pickInfo: PickingInfo, type: PointerEventTypes) {
     if (!document.pointerLockElement) {
