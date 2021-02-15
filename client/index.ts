@@ -62,7 +62,7 @@ class Game {
       (window as any).me = pv;
       this.me = pm;
       this.me.pos = new Vector3(1.8, 0, -9.5);
-      this.me.facing = new Vector3(0,0,-1);
+      this.me.facing = new Vector3(0, 0, -1);
     }
   }
   removePlayer(name: string) {
