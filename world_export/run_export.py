@@ -70,6 +70,6 @@ def export_bake_maps():
 
 
 #copy_static_images()
-#make_edit_scene()
-# export_geom()
+make_edit_scene()
+export_geom()
 export_bake_maps()

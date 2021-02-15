@@ -24,7 +24,7 @@ class Bake:
     def _withScreen(self):
         log.info(f'{self.obj_name} bake start')
         bpy.context.scene.cycles.use_denoising = True
-        bpy.context.scene.cycles.samples = 10
+        bpy.context.scene.cycles.samples = 30
 
         select_object(self.obj_name)
 
@@ -92,7 +92,8 @@ def async_bake(objs, cb):
         if not objs:
             cb()
             return
-        Bake(objs.pop(), map_size=512, cb=pump)
+        obj = objs.pop()
+        Bake(obj, map_size=1024 if obj == 'sign' else 256, cb=pump)
 
     pump()
 
@@ -104,12 +105,12 @@ def main():
         bpy.ops.wm.quit_blender()
 
     def eg(cb):
-        obj_names = ['rock_arch'] + gnd_names
+        obj_names = ['sign', 'signpost', 'rock_arch'] + gnd_names
         job = int(os.environ['EXPORT_JOB'])
         if job == 0:
-            obj_names = obj_names[:1]
+            obj_names = obj_names[:3]
         elif job == 1:
-            obj_names = obj_names[1:15]
+            obj_names = obj_names[3:15]
         elif job == 2:
             obj_names = obj_names[15:]
         else:
@@ -117,7 +118,7 @@ def main():
 
         async_bake(obj_names, cb)
 
-    gnd_names = ['gnd'] + ['gnd.%03d' % i for i in range(1, 38 - 1)]
+    gnd_names = ['gnd'] + ['gnd.%03d' % i for i in range(1, 38 - 1) if i == 24]
 
     later(2, eg, done)
 

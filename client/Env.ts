@@ -40,18 +40,7 @@ export async function loadEnv(scene: Scene) {
       setupSunShadows(scene);
 
       const gnd = scene.getMeshByName("gnd")!;
-
-      const gnd_bake_shadow = new Texture("./asset_build/gnd_bake_shadow.png", scene);
-      gnd_bake_shadow.vScale = -1;
-
-      const gnd_bake_combined = new Texture("./asset_build/gnd_bake_dif.png", scene);
-      gnd_bake_combined.vScale = -1;
-
       const mat = gnd.material as PBRMaterial;
-      //   mat.albedoTexture = alb;
-      //   mat.lightmapTexture = gnd_bake_combined;
-      //   mat.useLightmapAsShadowmap = true;
-      mat.albedoTexture = gnd_bake_combined;
 
       const bump = new Texture("./asset_build/normal1.png", scene);
       bump.level = 0.43;
@@ -59,25 +48,31 @@ export async function loadEnv(scene: Scene) {
       mat.bumpTexture = bump;
 
       gnd.material = mat;
-      //addGndOverlayShadow(scene, gnd);
-      // const shadowDepthWrapper = new ShadowDepthWrapper(shaderMaterial, scene);
-      // shaderMaterial.shadowDepthWrapper = shadowDepthWrapper;
-
-      // gen.getShadowMap()?.renderList?.push(gnd);
 
       scene.getLightByName("Spot")!.intensity /= 1000;
       scene.getLightByName("Spot.001")!.intensity /= 1000;
       scene.getLightByName("Spot")!.diffuse = Color3.FromHexString("#68534D");
       scene.getLightByName("Spot.001")!.diffuse = Color3.FromHexString("#730F4C");
 
-      const rock = scene.getMeshByName("rock_arch")!;
-      const rm = rock.material as PBRMaterial;
-      rm.albedoTexture = new Texture("./asset_build/bake_rock_arch_diff.jpg", scene);
-      rm.lightmapTexture = new Texture("./asset_build/bake_rock_arch_shad.jpg", scene);
-      //  = new Texture("./asset_build/bake_rock_arch_ao.jpg", scene);
-      rm.useLightmapAsShadowmap = true;
+      const bakedTx = (name: string): Texture => {
+        const tx = new Texture(`./asset_build/` + name, scene);
+        tx.vScale = -1;
+        return tx;
+      };
 
-      // get gnd.024
+      const assignTx = (objName: string) => {
+        const obj = scene.getMeshByName(objName);
+        if (!obj) {
+          return;
+        }
+        const mat = obj.material as PBRMaterial;
+        mat.albedoTexture = bakedTx(`bake_${objName}_dif.jpg`);
+        mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
+        mat.useLightmapAsShadowmap = true;
+      };
+      assignTx("rock_arch");
+      assignTx("gnd.024");
+      assignTx("sign");
 
       resolve();
     });
@@ -93,13 +88,6 @@ export function toggleNavmeshView(scene: Scene) {
       m.isVisible = !n.isVisible;
     }
   }
-}
-
-function addGndOverlayShadow(scene: Scene, gnd: AbstractMesh) {
-  const shadow = gnd.clone("shad", null) as Mesh;
-  shadow.position.y += 0.01;
-  shadow.material = new ShadowOnlyMaterial("g", scene);
-  shadow.receiveShadows = true;
 }
 
 function checkerboardMaterial(scene: Scene) {
