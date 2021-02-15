@@ -1,7 +1,9 @@
 import logging
 import os
+import sys
 
 import bpy
+sys.path.append(os.path.dirname(__file__))
 
 from dirs import dest
 
@@ -54,3 +56,12 @@ def write_glb():
         use_selection=False,
     )
     log.info("glb size %.1fKb" % (os.path.getsize(glb_out) / 1024))
+    # now run https://github.com/zeux/meshoptimizer/tree/master/gltf
+
+
+def main():
+    bpy.ops.wm.open_mainfile(filepath=str(dest / 'edit.blend'))
+    write_glb()
+    bpy.ops.wm.quit_blender()
+
+main()

@@ -3,17 +3,14 @@ import os
 import sys
 
 import bpy
-sys.path.append(os.path.dirname(__file__))
-from dirs import src, dest
-import export_geom
-import image
 
+sys.path.append(os.path.dirname(__file__))
+import image
+from blender_async import later
+from dirs import dest
+from selection import select_object
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
-
-
-def later(sec, func, *args, **kw):
-    bpy.app.timers.register(lambda: func(*args, **kw), first_interval=sec)
 
 
 class Bake:
@@ -29,9 +26,7 @@ class Bake:
         bpy.context.scene.cycles.use_denoising = True
         bpy.context.scene.cycles.samples = 10
 
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.data.objects[self.obj_name].select_set(True)
-        bpy.context.view_layer.objects.active = bpy.data.objects[self.obj_name]
+        select_object(self.obj_name)
 
         mat = bpy.data.objects[
             self.obj_name].material_slots.values()[0].material
@@ -46,6 +41,7 @@ class Bake:
         log.info(f'{self.obj_name} mat had {len(nodes)} nodes')
 
         tx = nodes.new('ShaderNodeTexImage')
+        self.delete_node = lambda: nodes.remove(tx)
         tx.image = self.img
 
         tx.select = True  # bake writes to the selected node
@@ -55,20 +51,22 @@ class Bake:
         bpy.context.scene.cycles.device = 'GPU'
 
         self.runs = [
-            ('COMBINED', 'comb', 'sRGB'),
+            # ('COMBINED', 'comb', 'sRGB'),
             ('DIFFUSE', 'dif', 'sRGB'),
             ('AO', 'ao', 'Non-Color'),
             ('SHADOW', 'shad', 'Non-Color'),
-            ('NORMAL', 'norm', 'Non-Color'),
+            # ('NORMAL', 'norm', 'Non-Color'),
             ('ROUGHNESS', 'ruff', 'Non-Color'),
-            ('GLOSSY', 'glos', 'Non-Color'),
+            # ('GLOSSY', 'glos', 'Non-Color'),
         ]
 
         self.nextBake()
 
     def nextBake(self):
         if not self.runs:
-            log.info('bake jobs done')
+            log.info(f'{self.obj_name} bake jobs done')
+            self.delete_node()
+
             self.cb()
             return
         self.bakeAndSave()
@@ -82,29 +80,46 @@ class Bake:
 
         bpy.ops.object.bake(type=bake_type, use_clear=True)
 
-        image.save(self.img, dest / f'bake_{self.obj_name}_{out_name}.png')
+        image.save(self.img, dest / f'bake_{self.obj_name}_{out_name}.jpg')
+
         self.runs.pop(0)
         # sometimes the next bake wouldn't start
-        later(0, self.nextBake)
+        later(.1, self.nextBake)
 
 
-def main():
-    bpy.ops.wm.open_mainfile(filepath=str(src / 'wrap/wrap.blend'))
-
-    export_geom.write_glb()
-
-    objs = ['rock_arch']
-
-    def done():
-        bpy.ops.wm.quit_blender()
-
+def async_bake(objs, cb):
     def pump():
         if not objs:
-            done()
+            cb()
             return
         Bake(objs.pop(), map_size=512, cb=pump)
 
     pump()
+
+
+def main():
+    bpy.ops.wm.open_mainfile(filepath=str(dest / 'edit.blend'))
+
+    def done():
+        bpy.ops.wm.quit_blender()
+
+    def eg(cb):
+        obj_names = ['rock_arch'] + gnd_names
+        job = int(os.environ['EXPORT_JOB'])
+        if job == 0:
+            obj_names = obj_names[:1]
+        elif job == 1:
+            obj_names = obj_names[1:15]
+        elif job == 2:
+            obj_names = obj_names[15:]
+        else:
+            raise NotImplementedError()
+
+        async_bake(obj_names, cb)
+
+    gnd_names = ['gnd'] + ['gnd.%03d' % i for i in range(1, 38 - 1)]
+
+    later(2, eg, done)
 
 
 main()
