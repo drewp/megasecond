@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(__file__))
 
 from dirs import dest
 
+logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
 
 

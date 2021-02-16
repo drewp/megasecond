@@ -14,10 +14,10 @@ log = logging.getLogger()
 
 
 class Bake:
-    def __init__(self, obj_name='gnd', map_size=1024, cb=lambda: None):
+    def __init__(self, obj_name='gnd', map_size=1024, on_bake_done=lambda: None):
         self.obj_name = obj_name
         self.map_size = map_size
-        self.cb = cb
+        self.on_bake_done = on_bake_done
         # 'screen' context is not immediately ready
         later(1, self._withScreen)
 
@@ -28,8 +28,13 @@ class Bake:
 
         select_object(self.obj_name)
 
-        mat = bpy.data.objects[
-            self.obj_name].material_slots.values()[0].material
+        obj = bpy.data.objects[self.obj_name]
+        slots = obj.material_slots
+        if not slots:
+            log.warning(f'{self.obj_name} has no mat slots')
+            self.on_bake_done()
+            return
+        mat = slots.values()[0].material
 
         self.img = bpy.data.images.new('bake_out',
                                        self.map_size,
@@ -53,10 +58,10 @@ class Bake:
         self.runs = [
             # ('COMBINED', 'comb', 'sRGB'),
             ('DIFFUSE', 'dif', 'sRGB'),
-            ('AO', 'ao', 'Non-Color'),
+            # ('AO', 'ao', 'Non-Color'),
             ('SHADOW', 'shad', 'Non-Color'),
             # ('NORMAL', 'norm', 'Non-Color'),
-            ('ROUGHNESS', 'ruff', 'Non-Color'),
+            # ('ROUGHNESS', 'ruff', 'Non-Color'),
             # ('GLOSSY', 'glos', 'Non-Color'),
         ]
 
@@ -67,7 +72,7 @@ class Bake:
             log.info(f'{self.obj_name} bake jobs done')
             self.delete_node()
 
-            self.cb()
+            self.on_bake_done()
             return
         self.bakeAndSave()
 
@@ -77,10 +82,12 @@ class Bake:
         self.img.colorspace_settings == cs
 
         bpy.context.scene.cycles.bake_type = bake_type
-
-        bpy.ops.object.bake(type=bake_type, use_clear=True)
-
-        image.save(self.img, dest / f'bake_{self.obj_name}_{out_name}.jpg')
+        try:
+            bpy.ops.object.bake(type=bake_type, use_clear=True)
+        except Exception as err:
+            log.warning(err)
+        else:
+            image.save(self.img, dest / f'bake_{self.obj_name}_{out_name}.jpg')
 
         self.runs.pop(0)
         # sometimes the next bake wouldn't start
@@ -93,34 +100,50 @@ def async_bake(objs, cb):
             cb()
             return
         obj = objs.pop()
-        Bake(obj, map_size=1024 if obj == 'sign' else 256, cb=pump)
+        log.info(f'{len(objs)} left')
+        Bake(
+            obj,
+            map_size=
+            256 if obj != 'gnd.023' else 2048,  # maybe let a custom attr raise this sometimes, or determine it from obj size?
+            on_bake_done=pump)
 
     pump()
+
+
+def all_mesh_objects(root):
+    # Need linked dups that share a mesh to be separately returned
+    expanded = []
+
+    def rec(cur):
+        if cur.type == 'MESH':
+            expanded.append(cur.name)
+        for child in cur.children:
+            rec(child)
+
+    rec(root)
+    return expanded
 
 
 def main():
     bpy.ops.wm.open_mainfile(filepath=str(dest / 'edit.blend'))
 
+    def run_bakes(cb):
+        to_bake = []
+        job = os.environ['EXPORT_JOB']
+        for obj_name in all_mesh_objects(bpy.data.objects['env']):
+            if job == 'gnd.023':
+                if obj_name == 'gnd.023': to_bake.append(obj_name)
+            elif job == 'other gnd':
+                if obj_name != 'gnd.023': to_bake.append(obj_name)
+            elif job == 'not gnd':
+                if not obj_name.startswith('gnd'): to_bake.append(obj_name)
+
+        async_bake(to_bake, cb)
+
     def done():
         bpy.ops.wm.quit_blender()
 
-    def eg(cb):
-        obj_names = ['sign', 'signpost', 'rock_arch'] + gnd_names
-        job = int(os.environ['EXPORT_JOB'])
-        if job == 0:
-            obj_names = obj_names[:3]
-        elif job == 1:
-            obj_names = obj_names[3:15]
-        elif job == 2:
-            obj_names = obj_names[15:]
-        else:
-            raise NotImplementedError()
-
-        async_bake(obj_names, cb)
-
-    gnd_names = ['gnd'] + ['gnd.%03d' % i for i in range(1, 38 - 1) if i == 24]
-
-    later(2, eg, done)
+    later(2, run_bakes, done)
 
 
 main()

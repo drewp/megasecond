@@ -15,14 +15,15 @@ from dirs import src, dest
 os.chdir(os.path.dirname(__file__))
 
 
-def copy_static_images():
+def export_static_images():
     for f in (list(src.glob("*.jpg")) +  #
-              list(src.glob("*.png")) +  #
-              list((src / "wrap").glob("*.png"))):
+              list(src.glob("*.png")) #+  #
+              #list((src / "wrap").glob("*.png"))
+              ):
         shutil.copyfile(f, dest / f.name)
 
 
-def make_edit_scene():
+def export_env_scene():
     subprocess.check_call([
         'blender',
         '--window-geometry',
@@ -32,20 +33,29 @@ def make_edit_scene():
         '0',
         # '--background', # ideally, headless mode, but it doesn't work yet.
         '--python',
-        'scene_edit.py'
+        'export_env_scene.py'
     ])
 
 
 def export_geom():
     subprocess.check_call([
-        'blender', '--background', '--addons', '', '--python', 'export_geom.py'
+        'blender',  #
+        '--background',  #
+        '--addons',
+        '',  #
+        '--python',
+        'export_geom.py'  #
     ])
 
 
 def export_bake_maps():
     cur_env = os.environ.copy()
-    for job in [0, 1, 2]:
-        cur_env['EXPORT_JOB'] = str(job)
+    for job in [
+       'gnd.023', 
+        #'other gnd', 
+        'not gnd',
+        ]:
+        cur_env['EXPORT_JOB'] = job
         subprocess.check_call(
             [
                 'blender',
@@ -64,12 +74,12 @@ def export_bake_maps():
                 # '--debug-cycles',
                 # '--debug-events',
                 '--python',
-                'run_scene_export.py'
+                'export_bake_maps.py'
             ],
             env=cur_env)
 
 
-#copy_static_images()
-make_edit_scene()
+# export_static_images()
+export_env_scene()
 export_geom()
-export_bake_maps()
+# export_bake_maps()

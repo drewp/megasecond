@@ -32,7 +32,7 @@ def separate_rect(obj_name, xlo, xhi, ylo, yhi) -> str:
                                  use_expand=False,
                                  type='VERT')
         bpy.ops.mesh.select_all(action='DESELECT')
-        mesh = bmesh.from_edit_mesh(bpy.data.objects['gnd'].data)
+        mesh = bmesh.from_edit_mesh(bpy.data.objects[obj_name].data)
         sel_verts = set()
         for i, v in enumerate(mesh.verts):
             if xlo <= v.co.x < xhi and ylo <= v.co.y < yhi:
@@ -56,7 +56,9 @@ def separate_rect(obj_name, xlo, xhi, ylo, yhi) -> str:
                                  use_expand=False,
                                  type='FACE')
         bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.uv.cube_project(cube_size=1, scale_to_bounds=True) # todo needs to go to a separate uv, to not break the big ground dif texture
+        bpy.ops.uv.cube_project(
+            cube_size=1, scale_to_bounds=True
+        )  # todo needs to go to a separate uv, to not break the big ground dif texture
     return new_name
 
 
@@ -67,17 +69,14 @@ def main():
         bpy.ops.wm.save_as_mainfile(filepath=str(dest / 'edit.blend'))
         bpy.ops.wm.quit_blender()
 
-    gnd_names = ['gnd']
-
     def dice_ground(cb):
         for xsplit in range(-750, 750, 250):
             for ysplit in range(-750, 750, 250):
-                gnd_names.append(
-                    separate_rect('gnd', -750, xsplit + 250, -750,
-                                  ysplit + 250))
+                separate_rect('gnd.001', -750, xsplit + 250, -750,
+                              ysplit + 250)
         cb()
 
     later(2, dice_ground, done)
-
+    # also, delete player and other setup stuff, maybe save a non-env scene with props and chars
 
 main()
