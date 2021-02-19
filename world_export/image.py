@@ -18,8 +18,8 @@ def save(img, path):
     log.info(f'{path}: preparing image data')
     ar = numpy.array(img.pixels).reshape((img.size[0], img.size[1], 4))
     ar = ar[::-1, :, :]
-    if img.colorspace_settings.name == 'sRGB':
-        ar = ar**(1 / 2.2)  # unverified
+    # if img.colorspace_settings.name == 'sRGB':
+    #     ar = ar**(1 / 2.2)  # unverified
     img = Image.fromarray((ar * 255).astype(numpy.uint8))
     img.convert('RGB').save(path)
     log.info(f'{path}: saved.')

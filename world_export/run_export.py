@@ -17,7 +17,7 @@ os.chdir(os.path.dirname(__file__))
 
 def export_static_images():
     for f in (list(src.glob("*.jpg")) +  #
-              list(src.glob("*.png")) #+  #
+              list(src.glob("*.png"))  #+  #
               #list((src / "wrap").glob("*.png"))
               ):
         shutil.copyfile(f, dest / f.name)
@@ -49,12 +49,16 @@ def export_geom():
 
 
 def export_bake_maps():
+    wj = dest / 'world.json'
+    if wj.exists():
+        wj.unlink()
     cur_env = os.environ.copy()
     for job in [
-       'gnd.023', 
-        #'other gnd', 
-        'not gnd',
-        ]:
+            'gnd.023',
+            'other gnd',
+            'not gnd',
+            # 'debug',
+    ]:
         cur_env['EXPORT_JOB'] = job
         subprocess.check_call(
             [
@@ -77,9 +81,10 @@ def export_bake_maps():
                 'export_bake_maps.py'
             ],
             env=cur_env)
+    print(open(dest / 'world.json').read())
 
 
-# export_static_images()
+export_static_images()
 export_env_scene()
 export_geom()
-# export_bake_maps()
+export_bake_maps()

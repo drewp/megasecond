@@ -67,28 +67,33 @@ export async function loadEnv(scene: Scene) {
           }
           const mat = new PBRMaterial("pbr_" + objName, scene); //obj.material as PBRMaterial;
           obj.material = mat;
-          mat.unlit=true;
+          mat.unlit = true;
           mat.albedoTexture = bakedTx(`bake_${objName}_dif.jpg`);
-          mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
-          mat.useLightmapAsShadowmap = true;
+          // mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
+          // mat.useLightmapAsShadowmap = true;
         };
-        assignTx("rock_arch");
-        assignTx("gnd.023");
-        assignTx("gnd.024");
-        assignTx("sign");
-        assignTx("building_022");
-        assignTx("building_023_house");
-        assignTx("cabin_box");
-if(0) {
-        var skyboxMaterial = new SkyMaterial("skyMaterial", scene);
-        skyboxMaterial.backFaceCulling = false;
 
-        var skybox = Mesh.CreateBox("skyBox", 1000.0, scene);
-        skybox.material = skyboxMaterial;
-        skyboxMaterial.inclination = 0;
-        skyboxMaterial.luminance = 1;
-        skyboxMaterial.turbidity = 40;
-}
+        for (var m of scene.meshes) {
+          if (m.name == "navmesh") {
+            continue;
+          }
+          try {
+            assignTx(m.name);
+          } catch (err) {
+            console.log("no tx for mesh", m, err);
+          }
+        }
+
+        if (0) {
+          var skyboxMaterial = new SkyMaterial("skyMaterial", scene);
+          skyboxMaterial.backFaceCulling = false;
+
+          var skybox = Mesh.CreateBox("skyBox", 1000.0, scene);
+          skybox.material = skyboxMaterial;
+          skyboxMaterial.inclination = 0;
+          skyboxMaterial.luminance = 1;
+          skyboxMaterial.turbidity = 40;
+        }
       } catch (err) {
         console.log("err", err);
         reject();

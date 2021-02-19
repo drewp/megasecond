@@ -9,7 +9,7 @@ import bpy
 sys.path.append(os.path.dirname(__file__))
 from blender_async import later
 from dirs import dest, src
-from selection import select_object
+from selection import select_object, all_mesh_objects
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
@@ -76,7 +76,14 @@ def main():
                               ysplit + 250)
         cb()
 
-    later(2, dice_ground, done)
+    def separate_materials(cb):
+        for obj_name in all_mesh_objects(bpy.data.objects['env']):
+            if len(bpy.data.objects[obj_name].material_slots) > 1:
+                select_object(obj_name)
+                bpy.ops.mesh.separate(type='MATERIAL')
+        cb()
+
+    later(2, dice_ground, lambda: separate_materials(done))
     # also, delete player and other setup stuff, maybe save a non-env scene with props and chars
 
 main()
