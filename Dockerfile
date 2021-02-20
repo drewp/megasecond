@@ -1,4 +1,4 @@
-FROM marketplace.gcr.io/google/ubuntu1804
+FROM ubuntu:18.04
 
 WORKDIR /workspace
 

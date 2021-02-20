@@ -19,12 +19,18 @@ Actual game TBD.
 
 ## Dev setup:
 
+`apt install blender python3-numpy`
+
+Export geometry and textures:
+
+`python3 world_export/run_export.py`
+
 Have skaffold and a k8s cluster (I use k3s).
 
-Run `skaffold dev` here.
+Run `skaffold dev` to launch two containers. Container 'megasecond' serves the game 
+and multiplayer API; 'rebuild-client' notices changes to the client code and rebuilds.
 
 Somehow route to the HTTP service at megasecond.default.service.cluster.local:80.
-
 
 ## Attributions
 
