@@ -17,74 +17,73 @@ import {
   ShadowGenerator,
   StandardMaterial,
   Texture,
+  Vector3,
 } from "babylonjs";
 import { GridMaterial, ShadowOnlyMaterial, SkyMaterial } from "babylonjs-materials";
 
-export async function loadEnv(scene: Scene) {
+export class World {
+  buildData: any;
+  groundBump: Texture | undefined;
+  constructor(public scene: Scene) {}
+  async load() {
+    const scene = this.scene;
+    this.buildData = await (await fetch("./asset_build/world.json")).json();
 
-  await SceneLoader.AppendAsync("./asset_build/", "wrap.glb", scene);
-  console.log("loaded gltf");
+    await SceneLoader.AppendAsync("./asset_build/", "wrap.glb", scene);
+    console.log("loaded gltf");
 
-  scene.clearColor = new Color4(0.419, 0.517, 0.545, 1);
+    scene.clearColor = new Color4(0.419, 0.517, 0.545, 1);
 
-  scene.getMeshByName("player")!.isVisible = false;
-  scene.getMeshByName("navmesh")!.isVisible = false;
-  const grid = new GridMaterial("grid", scene);
-  grid.gridRatio = 0.1;
-  grid.majorUnitFrequency = 5;
-  grid.mainColor = new Color3(0.3, 0.3, 0.3);
-  grid.backFaceCulling = false;
-  grid.wireframe = true; // maybe
-  scene.getMeshByName("navmesh")!.material = grid;
+    scene.getMeshByName("player")!.isVisible = false;
+    this.setupNavMesh();
 
-  setupSunShadows(scene);
+    setupSunShadows(scene);
 
-  const gnd = scene.getMeshByName("gnd.001")!;
-  const mat = gnd.material as PBRMaterial;
+    scene.getLightByName("Spot")!.intensity /= 1000;
+    scene.getLightByName("Spot.001")!.intensity /= 1000;
+    scene.getLightByName("Spot")!.diffuse = Color3.FromHexString("#68534D");
+    scene.getLightByName("Spot.001")!.diffuse = Color3.FromHexString("#730F4C");
 
-  const bump = new Texture("./asset_build/normal1.png", scene);
-  bump.level = 0.43;
-  bump.uScale = bump.vScale = 400;
-  mat.bumpTexture = bump;
+    this.groundBump = new Texture("./asset_build/normal1.png", scene);
+    this.groundBump.level = 0.43;
+    this.groundBump.uScale = this.groundBump.vScale = 400;
 
-  gnd.material = mat;
+    this.loadMaps(Vector3.Zero(), 100);
 
-  scene.getLightByName("Spot")!.intensity /= 1000;
-  scene.getLightByName("Spot.001")!.intensity /= 1000;
-  scene.getLightByName("Spot")!.diffuse = Color3.FromHexString("#68534D");
-  scene.getLightByName("Spot.001")!.diffuse = Color3.FromHexString("#730F4C");
+    // this.setupSkybox(scene);
+  }
 
-  const bakedTx = (name: string): Texture => {
-    const tx = new Texture(`./asset_build/` + name, scene);
-    tx.vScale = -1;
-    return tx;
-  };
+  loadMaps(center: Vector3, maxDist: number) {
+    for (var m of this.scene.meshes) {
+      if (m === null || m.name == "navmesh" || m.name == "__root__" || m.name == "player") {
+        continue;
+      }
 
-  const assignTx = (objName: string) => {
-    const obj = scene.getMeshByName(objName);
-    if (!obj) {
-      return;
-    }
-    const mat = new PBRMaterial("pbr_" + objName, scene); //obj.material as PBRMaterial;
-    obj.material = mat;
-    mat.unlit = true;
-    mat.albedoTexture = bakedTx(`bake_${objName}_dif.jpg`);
-    // mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
-    // mat.useLightmapAsShadowmap = true;
-  };
+      const d = this.distToObject(m, center);
+      console.log(`obj ${m.name} is ${d} away`);
+      if (d > maxDist) {
+        continue;
+      }
 
-  for (var m of scene.meshes) {
-    if (m.name == "navmesh") {
-      continue;
-    }
-    try {
-      assignTx(m.name);
-    } catch (err) {
-      console.log("no tx for mesh", m, err);
+      try {
+        this.assignTx(m.name);
+      } catch (err) {
+        console.log("no tx for mesh", m, err);
+        continue;
+      }
+      if (m.name.startsWith("gnd.")) {
+        (m.material as PBRMaterial).bumpTexture = this.groundBump!;
+      }
     }
   }
 
-  if (0) {
+  private distToObject(m: AbstractMesh, center: Vector3) {
+    const bb = this.buildData.objs[m.name].worldBbox;
+    const objCenter = Vector3.FromArray(bb.center);
+    return Math.max(0, objCenter.subtract(center).length() - bb.radius);
+  }
+
+  private setupSkybox(scene: Scene) {
     var skyboxMaterial = new SkyMaterial("skyMaterial", scene);
     skyboxMaterial.backFaceCulling = false;
 
@@ -93,6 +92,35 @@ export async function loadEnv(scene: Scene) {
     skyboxMaterial.inclination = 0;
     skyboxMaterial.luminance = 1;
     skyboxMaterial.turbidity = 40;
+  }
+
+  bakedTx(name: string): Texture {
+    const tx = new Texture(`./asset_build/` + name, this.scene);
+    tx.vScale = -1;
+    return tx;
+  }
+  assignTx(objName: string) {
+    const obj = this.scene.getMeshByName(objName);
+    if (!obj) {
+      return;
+    }
+    const mat = new PBRMaterial("pbr_" + objName, this.scene); //obj.material as PBRMaterial;
+    obj.material = mat;
+    mat.unlit = true;
+    mat.albedoTexture = this.bakedTx(`bake_${objName}_dif.jpg`);
+    // mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
+    // mat.useLightmapAsShadowmap = true;
+  }
+
+  private setupNavMesh() {
+    this.scene.getMeshByName("navmesh")!.isVisible = false;
+    const grid = new GridMaterial("grid", this.scene);
+    grid.gridRatio = 0.1;
+    grid.majorUnitFrequency = 5;
+    grid.mainColor = new Color3(0.3, 0.3, 0.3);
+    grid.backFaceCulling = false;
+    grid.wireframe = true; // maybe
+    this.scene.getMeshByName("navmesh")!.material = grid;
   }
 }
 
