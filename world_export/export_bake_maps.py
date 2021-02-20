@@ -141,7 +141,7 @@ def async_bake(objs, outData, cb):
             cb()
             return
         obj = objs.pop()
-        log.info(f'{len(objs)} left')
+        log.info(f'{len(objs)+1} left')
         map_size = 256
         # maybe let a custom attr raise this sometimes, or determine it from obj size?
         if obj.startswith('gnd.'):
