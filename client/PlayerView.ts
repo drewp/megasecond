@@ -22,6 +22,7 @@ export class PlayerView {
 
     const refOffset = refAim.position.subtract(playerReferenceModel.position);
     this.aimAt.position = this.body.position.add(refOffset);
+
     const sunCaster = (window as any).gen as ShadowGenerator; // todo
     sunCaster.addShadowCaster(this.body);
 

@@ -7,38 +7,62 @@ export enum Actions {
   ToggleBirdsEyeView,
 }
 
-export class UserInput {
-  private stickX = 0;
-  private stickY = 0;
-  private stickPressFunc: { [keyName: string]: () => void };
-  private stickReleaseFunc: { [keyName: string]: () => void };
+class MobileSticks {
+  walk: VirtualJoystick;
+  look: VirtualJoystick;
+  constructor(private out: UserInput) {
+    this.walk = new VirtualJoystick(true);
+    this.look = new VirtualJoystick(false);
+  }
+  step(dt: number) {
+    if (this.walk.pressed) {
+      this.out.stickX = this.walk.deltaPosition.x * 3;
+      this.out.stickY = -this.walk.deltaPosition.y * 3;
+    } else {
+      this.out.stickX = this.out.stickY = 0;
+    }
+    if (this.look.pressed) {
+      this.out.mouseAccumX = this.look.deltaPosition.x * 4;
+      this.out.mouseAccumY = -this.look.deltaPosition.y * 4;
+    }
+  }
+}
 
-  constructor(
-    private scene: Scene,
-    private onMouse: (dx: number, dy: number) => void,
-    private onStick: (x: number, y: number) => void,
-    private onAction: (name: Actions) => void
-  ) {
+export class UserInput {
+  private stickKeyX = 0; // exact state of up/down l/r keys
+  private stickKeyY = 0;
+  public stickX = 0; // analog input to game
+  public stickY = 0;
+  public shiftKey = false;
+  private stickKeyPressFunc: { [keyName: string]: () => void };
+  private stickKeyReleaseFunc: { [keyName: string]: () => void };
+  public mouseAccumX = 0;
+  public mouseAccumY = 0;
+  public mouseX = 0;
+  public mouseY = 0;
+  private mobileInput: MobileSticks | undefined;
+
+  constructor(private scene: Scene, private onAction: (name: Actions) => void) {
     (window as any).ui = this;
-    this.stickPressFunc = {
-      ArrowUp: () => (this.stickY = -1), // these could have a little analog ramp-up
-      w: () => (this.stickY = -1),
-      ArrowDown: () => (this.stickY = 1),
-      s: () => (this.stickY = 1),
-      ArrowLeft: () => (this.stickX = -1),
-      a: () => (this.stickX = -1),
-      ArrowRight: () => (this.stickX = 1),
-      d: () => (this.stickX = 1),
+    this.stickKeyPressFunc = {
+      arrowup: () => (this.stickKeyY = -1),
+      w: () => (this.stickKeyY = -1),
+      arrowdown: () => (this.stickKeyY = 1),
+      s: () => (this.stickKeyY = 1),
+      arrowleft: () => (this.stickKeyX = -1),
+      a: () => (this.stickKeyX = -1),
+      arrowright: () => (this.stickKeyX = 1),
+      d: () => (this.stickKeyX = 1),
     };
-    this.stickReleaseFunc = {
-      ArrowUp: () => (this.stickY = 0),
-      w: () => (this.stickY = 0),
-      ArrowDown: () => (this.stickY = 0),
-      s: () => (this.stickY = 0),
-      ArrowLeft: () => (this.stickX = 0),
-      a: () => (this.stickX = 0),
-      ArrowRight: () => (this.stickX = 0),
-      d: () => (this.stickX = 0),
+    this.stickKeyReleaseFunc = {
+      arrowup: () => (this.stickKeyY = 0),
+      w: () => (this.stickKeyY = 0),
+      arrowdown: () => (this.stickKeyY = 0),
+      s: () => (this.stickKeyY = 0),
+      arrowleft: () => (this.stickKeyX = 0),
+      a: () => (this.stickKeyX = 0),
+      arrowright: () => (this.stickKeyX = 0),
+      d: () => (this.stickKeyX = 0),
     };
     scene.actionManager = new ActionManager(scene);
     scene.actionManager.registerAction(new ExecuteCodeAction({ trigger: ActionManager.OnKeyDownTrigger }, this.onKeyDown.bind(this)));
@@ -47,36 +71,34 @@ export class UserInput {
 
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (isMobile) {
-      this.createMobileSticks();
+      this.mobileInput = new MobileSticks(this);
     }
   }
-  createMobileSticks() {
-    const walk = new VirtualJoystick(true);
-    const look = new VirtualJoystick(false);
-    const pollSticks = () => {
-      if (walk.pressed) {
-        this.onStick(walk.deltaPosition.x, -walk.deltaPosition.y);
-      } else {
-        this.onStick(0, 0);
-      }
-      if (look.pressed) {
-        this.onMouse(look.deltaPosition.x * 20, -look.deltaPosition.y * 20);
-      }
-    };
-    setInterval(pollSticks, 60); // todo: share with the main frame loop- no need for this to differ
+  step(dt: number) {
+    if (this.mobileInput) {
+      this.mobileInput.step(dt);
+    }
+    const runMult = this.shiftKey ? 8 : 1;
+    this.stickX += (this.stickKeyX * runMult - this.stickX) * 6 * dt;
+    this.stickY += (this.stickKeyY * runMult - this.stickY) * 6 * dt;
+
+    this.mouseX = dt == 0 ? 0 : this.mouseAccumX / dt;
+    this.mouseY = dt == 0 ? 0 : this.mouseAccumY / dt;
+    this.mouseAccumX = this.mouseAccumY = 0;
   }
   onMove(ev: PointerEvent, pickInfo: PickingInfo, type: PointerEventTypes) {
     if (!document.pointerLockElement) {
       return;
     }
-    this.onMouse(ev.movementX, ev.movementY);
+    this.mouseAccumX += ev.movementX;
+    this.mouseAccumY += ev.movementY;
   }
   onKeyDown(ev: ActionEvent) {
-    const func = this.stickPressFunc[ev.sourceEvent.key as string];
-    if (func) {
-      func();
-      this.onStick(this.stickX, this.stickY);
+    const setFromKey = this.stickKeyPressFunc[(ev.sourceEvent.key as string).toLowerCase()];
+    if (setFromKey) {
+      setFromKey();
     }
+    this.shiftKey = ev.sourceEvent.shiftKey as boolean;
     switch (ev.sourceEvent.key) {
       case " ":
         this.onAction(Actions.Jump);
@@ -93,10 +115,10 @@ export class UserInput {
     }
   }
   onKeyUp(ev: ActionEvent) {
-    const func = this.stickReleaseFunc[ev.sourceEvent.key as string];
-    if (func) {
-      func();
-      this.onStick(this.stickX, this.stickY);
+    const setFromKey = this.stickKeyReleaseFunc[(ev.sourceEvent.key as string).toLowerCase()];
+    if (setFromKey) {
+      setFromKey();
     }
+    this.shiftKey = ev.sourceEvent.shiftKey as boolean;
   }
 }

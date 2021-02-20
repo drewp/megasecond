@@ -1,4 +1,4 @@
-import { Scene, Vector3 } from "babylonjs";
+import { Scene, Vector2, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import { WorldRoom, WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
@@ -83,7 +83,7 @@ class Game {
     }
     pm.pos = pos;
   }
-  updatePlayerViews(dt: number) {
+  stepPlayerViews(dt: number) {
     for (let [name, pm] of this.playerMotions.entries()) {
       const pv = this.playerViews.get(name);
       if (pv === undefined) continue; //throw new Error("missing view for " + name);
@@ -128,35 +128,38 @@ async function go() {
     const pl = game.setPlayerPosFromNet(msg[0], new Vector3(msg[1].x, msg[1].y, msg[1].z));
   });
 
-  const userInput = new UserInput(
-    scene,
-    function onMouse(dx, dy) {
-      // x turns player (and that turns cam); y is cam-only (player doesn't care)
-      game.getMe().onMouseX(dx);
-      game.fcam.onMouseY(dy);
-    },
-    function onStick(x, y) {
-      game.getMe().onStick(x, y);
-    },
-    function onAction(name: Actions) {
-      if (name == Actions.Jump) {
-        game.getMe().requestJump();
-      } else if (name == Actions.ToggleNavmeshView) {
-        Env.toggleNavmeshView(scene);
-      } else if (name == Actions.ToggleBirdsEyeView) {
-        game.fcam.toggleBirdsEyeView();
-      }
+  const userInput = new UserInput(scene, function onAction(name: Actions) {
+    if (name == Actions.Jump) {
+      game.getMe().requestJump();
+    } else if (name == Actions.ToggleNavmeshView) {
+      Env.toggleNavmeshView(scene);
+    } else if (name == Actions.ToggleBirdsEyeView) {
+      game.fcam.toggleBirdsEyeView();
     }
-  );
+  });
 
-  scene.getEngine().runRenderLoop(() => {
-    const dt = scene.getEngine().getDeltaTime() / 1000.0;
-    const me = game.getMe();
-    me.step(dt);
+  const me = game.getMe();
+
+  const slowStep = false;
+
+  const gameStep = (dt: number) => {
+    userInput.step(dt);
+
+    me.step(dt, userInput.mouseX, new Vector2(userInput.stickX, userInput.stickY));
+    game.fcam.onMouseY(userInput.mouseY);
+
     net.uploadMe(me);
 
-    game.updatePlayerViews(dt);
-
+    game.stepPlayerViews(dt);
+  };
+  if (slowStep) {
+    setInterval(() => gameStep(0.1), 100);
+  }
+  scene.getEngine().runRenderLoop(() => {
+    if (!slowStep) {
+      const dt = scene.getEngine().getDeltaTime() / 1000.0;
+      gameStep(dt);
+    }
     scene.render();
   });
 }

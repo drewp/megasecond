@@ -26,14 +26,20 @@ export class FollowCam {
     }
   }
   onMouseY(movementY: number) {
-    this.cam.heightOffset += 0.001 * movementY;
+    this.cam.heightOffset += 0.0003 * movementY;
   }
   step(dt: number, pos: Vector3, facing: Vector3) {
     // try to get behind player, don't crash walls
-    let heading = (360 / 6.28) * Math.atan2(-facing.z, facing.x) + 270;
-    while (Math.abs(heading - 360 - this.cam.rotationOffset) < Math.abs(heading - this.cam.rotationOffset)) {
-      heading -= 360;
+    let heading = (360 / (2 * Math.PI)) * Math.atan2(-facing.z, facing.x) + 270;
+    let r = this.cam.rotationOffset;
+    if (Math.abs(r - heading) > 180) {
+      if (r < heading) {
+        r += 360;
+      } else {
+        r -= 360;
+      }
     }
-    this.cam.rotationOffset += (dt * 20 * (heading - this.cam.rotationOffset)) % 360;
+
+    this.cam.rotationOffset = (r + dt * 10 * (heading - r)) % 360;
   }
 }

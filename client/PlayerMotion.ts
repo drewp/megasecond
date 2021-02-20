@@ -1,4 +1,4 @@
-import { AbstractMesh, Color3, Matrix, Mesh, Quaternion, Ray, Scene, ThinEngine, Vector3 } from "babylonjs";
+import { AbstractMesh, Color3, Matrix, Mesh, Quaternion, Ray, Scene, ThinEngine, Vector2, Vector3 } from "babylonjs";
 import { ShowPoint, ShowSegment } from "./Debug";
 
 function projectToSegment(pt: Vector3, segStart: Vector3, segEnd: Vector3): Vector3 {
@@ -33,7 +33,7 @@ export class PlayerMotion {
 
   onMouseX(movementX: number) {
     const nf = Vector3.Zero();
-    const rot = Quaternion.RotationAxis(Vector3.Up(), movementX * 0.006);
+    const rot = Quaternion.RotationAxis(Vector3.Up(), movementX * 0.0002);
     this.facing.rotateByQuaternionAroundPointToRef(rot, Vector3.Zero(), nf);
     this.facing.copyFrom(nf);
 
@@ -41,10 +41,10 @@ export class PlayerMotion {
     this.vel.copyFrom(nf);
   }
 
-  onStick(x: number, y: number) {
+  setXZVel(stick: Vector2) {
     const runMult = 1; // todo get shift key
-    const forwardComp = this.facing.scale(-2.5 * y * runMult);
-    const sidewaysComp = this.facing.cross(Vector3.Up()).scale(-2 * x * runMult);
+    const forwardComp = this.facing.scale(-2.5 * stick.y * runMult);
+    const sidewaysComp = this.facing.cross(Vector3.Up()).scale(-2 * stick.x * runMult);
     const xzComp = forwardComp.add(sidewaysComp);
 
     const yComp = this.vel.multiplyByFloats(0, 1, 0);
@@ -57,7 +57,9 @@ export class PlayerMotion {
     }
   }
 
-  step(dt: number) {
+  step(dt: number, mouseX: number, stick: Vector2) {
+    this.onMouseX(mouseX)
+    this.setXZVel(stick)
     const tryPos = this.pos.add(this.vel.scale(dt));
 
     const knees = tryPos.add(new Vector3(0, 0.5, 0));
@@ -79,7 +81,7 @@ export class PlayerMotion {
       this.currentNavFaceId = info.faceId;
       this.pos = tryPos;
       const groundY = info.pickedPoint!.y;
-      if (groundY +.01> tryPos.y) {
+      if (groundY + 0.01 > tryPos.y) {
         this.pos.y = groundY;
         this.grounded = true;
       } else {
