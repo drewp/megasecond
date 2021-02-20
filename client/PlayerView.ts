@@ -55,7 +55,7 @@ export class PlayerView {
       false // types bug made this nonoptional?
     );
     tx.hasAlpha = true;
-    tx.drawText(this.name, 0, 50, "bold 50px monospace", "#ffffffff", "#00000000", true, true);
+    tx.drawText(this.name, 0, 50, "45px sans", "#ffffffff", "#00000000", true, true);
 
     var mat = new StandardMaterial(`nametag-${this.name}`, this.scene);
     mat.diffuseTexture = tx;
@@ -63,6 +63,7 @@ export class PlayerView {
     mat.transparencyMode = 3;
     mat.useAlphaFromDiffuseTexture = true;
     plane.material = mat;
+    plane.billboardMode = TransformNode.BILLBOARDMODE_ALL;
 
     return plane;
   }
@@ -76,7 +77,6 @@ export class PlayerView {
     b.lookAt(b.position.add(facing)); // todo: maybe with animation
     if (fcam) {
       fcam.step(dt, pos, facing);
-      this.nametag!.lookAt(this.scene.activeCamera!.globalPosition); //fcam.getPos());
     }
   }
   getCamTarget(): TransformNode {

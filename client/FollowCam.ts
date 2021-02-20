@@ -42,7 +42,4 @@ export class FollowCam {
 
     this.cam.rotationOffset = (r + dt * 10 * (heading - r)) % 360;
   }
-  getPos(): Vector3 {
-    return this.cam.position; // broken
-  }
 }
