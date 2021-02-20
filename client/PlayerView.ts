@@ -1,4 +1,16 @@
-import { AxesViewer, InstancedMesh, Mesh, Scene, ShadowGenerator, TransformNode, Vector3 } from "babylonjs";
+import {
+  AxesViewer,
+  StandardMaterial,
+  DynamicTexture,
+  InstancedMesh,
+  Mesh,
+  Scene,
+  ShadowGenerator,
+  TransformNode,
+  Vector3,
+  AbstractMesh,
+  PlaneBuilder,
+} from "babylonjs";
 import { FollowCam } from "./FollowCam";
 
 export class PlayerView {
@@ -7,6 +19,7 @@ export class PlayerView {
   // X=left, Y=up, Z=fwd
   private body?: InstancedMesh;
   private aimAt?: TransformNode;
+  private nametag?: AbstractMesh;
   constructor(private scene: Scene, private name: string) {
     this.makeInstance();
   }
@@ -23,10 +36,37 @@ export class PlayerView {
     const refOffset = refAim.position.subtract(playerReferenceModel.position);
     this.aimAt.position = this.body.position.add(refOffset);
 
+    this.nametag = this.makeNametag();
+
     const sunCaster = (window as any).gen as ShadowGenerator; // todo
     sunCaster.addShadowCaster(this.body);
-
   }
+
+  makeNametag() {
+    const scl = 0.2;
+    const plane = PlaneBuilder.CreatePlane(`nametag-${this.name}`, { width: 480 * scl, height: 64 * scl }, this.scene);
+    plane.parent = this.aimAt!;
+    plane.position.y = 20;
+
+    var tx = new DynamicTexture(
+      `nametag-${this.name}`,
+      { width: 256, height: 64 },
+      this.scene,
+      false // types bug made this nonoptional?
+    );
+    tx.hasAlpha = true;
+    tx.drawText(this.name, 0, 50, "bold 50px monospace", "#ffffffff", "#00000000", true, true);
+
+    var mat = new StandardMaterial(`nametag-${this.name}`, this.scene);
+    mat.diffuseTexture = tx;
+    mat.disableLighting = true;
+    mat.transparencyMode = 3;
+    mat.useAlphaFromDiffuseTexture = true;
+    plane.material = mat;
+
+    return plane;
+  }
+
   dispose() {
     this.body?.dispose();
   }
@@ -36,6 +76,7 @@ export class PlayerView {
     b.lookAt(b.position.add(facing)); // todo: maybe with animation
     if (fcam) {
       fcam.step(dt, pos, facing);
+      this.nametag!.lookAt(this.scene.activeCamera!.globalPosition); //fcam.getPos());
     }
   }
   getCamTarget(): TransformNode {
