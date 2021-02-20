@@ -19,7 +19,7 @@ Actual game TBD.
 
 ## Dev setup:
 
-`apt install blender python3-numpy`
+`apt install blender python3-numpy python3-pil`
 
 Export geometry and textures:
 
