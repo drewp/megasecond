@@ -1,4 +1,4 @@
-Requirements:
+# Project goals:
 
 - quick-to-join multiplayer game (trying https://github.com/colyseus/colyseus
   for this)
@@ -14,24 +14,88 @@ Also using these:
 - rollup
 - typescript
 - [babylonjs](https://www.babylonjs.com/)
+- blender
+
 
 Actual game TBD.
 
+# Live game instance
+
+<span style="display: inline-block; border: 3px outset #051d26; background: #191010; padding: 12px 12px 0 12px; margin-bottom: 40px; font-weight: bold; font-size: 20px">
+
+https://megasecond.club/
+
+</span>
+
 ## Dev setup:
 
-`apt install blender python3-numpy python3-pil`
+### (optional) Use mercurial
 
-Export geometry and textures:
+You can optionally get this (or any other git repo) with hg: 
 
-`python3 world_export/run_export.py`
+```
+hg clone git+ssh://git@github.com:drewp/megasecond.git
+```
+Push like this:
+```
+hg bookmark -r default master && hg push
+```
 
-Have skaffold and a k8s cluster (I use k3s).
+### Build the assets
 
-Run `skaffold dev` to launch two containers. Container 'megasecond' serves the game 
-and multiplayer API; 'rebuild-client' notices changes to the client code and rebuilds.
+Export geometry and textures (writes to `build/`):
 
-Somehow route to the HTTP service at megasecond.default.service.cluster.local:80.
+```
+apt install blender python3-numpy python3-pil
+python3 world_export/run_export.py
+```
+
+### Deploy
+
+Have [skaffold](https://skaffold.dev/) and a k8s cluster (I use
+[k3s](https://k3s.io/)).
+
+```
+skaffold dev
+```
+
+This launches two containers. Container 'megasecond' serves the game and
+multiplayer API; 'rebuild-client' notices changes to the client code and
+rebuilds. skaffold notices all changes and will rebuild/restart the containers
+if you change the server code, Dockerfile, etc.
+
+Finally, route somehow to the HTTP service at
+megasecond.default.service.cluster.local:80.
 
 ## Attributions
 
-"Abandoned factory" (https://skfb.ly/6TzYN) by Rixael is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+"Abandoned factory" (https://skfb.ly/6TzYN) by Rixael is licensed under Creative
+Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+## Development links
+
+- https://doc.babylonjs.com/divingDeeper/environment/environment_introduction#fog to add
+
+- http://grideasy.github.io/ some other bjs doc
+
+- https://playground.babylonjs.com/#E6OZX#221 sandbox for skyboxMaterial
+
+### Blender bake code:
+
+- https://www.reddit.com/r/blender/comments/jawtb7/my_python_batch_bake_script_for_blender_290/
+
+### Procedural animation
+
+- https://www.reddit.com/r/gamedev/comments/fqhp9q/procedural_animation_in_10_steps/
+- https://www.youtube.com/watch?v=LNidsMesxSE Overgrowth talk
+- https://www.reddit.com/r/gamedev/comments/gm6e8/procedural_walking/ more links
+- https://github.com/Banbury/cartwheel-3d
+- https://www.youtube.com/watch?v=MHj8RDfyqP0 video of cartwheel
+
+Swing dance step tutorials
+
+- https://www.youtube.com/c/ElectroSwingThing/videos
+
+## License
+
+MIT
