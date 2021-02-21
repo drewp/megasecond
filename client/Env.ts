@@ -54,25 +54,29 @@ export class World {
   }
 
   loadMaps(center: Vector3, maxDist: number) {
-    for (var m of this.scene.meshes) {
-      if (m === null || m.name == "navmesh" || m.name == "__root__" || m.name == "player") {
+    for (let m of Object.keys(this.buildData.objs)) {
+      if (m == "navmesh" || m == "__root__" || m == "player") {
         continue;
       }
-
-      const d = this.distToObject(m, center);
-      console.log(`obj ${m.name} is ${d} away`);
+      const obj = this.scene.getMeshByName(m);
+      if (!obj) {
+        console.log(`data said ${m} but no mesh found in scene`);
+        continue;
+      }
+      const d = this.distToObject(obj, center);
+      console.log(`obj ${m} is ${d} away`);
       if (d > maxDist) {
         continue;
       }
 
       try {
-        this.assignTx(m.name);
+        this.assignTx(m);
       } catch (err) {
         console.log("no tx for mesh", m, err);
         continue;
       }
-      if (m.name.startsWith("gnd.")) {
-        (m.material as PBRMaterial).bumpTexture = this.groundBump!;
+      if (m.startsWith("gnd.")) {
+        (obj.material as PBRMaterial).bumpTexture = this.groundBump!;
       }
     }
   }

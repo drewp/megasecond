@@ -2,6 +2,7 @@ import contextlib
 import logging
 import os
 import sys
+from typing import Union
 
 import bmesh
 import bpy
@@ -24,7 +25,7 @@ def editmode():
     bpy.ops.object.editmode_toggle()
 
 
-def separate_rect(obj_name, xlo, xhi, ylo, yhi) -> str:
+def separate_rect(obj_name, xlo, xhi, ylo, yhi) -> Union[str,None]:
     names_before = set(o.name for o in bpy.data.objects)
     select_object(obj_name)
     with editmode():
@@ -48,7 +49,11 @@ def separate_rect(obj_name, xlo, xhi, ylo, yhi) -> str:
         bpy.ops.mesh.separate()
 
     names_after = set(o.name for o in bpy.data.objects)
-    new_name = names_after.difference(names_before).pop()
+    new_names = names_after.difference(names_before)
+
+    if not new_names:
+        return None
+    new_name = new_names.pop()
 
     select_object(new_name)
     with editmode():
