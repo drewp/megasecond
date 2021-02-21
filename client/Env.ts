@@ -101,6 +101,7 @@ export class World {
   bakedTx(name: string): Texture {
     const tx = new Texture(`./asset_build/` + name, this.scene);
     tx.vScale = -1;
+    tx.coordinatesIndex = 0;
     return tx;
   }
   assignTx(objName: string) {

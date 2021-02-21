@@ -1,4 +1,5 @@
 import logging
+import json
 import os
 import sys
 
@@ -6,14 +7,27 @@ import bpy
 sys.path.append(os.path.dirname(__file__))
 
 from dirs import dest
+from selection import all_mesh_objects, select_object
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
 
 
+def switch_to_lightmap_uvs(outData):
+    for obj_name in all_mesh_objects(bpy.data.objects['env']):
+        obj = select_object(obj_name)
+        
+        obj_uv = outData.setdefault('objs', {}).setdefault(obj_name, {})
+        if 'lightmap_uv' in obj_uv:
+            for lyr in reversed(obj.data.uv_layers):
+                if lyr.name != obj_uv['lightmap_uv']:
+                    log.info(f'obj={obj_name} uv={lyr.name} is not for export')
+                    obj.data.uv_layers.remove(lyr)
+
 def write_glb():
     dest.mkdir(parents=True, exist_ok=True)
     glb_out = dest / "wrap.glb"
+
 
     # workaround for gltf export bug, from https://blender.stackexchange.com/questions/200616/script-to-export-gltf-fails-with-context-object-has-no-attribute-active-objec
     ctx = bpy.context.copy()
@@ -42,7 +56,7 @@ def write_glb():
         export_frame_range=False,
         export_frame_step=1,
         export_image_format='JPEG',
-        export_materials='EXPORT', # someday, PLACEHOLDER, to save 15MB+ of glb
+        export_materials='PLACEHOLDER', # someday, PLACEHOLDER, to save 15MB+ of glb
         export_morph_normal=True,
         export_morph_tangent=False,
         export_morph=True,
@@ -61,7 +75,15 @@ def write_glb():
 
 
 def main():
+    outData = {}
+    try:
+        with open(dest / 'world.json') as worldJsonPrev:
+            outData = json.load(worldJsonPrev)
+    except IOError:
+        pass
+
     bpy.ops.wm.open_mainfile(filepath=str(dest / 'edit.blend'))
+    switch_to_lightmap_uvs(outData)
     write_glb()
     bpy.ops.wm.quit_blender()
 

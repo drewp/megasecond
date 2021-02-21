@@ -2,8 +2,10 @@ import bpy
 
 def select_object(name):
     bpy.ops.object.select_all(action='DESELECT')
-    bpy.data.objects[name].select_set(True)
-    bpy.context.view_layer.objects.active = bpy.data.objects[name]
+    obj = bpy.data.objects[name]
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    return obj
 
 def all_mesh_objects(root):
     # Need linked dups that share a mesh to be separately returned

@@ -16,17 +16,6 @@ logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
 
 
-def objectBbox(obj):
-    ptsObject = obj.bound_box
-    ptsWorld = numpy.array([obj.matrix_world @ Vector(pt) for pt in ptsObject])
-    centerWorld = numpy.average(ptsWorld, axis=0)
-    centerToPts = ptsWorld - centerWorld
-    radius = numpy.linalg.norm(centerToPts, axis=1).max()
-    return {
-        'center': [round(x, 3) for x in centerWorld],
-        'radius': round(radius, 3)
-    }
-
 
 class Bake:
     def __init__(self,
@@ -52,8 +41,6 @@ class Bake:
             self.obj_name, {})
         obj = bpy.data.objects[self.obj_name]
 
-        self.objData['worldBbox'] = objectBbox(obj)
-
         slots = list(obj.material_slots)
         if len(slots) == 0:
             log.warning(f'{self.obj_name} has no mat slots')
@@ -63,6 +50,13 @@ class Bake:
             self.objData['material'] = {'name': slots[0].material.name}
         else:
             raise NotImplementedError("separate_materials didn't work")
+    
+        uvs = obj.data.uv_layers
+        for lyr in uvs:
+            if lyr.name == self.objData.get('render_uv', None):
+                lyr.active_render= True  # bake reads with this
+            if lyr.name == self.objData.get('lightmap_uv', None):
+                uvs.active = lyr         # bake writes with this
 
         mat = obj.material_slots.values()[0].material
 
@@ -110,7 +104,10 @@ class Bake:
 
     def bakeAndSave(self):
         bake_type, out_name, cs = self.runs[0]
-        log.info(f'{self.obj_name} start {bake_type} bake')
+        log.info(
+            f'{self.obj_name} start {bake_type} bake '
+            f'(size={self.img.generated_width}, samples={bpy.context.scene.cycles.samples})'
+        )
         self.img.colorspace_settings.name = cs
 
         bpy.context.scene.cycles.bake_type = bake_type

@@ -49,9 +49,6 @@ def export_geom():
 
 
 def export_bake_maps():
-    wj = dest / 'world.json'
-    if wj.exists():
-        wj.unlink()
     cur_env = os.environ.copy()
     for job in [
             'gnd.023',
@@ -83,6 +80,9 @@ def export_bake_maps():
             env=cur_env)
     print(open(dest / 'world.json').read())
 
+wj = dest / 'world.json'
+if wj.exists():
+    wj.unlink()
 
 export_static_images()
 export_env_scene()
