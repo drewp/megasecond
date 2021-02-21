@@ -78,7 +78,7 @@ class Bake:
 
         bpy.context.scene.render.engine = 'CYCLES'
         bpy.context.scene.cycles.device = 'GPU'
-        bpy.context.scene.cycles.samples = 40
+        bpy.context.scene.cycles.samples = 100
         bpy.context.scene.cycles.use_denoising = True
 
         self.runs = [
@@ -139,11 +139,11 @@ def async_bake(objs, outData, cb):
             return
         obj = objs.pop()
         log.info(f'{len(objs)+1} left')
-        map_size = 256
+        map_size = 512
         # maybe let a custom attr raise this sometimes, or determine it from obj size?
         if obj.startswith('gnd.'):
             map_size = 4096
-        if obj in ['building_022.002']:
+        if obj in ['building_022.outer.003']:
             map_size = 2048
         Bake(obj, outData, map_size=map_size, on_bake_done=pump)
 
@@ -170,7 +170,7 @@ def main():
             elif job == 'not gnd':
                 if not obj_name.startswith('gnd'): to_bake.append(obj_name)
             elif job == 'debug':
-                if obj_name.startswith('flag'):
+                if obj_name.startswith('sign_board'):
                     to_bake.append(obj_name)
 
         async_bake(to_bake, outData, cb)

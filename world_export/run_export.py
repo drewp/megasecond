@@ -52,7 +52,7 @@ def export_bake_maps():
     cur_env = os.environ.copy()
     for job in [
             'gnd.023',
-            'other gnd',
+            # 'other gnd',
             'not gnd',
             # 'debug',
     ]:
@@ -62,20 +62,10 @@ def export_bake_maps():
                 'blender',
                 # '--disable-autoexec',
                 # '--no-window-focus',
-                '--window-geometry',
-                '1200',
-                '800',
-                '0',
-                '0',
+                '--window-geometry', '1200', '800', '0', '0',
                 # '--background', # ideally, headless mode, but it doesn't work yet.
                 '--debug-python',
-                # '--debug-handlers',
-                # '--debug-gpu',
-                # '--debug-jobs',
-                # '--debug-cycles',
-                # '--debug-events',
-                '--python',
-                'export_bake_maps.py'
+                '--python', 'export_bake_maps.py'
             ],
             env=cur_env)
     print(open(dest / 'world.json').read())

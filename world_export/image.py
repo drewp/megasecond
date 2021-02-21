@@ -21,7 +21,7 @@ def save(img, path):
     # if img.colorspace_settings.name == 'sRGB':
     #     ar = ar**(1 / 2.2)  # unverified
     img = Image.fromarray((ar * 255).astype(numpy.uint8))
-    img.convert('RGB').save(path)
+    img.convert('RGB').save(path, quality=70)
     log.info(f'{path}: saved.')
     # then use https://github.com/BinomialLLC/basis_universal
     # then bjs loads with https://doc.babylonjs.com/advanced_topics/mutliPlatTextures#basis-file-format
