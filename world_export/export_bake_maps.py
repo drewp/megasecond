@@ -150,7 +150,7 @@ def async_bake(objs, outData, cb):
             map_size = 4096
         if obj in ['building_022.outer.003']:
             map_size = 2048
-        Bake(obj, outData, map_size=map_size, on_bake_done=pump)
+        Bake(obj, outData, map_size=map_size, samples=10, on_bake_done=pump)
 
     pump()
 
