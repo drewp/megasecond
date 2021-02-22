@@ -1,6 +1,6 @@
 import { Scene, Vector2, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
-import { WorldRoom, WorldState } from "../shared/WorldRoom";
+import { WorldRoom, WorldState, Player } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
 import * as Env from "./Env";
 import { FollowCam } from "./FollowCam";
