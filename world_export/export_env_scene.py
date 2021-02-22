@@ -1,6 +1,4 @@
-import contextlib
 import logging
-import json
 import os
 import sys
 from typing import Union
@@ -11,24 +9,17 @@ import numpy
 from mathutils import Vector
 
 sys.path.append(os.path.dirname(__file__))
+import world_json
 from blender_async import later
 from dirs import dest, src
-from selection import select_object, all_mesh_objects
+from selection import all_mesh_objects, editmode, select_object
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
 
 
-@contextlib.contextmanager
-def editmode():
-    if bpy.context.edit_object:
-        bpy.ops.object.editmode_toggle()
-    bpy.ops.object.editmode_toggle()
-    yield
-    bpy.ops.object.editmode_toggle()
-
-
-def separate_rect(obj_name, xlo, xhi, ylo, yhi) -> Union[str, None]:
+def separate_rect(obj_name: str, xlo: float, xhi: float, ylo: float,
+                  yhi: float) -> Union[str, None]:
     names_before = set(o.name for o in bpy.data.objects)
     select_object(obj_name)
     with editmode():
@@ -71,7 +62,6 @@ def separate_rect(obj_name, xlo, xhi, ylo, yhi) -> Union[str, None]:
 
 
 def make_lightmap_uv_layer(obj, outData):
-    # arrange for lightmap to always be 3rd
     uvs = obj.data.uv_layers
     lightmap_uv = uvs.new()
     lightmap_uv.name = 'lightmap'
@@ -91,6 +81,7 @@ def objectBbox(obj):
         'radius': round(radius, 3)
     }
 
+
 def storeExistingUvLayer(outData, obj):
     obj_uv = outData['objs'][obj.name]
     try:
@@ -101,18 +92,12 @@ def storeExistingUvLayer(outData, obj):
 
 
 def main():
-    outData = {}
-    try:
-        with open(dest / 'world.json') as worldJsonPrev:
-            outData = json.load(worldJsonPrev)
-    except IOError:
-        pass
+    outData = world_json.load()
 
     bpy.ops.wm.open_mainfile(filepath=str(src / 'wrap/wrap.blend'))
 
     def done():
-        with open(dest / 'world.json', 'w') as worldJson:
-            json.dump(outData, worldJson, indent=2, sort_keys=True)
+        world_json.rewrite(outData)
         bpy.ops.wm.save_as_mainfile(filepath=str(dest / 'edit.blend'))
         bpy.ops.wm.quit_blender()
 
@@ -135,13 +120,16 @@ def main():
             # if not obj_name.startswith('sign_board'): continue
 
             obj = select_object(obj_name)
-            outData.setdefault('objs', {}).setdefault(obj_name, {})['worldBbox'] = objectBbox(obj)
+            outData.setdefault('objs', {}).setdefault(
+                obj_name, {})['worldBbox'] = objectBbox(obj)
 
-            storeExistingUvLayer(outData, obj)            
+            storeExistingUvLayer(outData, obj)
             lyr = make_lightmap_uv_layer(obj, outData)
             obj.data.uv_layers.active = lyr
 
-            log.info(f'start lightmap_pack on {obj_name}; active uv is {obj.data.uv_layers.active.name}')
+            log.info(
+                f'start lightmap_pack on {obj_name}; active uv is {obj.data.uv_layers.active.name}'
+            )
             try:
                 bpy.ops.uv.lightmap_pack(
                     PREF_CONTEXT='ALL_FACES',

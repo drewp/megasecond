@@ -1,20 +1,20 @@
-import time
-import logging
 import json
+import logging
 import os
 import sys
+import time
 
-import numpy
 import bpy
-from mathutils import Vector
+
 sys.path.append(os.path.dirname(__file__))
 import image
+import world_json
 from blender_async import later
 from dirs import dest
-from selection import select_object, all_mesh_objects
+from selection import all_mesh_objects, select_object
+
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
-
 
 
 class Bake:
@@ -22,10 +22,12 @@ class Bake:
                  obj_name,
                  outData,
                  map_size=1024,
+                 samples=100,
                  on_bake_done=lambda: None):
         self.obj_name = obj_name
         self.outData = outData
         self.map_size = map_size
+        self.samples = samples
         self.on_bake_done = on_bake_done
         # 'screen' context is not immediately ready
         later(1, self._withScreen)
@@ -50,16 +52,33 @@ class Bake:
             self.objData['material'] = {'name': slots[0].material.name}
         else:
             raise NotImplementedError("separate_materials didn't work")
-    
+
+        self._selectUvs(obj)
+        mat = obj.material_slots.values()[0].material
+
+        self._prepBakeImage(mat)
+
+        self.runs = [
+            # ('COMBINED', 'comb', 'sRGB'),
+            ('DIFFUSE', 'dif', 'sRGB'),
+            # ('AO', 'ao', 'Non-Color'),
+            # ('SHADOW', 'shad', 'Non-Color'),
+            # ('NORMAL', 'norm', 'Non-Color'),
+            # ('ROUGHNESS', 'ruff', 'Non-Color'),
+            # ('GLOSSY', 'glos', 'Non-Color'),
+        ]
+
+        self.nextBake()
+
+    def _selectUvs(self, obj):
         uvs = obj.data.uv_layers
         for lyr in uvs:
             if lyr.name == self.objData.get('render_uv', None):
-                lyr.active_render= True  # bake reads with this
+                lyr.active_render = True  # bake reads with this
             if lyr.name == self.objData.get('lightmap_uv', None):
-                uvs.active = lyr         # bake writes with this
+                uvs.active = lyr  # bake writes with this
 
-        mat = obj.material_slots.values()[0].material
-
+    def _prepBakeImage(self, mat):
         self.img = bpy.data.images.new('bake_out',
                                        self.map_size,
                                        self.map_size,
@@ -76,41 +95,27 @@ class Bake:
         tx.select = True  # bake writes to the selected node
         nodes.active = tx
 
-        bpy.context.scene.render.engine = 'CYCLES'
-        bpy.context.scene.cycles.device = 'GPU'
-        bpy.context.scene.cycles.samples = 100
-        bpy.context.scene.cycles.use_denoising = True
-
-        self.runs = [
-            # ('COMBINED', 'comb', 'sRGB'),
-            ('DIFFUSE', 'dif', 'sRGB'),
-            # ('AO', 'ao', 'Non-Color'),
-            # ('SHADOW', 'shad', 'Non-Color'),
-            # ('NORMAL', 'norm', 'Non-Color'),
-            # ('ROUGHNESS', 'ruff', 'Non-Color'),
-            # ('GLOSSY', 'glos', 'Non-Color'),
-        ]
-
-        self.nextBake()
-
     def nextBake(self):
         if not self.runs:
             log.info(f'{self.obj_name} bake jobs done')
             self.delete_node()
-
             self.on_bake_done()
             return
+
         self.bakeAndSave()
 
     def bakeAndSave(self):
         bake_type, out_name, cs = self.runs[0]
-        log.info(
-            f'{self.obj_name} start {bake_type} bake '
-            f'(size={self.img.generated_width}, samples={bpy.context.scene.cycles.samples})'
-        )
+        log.info(f'{self.obj_name} start {bake_type} bake '
+                 f'(size={self.img.generated_width}, samples={self.samples})')
         self.img.colorspace_settings.name = cs
 
+        bpy.context.scene.render.engine = 'CYCLES'
+        bpy.context.scene.cycles.device = 'GPU'
+        bpy.context.scene.cycles.samples = self.samples
+        bpy.context.scene.cycles.use_denoising = True
         bpy.context.scene.cycles.bake_type = bake_type
+
         bakeData = self.objData.setdefault('bake',
                                            {}).setdefault(bake_type, {})
         bakeData['res'] = self.img.generated_width
@@ -152,12 +157,7 @@ def async_bake(objs, outData, cb):
 
 def main():
     bpy.ops.wm.open_mainfile(filepath=str(dest / 'edit.blend'))
-    outData = {}
-    try:
-        with open(dest / 'world.json') as worldJsonPrev:
-            outData = json.load(worldJsonPrev)
-    except IOError:
-        pass
+    outData = world_json.load()
 
     def run_bakes(cb):
         to_bake = []
@@ -176,8 +176,7 @@ def main():
         async_bake(to_bake, outData, cb)
 
     def done():
-        with open(dest / 'world.json', 'w') as worldJson:
-            json.dump(outData, worldJson, indent=2, sort_keys=True)
+        world_json.rewrite(outData)
         bpy.ops.wm.quit_blender()
 
     later(2, run_bakes, done)
