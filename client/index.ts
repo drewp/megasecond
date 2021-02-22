@@ -7,6 +7,9 @@ import { FollowCam } from "./FollowCam";
 import { PlayerMotion } from "./PlayerMotion";
 import { PlayerView } from "./PlayerView";
 import { Actions, UserInput } from "./UserInput";
+import createLogger from "logging";
+
+const log = createLogger("WorldRoom");
 
 class Net {
   client: Colyseus.Client;

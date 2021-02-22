@@ -2,7 +2,9 @@ import { Context, defineTypes, MapSchema, Schema, type } from "@colyseus/schema"
 
 import { Room } from "colyseus";
 import { Client } from "colyseus";
+import createLogger from "logging";
 
+const log = createLogger("WorldRoom");
 /**
  * Create another context to avoid these types from being in the user's global `Context`
  */
