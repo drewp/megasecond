@@ -25,7 +25,7 @@ export class World {
   buildData: any;
   groundBump: Texture | undefined;
   constructor(public scene: Scene) {}
-  async load() {
+  async load(wire: boolean) {
     const scene = this.scene;
     this.buildData = await (await fetch("./asset_build/world.json")).json();
 
@@ -37,6 +37,10 @@ export class World {
     scene.getMeshByName("player")!.isVisible = false;
     this.setupNavMesh();
 
+    if (wire) {
+      scene.forceWireframe = true;
+      return;
+    }
     setupSunShadows(scene);
 
     scene.getLightByName("Spot")!.intensity /= 1000;

@@ -39,7 +39,9 @@ export class PlayerView {
     this.nametag = this.makeNametag();
 
     const sunCaster = (window as any).gen as ShadowGenerator; // todo
-    sunCaster.addShadowCaster(this.body);
+    if (sunCaster) {
+      sunCaster.addShadowCaster(this.body);
+    }
   }
 
   makeNametag() {

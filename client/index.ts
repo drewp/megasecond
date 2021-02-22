@@ -101,7 +101,7 @@ async function go() {
   const scene = setupScene("renderCanvas");
   const game = new Game(scene);
   const env = new Env.World(scene);
-  await env.load();
+  await env.load(true);
 
   for (let [sess, data] of net.worldState!.players.entries()) {
     game.addPlayer(sess, /*me=*/ sess == net.world?.sessionId);
