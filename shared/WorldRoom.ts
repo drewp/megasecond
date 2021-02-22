@@ -44,7 +44,7 @@ export class WorldRoom extends Room<WorldState> {
     player.sessionId = client.sessionId;
 
     if (options.name) {
-      player.name = options.name;
+      player.nick = options.name;
     }
 
     this.state.players.set(client.sessionId, player);
