@@ -45,26 +45,11 @@ defineTypes(
 export class WorldRoom extends Room<WorldState> {
   public allowReconnectionTime: number = 10;
 
-  public onCreate(
-    options: Partial<{
-      maxClients: number;
-      allowReconnectionTime: number;
-      metadata: any;
-    }>
-  ) {
+  public onCreate() {
+    log.info("created WorldRoom");
     this.setState(new WorldState());
 
-    if (options.maxClients) {
-      this.maxClients = options.maxClients;
-    }
-
-    if (options.allowReconnectionTime) {
-      this.allowReconnectionTime = Math.min(options.allowReconnectionTime, 40);
-    }
-
-    if (options.metadata) {
-      this.setMetadata(options.metadata);
-    }
+    this.maxClients = 100;
 
     this.onMessage("*", (client: Client, type: string|number, message: any) => {
       this.broadcast(type, [client.sessionId, message], { except: client });
