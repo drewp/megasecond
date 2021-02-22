@@ -1,4 +1,4 @@
-import { Context, defineTypes, MapSchema, Schema } from "@colyseus/schema";
+import { Context, defineTypes, MapSchema, Schema, type } from "@colyseus/schema";
 
 import { Room } from "colyseus";
 import { Client } from "colyseus";
@@ -8,39 +8,19 @@ import { Client } from "colyseus";
  */
 const context = new Context();
 
-class Player extends Schema {
-  // tslint:disable-line
-  public connected: boolean=false;
-  public name: string="unnamed";
-  public sessionId: string="";
+export class Player extends Schema {
+  @type("boolean")
+  connected = false;
+  @type("string")
+  nick = "unnamed";
+  @type("string")
+  sessionId = "";
 }
-defineTypes(
-  Player,
-  {
-    connected: "boolean",
-    name: "string",
-    sessionId: "string",
-  },
-  context
-);
 
 export class WorldState extends Schema {
+  @type({ map: Player })
   public players = new MapSchema<Player>();
 }
-defineTypes(
-  WorldState,
-  {
-    players: { map: Player },
-  },
-  context
-);
-
-/**
- * client.joinOrCreate("relayroom", {
- *   maxClients: 10,
- *   allowReconnectionTime: 20
- * });
- */
 
 export class WorldRoom extends Room<WorldState> {
   public allowReconnectionTime: number = 10;
