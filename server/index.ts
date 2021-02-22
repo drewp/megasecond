@@ -26,8 +26,8 @@ const server = http.createServer(app);
 const gameServer = new Server({ server });
 gameServer.define('lobby', LobbyRoom);
 gameServer.define('world', WorldRoom).enableRealtimeListing();
-
+log.info('defined game world')
 
 app.use("/colyseus", monitor());
 gameServer.listen(port);
-console.log(`Listening on ${port}`);
+log.info(`Listening on ${port}`);

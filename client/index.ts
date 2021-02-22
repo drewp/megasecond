@@ -28,6 +28,7 @@ class Net {
     this.world = await this.client.joinOrCreate<WorldRoom>("world", { name: this.myDisplayName });
     this.status.setConnection("connected.");
 
+    log.info('first state on'); 
     (window as any).world = this.world;
     this.worldState = (this.world.state as unknown) as any;
   }

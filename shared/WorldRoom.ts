@@ -39,7 +39,7 @@ export class WorldRoom extends Room<WorldState> {
   }
 
   public onJoin(client: Client, options: any = {}) {
-      console.log('onjoin', client.sessionId, options);
+    log.info("onjoin", client.sessionId, options);
     const player = new Player();
 
     player.connected = true;
@@ -53,7 +53,7 @@ export class WorldRoom extends Room<WorldState> {
   }
 
   public async onLeave(client: Client, consented: boolean) {
-      console.log('onLeave', client.id, consented)
+    log.info("onLeave", client.id, { consented });
     if (this.allowReconnectionTime > 0) {
       const player = this.state.players.get(client.sessionId)!;
       player.connected = false;
