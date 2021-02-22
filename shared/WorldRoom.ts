@@ -46,7 +46,7 @@ export class WorldRoom extends Room<WorldState> {
   public allowReconnectionTime: number = 10;
 
   public onCreate() {
-    log.info("created WorldRoom");
+    // log.info("created WorldRoom");
     this.setState(new WorldState());
 
     this.maxClients = 100;
