@@ -16,7 +16,6 @@ Also using these:
 - [babylonjs](https://www.babylonjs.com/)
 - blender
 
-
 Actual game TBD.
 
 # Live game instance
@@ -31,12 +30,14 @@ https://megasecond.club/
 
 ### (optional) Use mercurial
 
-You can optionally get this (or any other git repo) with hg: 
+You can optionally get this (or any other git repo) with hg:
 
 ```
 hg clone git+ssh://git@github.com:drewp/megasecond.git
 ```
+
 Push like this:
+
 ```
 hg bookmark -r default master && hg push
 ```
@@ -71,6 +72,8 @@ megasecond.default.service.cluster.local:80.
 
 "Abandoned factory" (https://skfb.ly/6TzYN) by Rixael is licensed under Creative
 Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+"Illustration from The Grammar of Ornament (1910) by Owen Jones" (https://flickr.com/photos/byrawpixel/35104618923), public domain.
 
 ## Development links
 
