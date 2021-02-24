@@ -21,11 +21,17 @@ import {
 } from "babylonjs";
 import { GridMaterial, ShadowOnlyMaterial, SkyMaterial } from "babylonjs-materials";
 
+export enum GraphicsLevel {
+  wire,
+  grid,
+  texture,
+}
+
 export class World {
   buildData: any;
   groundBump: Texture | undefined;
   constructor(public scene: Scene) {}
-  async load(wire: boolean) {
+  async load(graphicsLevel: GraphicsLevel) {
     const scene = this.scene;
     this.buildData = await (await fetch("./asset_build/world.json")).json();
 
@@ -37,7 +43,7 @@ export class World {
     scene.getMeshByName("player")!.isVisible = false;
     this.setupNavMesh();
 
-    if (wire) {
+    if (graphicsLevel == GraphicsLevel.wire) {
       scene.forceWireframe = true;
       return;
     }
@@ -52,8 +58,21 @@ export class World {
     this.groundBump.level = 0.43;
     this.groundBump.uScale = this.groundBump.vScale = 400;
 
-    this.loadMaps(Vector3.Zero(), 100);
+    if (graphicsLevel == GraphicsLevel.grid) {
+      const grid = new GridMaterial("grid", this.scene);
+      grid.gridRatio = 0.1;
+      grid.majorUnitFrequency = 5;
+      grid.mainColor = new Color3(0.3, 0.3, 0.3);
+      grid.backFaceCulling = false;
 
+      for (let m of Object.keys(this.buildData.objs)) {
+        try {
+          this.scene.getMeshByName(m)!.material = grid;
+        } catch (err) {}
+      }
+    } else {
+      this.loadMaps(Vector3.Zero(), 100);
+    }
     // this.setupSkybox(scene);
   }
 
