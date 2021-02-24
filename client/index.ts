@@ -8,59 +8,113 @@ import { PlayerMotion } from "./PlayerMotion";
 import { PlayerView } from "./PlayerView";
 import { Actions, UserInput } from "./UserInput";
 import createLogger from "logging";
+import { MapSchema } from "@colyseus/schema";
 
 const log = createLogger("WorldRoom");
 
+type PlayerMap = Map<playerSessionId, Player>;
+
 class Net {
   client: Colyseus.Client;
-  world?: Colyseus.Room<WorldRoom>;
+  world?: Colyseus.Room<WorldState>;
   worldState?: WorldState;
-  myDisplayName: string;
-  private lastSent: { x: number; y: number; z: number } | undefined;
+  private lastSent: { x: number; y: number; z: number; facingX: number; facingY: number; facingZ: number } | undefined;
   constructor(private status: StatusLine) {
     this.status.setPlayer("...");
     this.status.setConnection("connecting...");
     this.client = new Colyseus.Client("wss://megasecond.club/");
-    this.myDisplayName = "p" + Math.round(Math.random() * 10000);
-    this.status.setPlayer(this.myDisplayName);
+    // this.status.setPlayer(this.myDisplayName);
   }
   async joinWorld() {
-    this.world = await this.client.joinOrCreate<WorldRoom>("world", { name: this.myDisplayName });
-    this.status.setConnection("connected.");
+    const world = await this.client.joinOrCreate<WorldState>("world", {});
+    this.world = world;
+    (window as any).world = world;
 
-    log.info('first state on'); 
-    (window as any).world = this.world;
-    this.worldState = (this.world.state as unknown) as any;
+    this.status.setConnection("connected...");
+
+    this.world.listen("/players/:id/nick", (cur: any, prev: any) => log.info("cb /players", cur, prev));
+
+    return new Promise<{ me: Player; others: PlayerMap }>((resolve, reject) => {
+      world.onStateChange.once((state) => {
+        this.status.setConnection(`connected (${Array.from(state.players.keys()).length} players)`);
+        log.info("players are", Array.from(state.players.entries()));
+        const me = state.players.get(world.sessionId);
+        if (!me) {
+          reject("player list didn't include me");
+          return;
+        }
+        const others: PlayerMap = new Map();
+        state.players.forEach((pl, id) => {if (id!=world.sessionId) {others.set(id, pl)}});
+        resolve({ me, others });
+      });
+    });
+  }
+  players(): MapSchema<Player> {
+    return this.world!.state.players;
   }
   uploadMe(me: PlayerMotion) {
     if (
       this.lastSent !== undefined && //
       this.lastSent.x == me.pos.x &&
       this.lastSent.y == me.pos.y &&
-      this.lastSent.z == me.pos.z
+      this.lastSent.z == me.pos.z &&
+      this.lastSent.facingX == me.facing.x &&
+      this.lastSent.facingY == me.facing.y &&
+      this.lastSent.facingZ == me.facing.z
     ) {
       return;
     }
-    this.lastSent = { x: me.pos.x, y: me.pos.y, z: me.pos.z };
-    // surely this isn't supposed to be a new message, just some kind of set on the room state object
+    this.lastSent = { x: me.pos.x, y: me.pos.y, z: me.pos.z, facingX: me.facing.x, facingY: me.facing.y, facingZ: me.facing.z };
     this.world!.send("playerMove", this.lastSent);
   }
 }
 
+type playerSessionId = string;
+
 class Game {
-  playerViews = new Map<string, PlayerView>();
-  playerMotions = new Map<string, PlayerMotion>();
+  playerViews = new Map<playerSessionId, PlayerView>();
+  playerMotions = new Map<playerSessionId, PlayerMotion>();
   fcam: FollowCam;
   me?: PlayerMotion;
   constructor(private scene: Scene) {
     this.fcam = new FollowCam(scene);
   }
+  trackServerPlayers(net: Net, mePlayer: Player, others: PlayerMap, status: StatusLine) {
+    // this is not right- misses some cases
 
-  addPlayer(name: string, me: boolean) {
-    const pv = new PlayerView(this.scene, name);
-    this.playerViews.set(name, pv);
-    const pm = new PlayerMotion(this.scene);
-    this.playerMotions.set(name, pm);
+    this.addPlayer(net.world!.sessionId, mePlayer, true);
+    others.forEach((pl, id) => {
+      log.info(`initial others onadd ${id}`);
+
+      this.addPlayer(id, pl, false);
+    });
+
+    net.players().onAdd = (player: Player, sessionId: string) => {
+      log.info(`\nnet onAdd ${sessionId} ${net.world!.sessionId}`);
+      if (net.world!.sessionId == sessionId) {
+        log.error("another player with my session");
+      } else {
+        console.log("player add", player.sessionId);
+        if (!this.playerViews.has(sessionId)) {
+          this.addPlayer(sessionId, player, /*me=*/ false);
+        }
+      }
+      status.setConnection(`connected (${Array.from(net.world!.state.players.keys()).length} players)`);
+    };
+
+    net.players().onRemove = (player: Player, sessionId: string) => {
+      console.log("player rm", player.sessionId);
+      this.removePlayer(sessionId);
+      status.setConnection(`connected (${Array.from(net.world!.state.players.keys()).length} players)`);
+    };
+  }
+
+  addPlayer(sessionId: playerSessionId, player: Player, me: boolean) {
+    log.info("addPlayer", sessionId);
+    const pv = new PlayerView(this.scene, player);
+    this.playerViews.set(sessionId, pv);
+    const pm = new PlayerMotion(this.scene, player);
+    this.playerMotions.set(sessionId, pm);
     if (me) {
       this.fcam.setTarget(pv.getCamTarget());
       (window as any).me = pv;
@@ -69,13 +123,14 @@ class Game {
       this.me.facing = new Vector3(0, 0, -1);
     }
   }
-  removePlayer(name: string) {
-    const pv = this.playerViews.get(name);
+  removePlayer(sessionId: playerSessionId) {
+    const pv = this.playerViews.get(sessionId);
     if (pv === undefined) {
       return;
     }
     pv.dispose();
-    this.playerViews.delete(name);
+    this.playerViews.delete(sessionId);
+    this.playerMotions.delete(sessionId);
   }
   getMe(): PlayerMotion {
     return this.me!;
@@ -87,10 +142,22 @@ class Game {
     }
     pm.pos = pos;
   }
+  setAll(players: PlayerMap) {
+    players.forEach((pl, id) => {
+      const pm = this.playerMotions.get(id);
+      if (pm === undefined) {
+        log.error(`net update for id=${id}, not found`);
+        return;
+      }
+      pm.pos = new Vector3(pl.x, pl.y, pl.z);
+      pm.facing = new Vector3(pl.facingX, pl.facingY, pl.facingZ);
+      // log.info(`facing update for ${id} to ${pm.facing.toString()}`)
+    });
+  }
   stepPlayerViews(dt: number) {
     for (let [name, pm] of this.playerMotions.entries()) {
       const pv = this.playerViews.get(name);
-      if (pv === undefined) continue; //throw new Error("missing view for " + name);
+      if (pv === undefined) throw new Error("missing view for " + name);
       pv.step(dt, pm.pos, pm.facing, pm.getHeading(), pm === this.me ? this.fcam : undefined);
     }
   }
@@ -120,39 +187,34 @@ async function go() {
   const nick = getOrCreateNick();
 
   const status = new StatusLine();
-  const net = new Net(status);
+  status.setPlayer(nick);
 
-  await net.joinWorld();
+  const net = new Net(status);
+  const ret = await net.joinWorld();
+  const mePlayer = ret.me;
+  const others = ret.others;
+
+  net.world!.send("setNick", nick);
 
   const scene = setupScene("renderCanvas");
   const game = new Game(scene);
   const env = new Env.World(scene);
-
-  for (let [sess, data] of net.worldState!.players.entries()) {
-    game.addPlayer(sess, /*me=*/ sess == net.world?.sessionId);
-  }
   await env.load(Env.GraphicsLevel.texture);
+  // for (let [sess, data] of net.worldState!.players.entries()) {
+  //   game.addPlayer(sess, /*me=*/ sess == net.world?.sessionId);
+  // }
+  game.trackServerPlayers(net, mePlayer, others, status);
 
-  net.worldState!.players.onAdd = (player: any, sessionId: any) => {
-    if (net.world!.sessionId === sessionId) {
-      status.setPlayer(player.name);
-      status.setConnection(`connected (${Array.from(net.worldState!.players.keys()).length} players)`);
-    } else {
-      console.log("It's an opponent", player.name, sessionId);
-      status.setConnection(`connected (${Array.from(net.worldState!.players.keys()).length} players)`);
-      game.addPlayer(sessionId, /*me=*/ false); // todo: this isnt happening for existing players
-    }
-  };
-
-  net.worldState!.players.onRemove = function (player: any, sessionId: any) {
-    console.log("bye", player, sessionId);
-    status.setConnection(`connected (${Array.from(net.worldState!.players.keys()).length} players)`);
-    game.removePlayer(sessionId);
-  };
-
-  net.world!.onMessage("playerMove", (msg: any) => {
-    const pl = game.setPlayerPosFromNet(msg[0], new Vector3(msg[1].x, msg[1].y, msg[1].z));
+  net.world!.onStateChange((state) => {
+    game.setAll(net.world!.state.players);
   });
+
+  //   net.world!.state.listen("players", (cur, prev) => {
+  // log.info('player change', cur, prev)
+  //   });
+  // onMessage("playerMove", (msg: any) => {
+  //   const pl = game.setPlayerPosFromNet(msg[0], new Vector3(msg[1].x, msg[1].y, msg[1].z));
+  // });
 
   const userInput = new UserInput(scene, function onAction(name: Actions) {
     if (name == Actions.Jump) {

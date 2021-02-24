@@ -1,4 +1,5 @@
 import { AbstractMesh, Color3, Matrix, Mesh, Quaternion, Ray, Scene, ThinEngine, Vector2, Vector3 } from "babylonjs";
+import { Player } from "../shared/WorldRoom";
 import { ShowPoint, ShowSegment } from "./Debug";
 
 function projectToSegment(pt: Vector3, segStart: Vector3, segEnd: Vector3): Vector3 {
@@ -20,7 +21,7 @@ export class PlayerMotion {
   debugNavHit: ShowSegment;
   debugNavRay: ShowSegment;
   debugCurNavFace: ShowPoint[];
-  constructor(public scene: Scene) {
+  constructor(public scene: Scene, public player: Player) {
     this.nav = scene.getMeshByName("navmesh") as Mesh;
     this.nav.updateFacetData();
 
