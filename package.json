@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "game",
   "scripts": {
-    "run_server": "ts-node-dev server/index.ts",
+    "run_server": "ts-node-dev --respawn --watch shared/*.ts -- server/index.ts",
     "rebuild_client_forever": "rollup -cw"
   },
   "author": "drewp@bigasterisk.com",

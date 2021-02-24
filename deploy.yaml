@@ -20,6 +20,9 @@ spec:
           volumeMounts:
             - { name: rollup-build, mountPath: /workspace/rollup_build }
           ports: [{ containerPort: 10001 }]
+          env:
+            - name: DEBUG
+              value: colyseus:*
         # this container reads from client/** and outputs to rollup_build/
         - name: rebuild-client
           image: bang5:5000/megasecond_image
