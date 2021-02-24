@@ -6,20 +6,19 @@ import {
   Color4,
   DirectionalLight,
   Effect,
-  Material,
   Mesh,
-  PBRBaseSimpleMaterial,
   PBRMaterial,
-  PBRSpecularGlossinessMaterial,
   Scene,
   SceneLoader,
   ShaderMaterial,
   ShadowGenerator,
-  StandardMaterial,
   Texture,
   Vector3,
 } from "babylonjs";
-import { GridMaterial, ShadowOnlyMaterial, SkyMaterial } from "babylonjs-materials";
+import { GridMaterial, SkyMaterial } from "babylonjs-materials";
+import createLogger from "logging";
+
+const log = createLogger("Env");
 
 export enum GraphicsLevel {
   wire,
@@ -77,6 +76,8 @@ export class World {
   }
 
   loadMaps(center: Vector3, maxDist: number) {
+    let objsInRange = 0,
+      objsTooFar = 0;
     for (let m of Object.keys(this.buildData.objs)) {
       if (m == "navmesh" || m == "__root__" || m == "player") {
         continue;
@@ -87,10 +88,11 @@ export class World {
         continue;
       }
       const d = this.distToObject(obj, center);
-      console.log(`obj ${m} is ${d} away`);
       if (d > maxDist) {
+        objsTooFar += 1;
         continue;
       }
+      objsInRange += 1;
 
       try {
         this.assignTx(m);
@@ -102,6 +104,7 @@ export class World {
         (obj.material as PBRMaterial).bumpTexture = this.groundBump!;
       }
     }
+    log.info(`loaded textures for ${objsInRange}, skipped ${objsTooFar} objs`);
   }
 
   private distToObject(m: AbstractMesh, center: Vector3) {
