@@ -91,7 +91,7 @@ class Game {
     for (let [name, pm] of this.playerMotions.entries()) {
       const pv = this.playerViews.get(name);
       if (pv === undefined) continue; //throw new Error("missing view for " + name);
-      pv.step(dt, pm.pos, pm.facing, pm === this.me ? this.fcam : undefined);
+      pv.step(dt, pm.pos, pm.facing, pm.getHeading(), pm === this.me ? this.fcam : undefined);
     }
   }
 }

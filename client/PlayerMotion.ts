@@ -133,4 +133,8 @@ export class PlayerMotion {
     verts[2] = Vector3.TransformCoordinates(verts[2], this.rootTransform);
     return verts;
   }
+  getHeading():number {
+    return (360 / (2 * Math.PI)) * Math.atan2(-this.facing.z, this.facing.x) + 270;
+
+  }
 }

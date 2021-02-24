@@ -73,12 +73,12 @@ export class PlayerView {
   dispose() {
     this.body?.dispose();
   }
-  step(dt: number, pos: Vector3, facing: Vector3, fcam: FollowCam | undefined) {
+  step(dt: number, pos: Vector3, facing: Vector3, heading: number, fcam: FollowCam | undefined) {
     const b = this.body!;
     b.position.copyFrom(pos);
     b.lookAt(b.position.add(facing)); // todo: maybe with animation
     if (fcam) {
-      fcam.step(dt, pos, facing);
+      fcam.step(dt, pos, heading);
     }
   }
   getCamTarget(): TransformNode {

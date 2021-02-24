@@ -28,9 +28,8 @@ export class FollowCam {
   onMouseY(movementY: number) {
     this.cam.heightOffset += 0.0003 * movementY;
   }
-  step(dt: number, pos: Vector3, facing: Vector3) {
+  step(dt: number, pos: Vector3, heading: number) {
     // try to get behind player, don't crash walls
-    let heading = (360 / (2 * Math.PI)) * Math.atan2(-facing.z, facing.x) + 270;
     let r = this.cam.rotationOffset;
     if (Math.abs(r - heading) > 180) {
       if (r < heading) {
