@@ -1,6 +1,7 @@
 import { MapSchema } from "@colyseus/schema";
 import { Scene, Vector2, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
+import { Component, Types, World } from "ecsy";
 import createLogger from "logging";
 import { Player, WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
@@ -81,7 +82,8 @@ class Game {
   playerMotions = new Map<playerSessionId, PlayerMotion>();
   fcam: FollowCam;
   me?: PlayerMotion;
-  constructor(private scene: Scene) {
+  constructor(private scene: Scene, private world: World) {
+    const localPlayer = world.createEntity();
     this.fcam = new FollowCam(scene);
   }
   trackServerPlayers(net: Net, mePlayer: Player, others: PlayerMap, status: StatusLine) {
@@ -169,6 +171,16 @@ class Game {
 }
 
 async function go() {
+  const world = new World();
+
+  class Demo extends Component<{}> {}
+  Demo.schema = {
+    num: { type: Types.Number, default: 10 },
+  };
+  world.registerComponent(Demo);
+  const meEntity = world.createEntity();
+  meEntity.addComponent(Demo);
+
   const nick = getOrCreateNick();
 
   const status = new StatusLine();
@@ -182,7 +194,7 @@ async function go() {
   net.world!.send("setNick", nick);
 
   const scene = setupScene("renderCanvas");
-  const game = new Game(scene);
+  const game = new Game(scene, world);
   const env = new Env.World(scene);
   await env.load(Env.GraphicsLevel.texture);
   game.trackServerPlayers(net, mePlayer, others, status);
@@ -206,6 +218,8 @@ async function go() {
   const slowStep = false;
 
   const gameStep = (dt: number) => {
+    world.execute(dt, performance.now() / 1000);
+
     userInput.step(dt);
 
     me.step(dt, userInput.mouseX, new Vector2(userInput.stickX, userInput.stickY));

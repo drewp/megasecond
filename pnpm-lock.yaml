@@ -14,6 +14,7 @@ dependencies:
   colyseus: 0.14.6
   colyseus.js: 0.14.1
   cors: 2.8.5
+  ecsy: 0.4.2
   express: 4.17.1
   express-jwt: 5.3.3
   logging: 3.3.0
@@ -820,6 +821,10 @@ packages:
     dev: false
     resolution:
       integrity: sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==
+  /ecsy/0.4.2:
+    dev: false
+    resolution:
+      integrity: sha512-dVKOkuz1IsRvS7GlHcWghUtMZzXr70h6b+SQEHlKy2RgsCRNDzdYr6a43Q6HafuquA/67YFZCQt8zqadq/jlLA==
   /ee-first/1.1.1:
     dev: false
     resolution:
@@ -2573,6 +2578,7 @@ specifiers:
   colyseus: ^0.14.6
   colyseus.js: 0.14.1
   cors: ^2.8.5
+  ecsy: ^0.4.2
   express: ^4.16.4
   express-jwt: ^5.3.1
   logging: ^3.3.0
