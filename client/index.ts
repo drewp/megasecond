@@ -1,14 +1,15 @@
+import { MapSchema } from "@colyseus/schema";
 import { Scene, Vector2, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
-import { WorldRoom, WorldState, Player } from "../shared/WorldRoom";
+import createLogger from "logging";
+import { Player, WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
 import * as Env from "./Env";
 import { FollowCam } from "./FollowCam";
+import { getOrCreateNick } from "./nick";
 import { PlayerMotion } from "./PlayerMotion";
 import { PlayerView } from "./PlayerView";
 import { Actions, UserInput } from "./UserInput";
-import createLogger from "logging";
-import { MapSchema } from "@colyseus/schema";
 
 const log = createLogger("WorldRoom");
 
@@ -44,7 +45,11 @@ class Net {
           return;
         }
         const others: PlayerMap = new Map();
-        state.players.forEach((pl, id) => {if (id!=world.sessionId) {others.set(id, pl)}});
+        state.players.forEach((pl, id) => {
+          if (id != world.sessionId) {
+            others.set(id, pl);
+          }
+        });
         resolve({ me, others });
       });
     });
@@ -163,26 +168,6 @@ class Game {
   }
 }
 
-function getOrCreateNick(): string {
-  const url = new URL(window.location.href);
-  const qparams = url.searchParams;
-  if (!qparams.has("nick")) {
-    let pairs: string[] = [];
-    pairs = pairs.concat(["th", "ar", "he", "te", "an", "se", "in", "me", "er", "sa"]);
-    pairs = pairs.concat(["nd", "ne", "re", "wa", "ed", "ve", "es", "le", "ou", "no"]);
-    pairs = pairs.concat(["to", "ta", "ha", "al", "en", "de", "ea", "ot", "st", "so"]);
-
-    let nick = "";
-    for (let i = 2 + Math.random() * 2; i > 0; i--) {
-      nick += pairs[Math.floor(Math.random() * pairs.length)];
-    }
-
-    qparams.append("nick", nick);
-    window.location.replace(url.toString());
-  }
-  return qparams.get("nick")!;
-}
-
 async function go() {
   const nick = getOrCreateNick();
 
@@ -200,21 +185,11 @@ async function go() {
   const game = new Game(scene);
   const env = new Env.World(scene);
   await env.load(Env.GraphicsLevel.texture);
-  // for (let [sess, data] of net.worldState!.players.entries()) {
-  //   game.addPlayer(sess, /*me=*/ sess == net.world?.sessionId);
-  // }
   game.trackServerPlayers(net, mePlayer, others, status);
 
   net.world!.onStateChange((state) => {
     game.setAll(net.world!.state.players);
   });
-
-  //   net.world!.state.listen("players", (cur, prev) => {
-  // log.info('player change', cur, prev)
-  //   });
-  // onMessage("playerMove", (msg: any) => {
-  //   const pl = game.setPlayerPosFromNet(msg[0], new Vector3(msg[1].x, msg[1].y, msg[1].z));
-  // });
 
   const userInput = new UserInput(scene, function onAction(name: Actions) {
     if (name == Actions.Jump) {
