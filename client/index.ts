@@ -1,7 +1,7 @@
 import { MapSchema } from "@colyseus/schema";
-import { Scene, Vector2, Vector3 } from "babylonjs";
+import { AbstractMesh, Color3, MeshBuilder, Scene, StandardMaterial, Vector2, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
-import { Component, Types, World } from "ecsy";
+import { Component, Entity, System, Types, World } from "ecsy";
 import createLogger from "logging";
 import { Player, WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
@@ -126,8 +126,8 @@ class Game {
       this.fcam.setTarget(pv.getCamTarget());
       (window as any).me = pv;
       this.me = pm;
-      this.me.pos = new Vector3(1.8, 0, -9.5);
-      this.me.facing = new Vector3(0, 0, -1);
+      this.me.pos = new Vector3(-2.3, 0, -2);
+      this.me.facing = new Vector3(0, 0, 1);
     }
   }
   removePlayer(sessionId: playerSessionId) {
@@ -170,17 +170,51 @@ class Game {
   }
 }
 
-async function go() {
+function ecsCard(scene: Scene) {
   const world = new World();
 
-  class Demo extends Component<{}> {}
-  Demo.schema = {
-    num: { type: Types.Number, default: 10 },
+  class BjsMesh extends Component<{}> {}
+  BjsMesh.schema = {
+    object: { type: Types.Ref },
   };
-  world.registerComponent(Demo);
-  const meEntity = world.createEntity();
-  meEntity.addComponent(Demo);
+  world.registerComponent(BjsMesh);
 
+  class Twirl extends Component<{}> {}
+  Twirl.schema = {
+    degPerSec: { type: Types.Number, default: 1 },
+  };
+  world.registerComponent(Twirl);
+
+  var cardMesh = MeshBuilder.CreateBox("box", { size: 3 }, scene);
+  var material = new StandardMaterial("material", scene);
+  material.diffuseColor = new Color3(1, 1, 1);
+  cardMesh.material = material;
+
+  const card = world.createEntity();
+  card.addComponent(Twirl, { degPerSec: 1 });
+  card.addComponent(BjsMesh, { object: cardMesh });
+
+  class SimpleMove extends System {
+    execute(delta: number) {
+      const entities = this.queries.entities.results;
+      for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i] as Entity;
+        const degPerSec = (entity.getComponent(Twirl) as any).degPerSec;
+        const object: AbstractMesh = (entity.getComponent(BjsMesh) as any).object;
+
+        object.rotation.y += degPerSec * delta;
+      }
+    }
+  }
+
+  SimpleMove.queries = {
+    entities: { components: [Twirl, BjsMesh] },
+  };
+  world.registerSystem(SimpleMove);
+  return world;
+}
+
+async function go() {
   const nick = getOrCreateNick();
 
   const status = new StatusLine();
@@ -194,6 +228,7 @@ async function go() {
   net.world!.send("setNick", nick);
 
   const scene = setupScene("renderCanvas");
+  const world = ecsCard(scene);
   const game = new Game(scene, world);
   const env = new Env.World(scene);
   await env.load(Env.GraphicsLevel.texture);
