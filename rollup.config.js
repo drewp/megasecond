@@ -7,7 +7,7 @@ const destDir = "rollup_build";
 const sourcemap = true;
 
 export default {
-    external: ["babylonjs", "colyseus.js", "ecsy"],
+    external: ["babylonjs", "colyseus.js", "miski"],
     input: "client/index.ts",
     output: {
         sourcemap: sourcemap,
@@ -15,7 +15,7 @@ export default {
         format: "iife",
         name: "bundle",
         file: `${destDir}/bundle.js`,
-        globals: { "babylonjs": "BABYLON", "colyseus.js": "Colyseus", "ecsy": "ECSY" }
+        globals: { "babylonjs": "BABYLON", "colyseus.js": "Colyseus", "miski": "miski" }
     },
     plugins: [
         resolve({

@@ -25,6 +25,6 @@
     "server/**/*.ts",
     "shared/**/*.ts",
     "node_modules/babylonjs/*.ts",
-    "node_modules/ecsy/src/index.d.ts"
+    "node_modules/miski/dist/esm/index.d.ts"
   ]
 }
