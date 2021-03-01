@@ -19,7 +19,7 @@ app.use("/asset_build",             express.static(dir("asset_build")));
 app.use("/rollup_build/src/client", express.static(dir("client")));
 app.use("/rollup_build",            express.static(dir("rollup_build")));
 app.use("/lib/colyseus.js/",        express.static(dir("node_modules/colyseus.js/dist")));
-app.use("/lib/ecsy/",               express.static(dir("node_modules/ecsy/build")));
+app.use("/lib/@trixt0r/ecs/",       express.static(dir("node_modules/@trixt0r/ecs/build")));
 app.use("/",                        express.static(dir("client_root")));
 
 const server = http.createServer(app);

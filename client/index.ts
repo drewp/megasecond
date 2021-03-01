@@ -1,7 +1,7 @@
 import { MapSchema } from "@colyseus/schema";
+import { AbstractEntity, AbstractEntitySystem, Component, Engine } from "@trixt0r/ecs";
 import { AbstractMesh, Color3, MeshBuilder, Scene, StandardMaterial, Vector2, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
-import { Component, Entity, System, Types, World } from "ecsy";
 import createLogger from "logging";
 import { Player, WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
@@ -82,8 +82,7 @@ class Game {
   playerMotions = new Map<playerSessionId, PlayerMotion>();
   fcam: FollowCam;
   me?: PlayerMotion;
-  constructor(private scene: Scene, private world: World) {
-    const localPlayer = world.createEntity();
+  constructor(private scene: Scene) {
     this.fcam = new FollowCam(scene);
   }
   trackServerPlayers(net: Net, mePlayer: Player, others: PlayerMap, status: StatusLine) {
@@ -171,46 +170,45 @@ class Game {
 }
 
 function ecsCard(scene: Scene) {
-  const world = new World();
+  const world = new Engine();
 
-  class BjsMesh extends Component<{}> {}
-  BjsMesh.schema = {
-    object: { type: Types.Ref },
-  };
-  world.registerComponent(BjsMesh);
+  let id = 1;
 
-  class Twirl extends Component<{}> {}
-  Twirl.schema = {
-    degPerSec: { type: Types.Number, default: 1 },
-  };
-  world.registerComponent(Twirl);
+  class MyEntity extends AbstractEntity {
+    constructor() {
+      super(id++);
+    }
+  }
+
+  class BjsMesh implements Component {
+    constructor(public object: AbstractMesh) {}
+  }
+
+  class Twirl implements Component {
+    constructor(public degPerSec = 1) {}
+  }
+
+  class SimpleMove extends AbstractEntitySystem<MyEntity> {
+    processEntity(entity: MyEntity, index: number, entities: unknown, dt: any) {
+      const degPerSec = entity.components.get(Twirl).degPerSec;
+      const object: AbstractMesh = entity.components.get(BjsMesh).object;
+
+      object.rotation.y += degPerSec * dt;
+    }
+  }
+  world.systems.add(new SimpleMove(/*priority=*/ 0, /*all=*/ [Twirl, BjsMesh]));
 
   var cardMesh = MeshBuilder.CreateBox("box", { size: 3 }, scene);
   var material = new StandardMaterial("material", scene);
   material.diffuseColor = new Color3(1, 1, 1);
   cardMesh.material = material;
 
-  const card = world.createEntity();
-  card.addComponent(Twirl, { degPerSec: 1 });
-  card.addComponent(BjsMesh, { object: cardMesh });
+  const card = new MyEntity();
+  card.components.add(new Twirl(/*degPerSec=*/1));
+  card.components.add(new BjsMesh(cardMesh));
 
-  class SimpleMove extends System {
-    execute(delta: number) {
-      const entities = this.queries.entities.results;
-      for (let i = 0; i < entities.length; i++) {
-        const entity = entities[i] as Entity;
-        const degPerSec = (entity.getComponent(Twirl) as any).degPerSec;
-        const object: AbstractMesh = (entity.getComponent(BjsMesh) as any).object;
+  world.entities.add(card);
 
-        object.rotation.y += degPerSec * delta;
-      }
-    }
-  }
-
-  SimpleMove.queries = {
-    entities: { components: [Twirl, BjsMesh] },
-  };
-  world.registerSystem(SimpleMove);
   return world;
 }
 
@@ -229,7 +227,7 @@ async function go() {
 
   const scene = setupScene("renderCanvas");
   const world = ecsCard(scene);
-  const game = new Game(scene, world);
+  const game = new Game(scene);
   const env = new Env.World(scene);
   await env.load(Env.GraphicsLevel.texture);
   game.trackServerPlayers(net, mePlayer, others, status);
@@ -253,7 +251,7 @@ async function go() {
   const slowStep = false;
 
   const gameStep = (dt: number) => {
-    world.execute(dt, performance.now() / 1000);
+    world.run(dt);
 
     userInput.step(dt);
 
