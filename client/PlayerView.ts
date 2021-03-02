@@ -33,9 +33,8 @@ export class PlayerView implements Component {
       sunCaster.addShadowCaster(this.body);
     }
   }
-  onRemoved() {
-    // where does this go?
-    this.body?.dispose();
+  dispose() {
+    this.body.dispose();
   }
 }
 

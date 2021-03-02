@@ -25,7 +25,7 @@ export class WorldState extends Schema {
 }
 
 export class WorldRoom extends Room<WorldState> {
-  public allowReconnectionTime: number = 10;
+  public allowReconnectionTime: number = 2;
 
   public onCreate() {
     log.info("WorldRoom.onCreate");

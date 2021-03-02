@@ -5,6 +5,7 @@ import { ShowPoint, ShowSegment } from "./Debug";
 import { removeComponent } from "./EcsOps";
 import { IdEntity } from "./IdEntity";
 import { WorldRunOptions } from "./types";
+
 const log = createLogger("PlayerMotion");
 
 function projectToSegment(pt: Vector3, segStart: Vector3, segEnd: Vector3): Vector3 {
@@ -21,7 +22,6 @@ export class PlayerTransform implements Component {
     public vel: Vector3, // move this to a motion component
     public facing: Vector3,
     public nav: Mesh, // move to Grounded?
-    public rootTransform: Matrix,
     public currentNavFaceId = 0,
     public grounded = false
   ) {}
@@ -56,7 +56,101 @@ export class PlayerJump extends AbstractEntitySystem<IdEntity> {
   }
 }
 
-export class PlayerMovement extends AbstractEntitySystem<IdEntity> {
+// server will run this too
+function playerStep(
+  dt: number,
+  pos: Vector3,
+  vel: Vector3,
+  facing: Vector3,
+  nav: Mesh,
+  pd: PlayerDebug,
+  currentNavFaceId: number
+): [Vector3, Vector3, Vector3, boolean, number] {
+  const tryPos = pos.add(vel.scale(dt));
+
+  const knees = tryPos.add(new Vector3(0, 0.5, 0));
+
+  const down = new Ray(knees, Vector3.Down());
+  pd.debugNavRay.set(down.origin, down.origin.add(down.direction));
+
+  const info = down.intersectsMesh(nav as any);
+
+  const verts = currentNavFace(nav, currentNavFaceId);
+  if (pd) {
+    pd.debugCurNavFace[0].set(verts[0]);
+    pd.debugCurNavFace[1].set(verts[1]);
+    pd.debugCurNavFace[2].set(verts[2]);
+  }
+  let grounded;
+  if (!info.hit) {
+    pos = closestEdgeProject(tryPos, verts);
+    grounded = true;
+  } else {
+    currentNavFaceId = info.faceId;
+    pos = tryPos;
+    const groundY = info.pickedPoint!.y;
+    if (groundY + 0.01 > tryPos.y) {
+      pos.y = groundY;
+      grounded = true;
+    } else {
+      grounded = false;
+    }
+    if (pd) {
+      pd.debugNavHit.set(knees, info.pickedPoint!);
+    }
+  }
+
+  if (!grounded) {
+    vel.y -= dt * 9.8;
+  } else {
+    vel.y = 0;
+  }
+  return [pos, vel, facing, grounded, currentNavFaceId];
+}
+
+function closestEdgeProject(tryPos: Vector3, verts: Vector3[]): Vector3 {
+  const projTries = [projectToSegment(tryPos, verts[0], verts[1]), projectToSegment(tryPos, verts[1], verts[2]), projectToSegment(tryPos, verts[2], verts[0])];
+  const withDist = [
+    { proj: projTries[0], dist: projTries[0].subtract(tryPos).length() },
+    { proj: projTries[1], dist: projTries[1].subtract(tryPos).length() },
+    { proj: projTries[2], dist: projTries[2].subtract(tryPos).length() },
+  ];
+  withDist.sort((a, b) => {
+    return a.dist - b.dist;
+  });
+  return withDist[0].proj;
+}
+
+function currentNavFace(nav: Mesh, currentNavFaceId: number): Vector3[] {
+  const navIndices = nav.getIndices()!;
+  const currentFaceVertIndices = [navIndices[currentNavFaceId * 3 + 0], navIndices[currentNavFaceId * 3 + 1], navIndices[currentNavFaceId * 3 + 2]];
+  const navVertPos = nav.getVerticesData(BABYLON.VertexBuffer.PositionKind)!;
+  const verts = [
+    new Vector3(
+      navVertPos[currentFaceVertIndices[0] * 3 + 0], //
+      navVertPos[currentFaceVertIndices[0] * 3 + 1],
+      navVertPos[currentFaceVertIndices[0] * 3 + 2]
+    ),
+    new Vector3(
+      navVertPos[currentFaceVertIndices[1] * 3 + 0], //
+      navVertPos[currentFaceVertIndices[1] * 3 + 1],
+      navVertPos[currentFaceVertIndices[1] * 3 + 2]
+    ),
+    new Vector3(
+      navVertPos[currentFaceVertIndices[2] * 3 + 0], //
+      navVertPos[currentFaceVertIndices[2] * 3 + 1],
+      navVertPos[currentFaceVertIndices[2] * 3 + 2]
+    ),
+  ];
+  // verts are local to navmesh, which is under
+  const rootTransform = nav.getWorldMatrix();
+  verts[0] = Vector3.TransformCoordinates(verts[0], rootTransform);
+  verts[1] = Vector3.TransformCoordinates(verts[1], rootTransform);
+  verts[2] = Vector3.TransformCoordinates(verts[2], rootTransform);
+  return verts;
+}
+
+export class LocalMovement extends AbstractEntitySystem<IdEntity> {
   processEntity(entity: IdEntity, index: number, entities: unknown, options: WorldRunOptions) {
     const dt = options.dt;
     const pt = entity.components.get(PlayerTransform);
@@ -67,41 +161,16 @@ export class PlayerMovement extends AbstractEntitySystem<IdEntity> {
 
     this.onMouseX(mouseX, pt.facing, pt.vel);
     pt.vel = this.setXZVel(stick, pt.facing, pt.vel);
-    const tryPos = pt.pos.add(pt.vel.scale(dt));
 
-    const knees = tryPos.add(new Vector3(0, 0.5, 0));
-
-    const down = new Ray(knees, Vector3.Down());
-    pd.debugNavRay.set(down.origin, down.origin.add(down.direction));
-
-    const info = down.intersectsMesh(pt.nav as any);
-
-    const verts = this.currentNavFace(pt.nav, pt.rootTransform, pt.currentNavFaceId);
-    pd.debugCurNavFace[0].set(verts[0]);
-    pd.debugCurNavFace[1].set(verts[1]);
-    pd.debugCurNavFace[2].set(verts[2]);
-
-    if (!info.hit) {
-      pt.pos = this._closestEdgeProject(tryPos, verts);
-      pt.grounded = true;
-    } else {
-      pt.currentNavFaceId = info.faceId;
-      pt.pos = tryPos;
-      const groundY = info.pickedPoint!.y;
-      if (groundY + 0.01 > tryPos.y) {
-        pt.pos.y = groundY;
-        pt.grounded = true;
-      } else {
-        pt.grounded = false;
-      }
-      pd.debugNavHit.set(knees, info.pickedPoint!);
-    }
-
-    if (!pt.grounded) {
-      pt.vel.y -= dt * 9.8;
-    } else {
-      pt.vel.y = 0;
-    }
+    [pt.pos, pt.vel, pt.facing, pt.grounded, pt.currentNavFaceId] = playerStep(
+      dt,
+      pt.pos,
+      pt.vel,
+      pt.facing,
+      pt.nav,
+      pd,
+      pt.currentNavFaceId
+    );
   }
 
   private onMouseX(movementX: number, facing: Vector3 /*mutated*/, vel: Vector3 /*mutated*/) {
@@ -122,38 +191,5 @@ export class PlayerMovement extends AbstractEntitySystem<IdEntity> {
 
     const yComp = vel.multiplyByFloats(0, 1, 0);
     return xzComp.add(yComp);
-  }
-
-  private _closestEdgeProject(tryPos: Vector3, verts: Vector3[]): Vector3 {
-    const projTries = [
-      projectToSegment(tryPos, verts[0], verts[1]),
-      projectToSegment(tryPos, verts[1], verts[2]),
-      projectToSegment(tryPos, verts[2], verts[0]),
-    ];
-    const withDist = [
-      { proj: projTries[0], dist: projTries[0].subtract(tryPos).length() },
-      { proj: projTries[1], dist: projTries[1].subtract(tryPos).length() },
-      { proj: projTries[2], dist: projTries[2].subtract(tryPos).length() },
-    ];
-    withDist.sort((a, b) => {
-      return a.dist - b.dist;
-    });
-    return withDist[0].proj;
-  }
-
-  private currentNavFace(nav: Mesh, rootTransform: Matrix, currentNavFaceId: number): Vector3[] {
-    const navIndices = nav.getIndices()!;
-    const currentFaceVertIndices = [navIndices[currentNavFaceId * 3 + 0], navIndices[currentNavFaceId * 3 + 1], navIndices[currentNavFaceId * 3 + 2]];
-    const navVertPos = nav.getVerticesData(BABYLON.VertexBuffer.PositionKind)!;
-    const verts = [
-      new Vector3(navVertPos[currentFaceVertIndices[0] * 3 + 0], navVertPos[currentFaceVertIndices[0] * 3 + 1], navVertPos[currentFaceVertIndices[0] * 3 + 2]),
-      new Vector3(navVertPos[currentFaceVertIndices[1] * 3 + 0], navVertPos[currentFaceVertIndices[1] * 3 + 1], navVertPos[currentFaceVertIndices[1] * 3 + 2]),
-      new Vector3(navVertPos[currentFaceVertIndices[2] * 3 + 0], navVertPos[currentFaceVertIndices[2] * 3 + 1], navVertPos[currentFaceVertIndices[2] * 3 + 2]),
-    ];
-    // verts are local to navmesh, which is under
-    verts[0] = Vector3.TransformCoordinates(verts[0], rootTransform);
-    verts[1] = Vector3.TransformCoordinates(verts[1], rootTransform);
-    verts[2] = Vector3.TransformCoordinates(verts[2], rootTransform);
-    return verts;
   }
 }

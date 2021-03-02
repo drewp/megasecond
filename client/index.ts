@@ -9,7 +9,7 @@ import * as Env from "./Env";
 import { LocalCam, LocalCamFollow } from "./FollowCam";
 import { IdEntity } from "./IdEntity";
 import { getOrCreateNick } from "./nick";
-import { InitJump, PlayerDebug, PlayerJump, PlayerMovement, PlayerTransform } from "./PlayerMotion";
+import { InitJump, LocalMovement, PlayerDebug, PlayerJump, PlayerTransform } from "./PlayerMotion";
 import { CreateNametag, InitNametag, Nametag, PlayerView, PlayerViewMovement, RepaintNametag } from "./PlayerView";
 import { WorldRunOptions } from "./types";
 import { Actions, UserInput } from "./UserInput";
@@ -18,178 +18,177 @@ const log = createLogger("WorldRoom");
 
 type PlayerMap = Map<playerSessionId, NetPlayer>;
 
-class Net {
+type PlayerMoveMsg = { x: number; y: number; z: number; facingX: number; facingY: number; facingZ: number };
+
+class Game {
   client: Colyseus.Client;
-  world?: Colyseus.Room<WorldState>;
-  worldState?: WorldState;
-  private lastSent: { x: number; y: number; z: number; facingX: number; facingY: number; facingZ: number } | undefined;
-  constructor(private status: StatusLine) {
+  worldRoom?: Colyseus.Room<WorldState>;
+  me?: IdEntity;
+  constructor(private status: StatusLine, private world: Engine, private scene: Scene, private nick: string) {
     this.status.setPlayer("...");
     this.status.setConnection("connecting...");
     this.client = new Colyseus.Client("wss://megasecond.club/");
-    // this.status.setPlayer(this.myDisplayName);
   }
-  async joinWorld() {
-    const world = await this.client.joinOrCreate<WorldState>("world", {});
-    this.world = world;
-    (window as any).world = world;
+  async joinWorld(nav: Mesh) {
+    const worldRoom = await this.client.joinOrCreate<WorldState>("world", {});
+    this.worldRoom = worldRoom;
 
     this.status.setConnection("connected...");
+    worldRoom.send("setNick", this.nick);
 
-    this.world.listen("/players/:id/nick", (cur: any, prev: any) => log.info("cb /players", cur, prev));
-
-    return new Promise<{ me: NetPlayer; others: PlayerMap }>((resolve, reject) => {
-      world.onStateChange.once((state) => {
-        this.status.setConnection(`connected (${Array.from(state.players.keys()).length} players)`);
-        log.info("players are", Array.from(state.players.entries()));
-        const me = state.players.get(world.sessionId);
-        if (!me) {
-          reject("player list didn't include me");
-          return;
+    return new Promise<{ me: IdEntity }>((resolve, _reject) => {
+      worldRoom.onStateChange.once((state) => {
+        this.trackPlayers(state, nav);
+        if (!this.me) {
+          throw new Error("player list didn't include me");
         }
-        const others: PlayerMap = new Map();
-        state.players.forEach((pl, id) => {
-          if (id != world.sessionId) {
-            others.set(id, pl);
-          }
-        });
-        resolve({ me, others });
+        resolve({ me: this.me });
       });
     });
   }
-  players(): MapSchema<NetPlayer> {
-    return this.world!.state.players;
-  }
-  uploadMe(me: IdEntity) {
-    // todo System
-    const pos = me.components.get(PlayerTransform).pos;
-    const facing = me.components.get(PlayerTransform).facing;
-    if (
-      this.lastSent !== undefined && //
-      this.lastSent.x == pos.x &&
-      this.lastSent.y == pos.y &&
-      this.lastSent.z == pos.z &&
-      this.lastSent.facingX == facing.x &&
-      this.lastSent.facingY == facing.y &&
-      this.lastSent.facingZ == facing.z
-    ) {
-      return;
-    }
-    this.lastSent = { x: pos.x, y: pos.y, z: pos.z, facingX: facing.x, facingY: facing.y, facingZ: facing.z };
-    this.world!.send("playerMove", this.lastSent);
-  }
-}
 
-type playerSessionId = string;
-class PlayerSession implements Component {
-  constructor(public id: playerSessionId) {}
-}
-
-class Game {
-  me?: IdEntity;
-  constructor(private scene: Scene, private world: Engine) {}
-  trackServerPlayers(net: Net, mePlayer: NetPlayer, others: PlayerMap, status: StatusLine) {
-    // this is not right- misses some cases
-
-    this.addPlayer(net.world!.sessionId, mePlayer, true);
-    others.forEach((pl, id) => {
-      log.info(`initial others onadd ${id}`);
-
-      this.addPlayer(id, pl, false);
+  private trackPlayers(state: WorldState, nav: Mesh) {
+    this.status.setConnection(`connected (${Array.from(state.players.keys()).length} players)`);
+    const playerRows = Array.from(state.players.entries());
+    playerRows.forEach((row: [string, NetPlayer]) => {
+      this.addPlayerEntity(row[1], row[0] == this.worldRoom!.sessionId, nav);
     });
 
-    net.players().onAdd = (player: NetPlayer, sessionId: string) => {
-      log.info(`\nnet onAdd ${sessionId} ${net.world!.sessionId}`);
-      if (net.world!.sessionId == sessionId) {
-        log.error("another player with my session");
-      } else {
-        console.log("player add", player.sessionId);
-        if (this.playersWithSession(sessionId).length == 0) {
-          this.addPlayer(sessionId, player, /*me=*/ false);
-        }
-      }
-      status.setConnection(`connected (${Array.from(net.world!.state.players.keys()).length} players)`);
+    this.worldRoom!.state.players.onAdd = (player: NetPlayer, sessionId: string) => {
+      log.info(`\nnet onAdd ${sessionId} ${this.worldRoom!.sessionId}`);
+      this.addPlayerEntity(player, /*isMe=*/ sessionId == this.worldRoom!.sessionId, nav);
+      this.status.setConnection(`connected (${Array.from(this.worldRoom!.state.players.keys()).length} players)`);
     };
 
-    net.players().onRemove = (player: NetPlayer, sessionId: string) => {
+    this.worldRoom!.state.players.onRemove = (player: NetPlayer, _sessionId: string) => {
       console.log("player rm", player.sessionId);
-      this.removePlayer(sessionId);
-      status.setConnection(`connected (${Array.from(net.world!.state.players.keys()).length} players)`);
+      this.removePlayerEntity(player);
+      this.status.setConnection(`connected (${Array.from(this.worldRoom!.state.players.keys()).length} players)`);
     };
-  }
-  playersWithSession(sessionId: playerSessionId): IdEntity[] {
-    //    hopefully 0 or 1!
-    const ret: IdEntity[] = [];
-    this.world.entities.forEach((e: IdEntity) => {
-      const sess = e.components.get(PlayerSession);
-      if (sess) {
-        if (sess.id == sessionId) {
-          ret.push(e);
-        }
+
+    const others: PlayerMap = new Map();
+    state.players.forEach((pl, id) => {
+      if (id != this.worldRoom!.sessionId) {
+        others.set(id, pl);
       }
     });
-    return ret;
   }
-  addPlayer(sessionId: playerSessionId, player: NetPlayer, me: boolean) {
-    log.info("addPlayer", sessionId);
+
+  addPlayerEntity(netPlayer: NetPlayer, isMe: boolean, nav: Mesh) {
+    log.info("addPlayer", netPlayer.sessionId);
     const p = new IdEntity();
     this.world.entities.add(p);
-    p.components.add(new PlayerSession(sessionId));
-    const nav = this.scene.getMeshByName("navmesh") as Mesh;
-    nav.updateFacetData(); // only once- move to env?
-    const rootTransform = nav.getWorldMatrix()!;
 
-    p.components.add(new PlayerTransform(this.scene, Vector3.Zero(), Vector3.Zero(), Vector3.Forward(), nav, rootTransform));
+    p.components.add(new ServerRepresented(this.worldRoom!, netPlayer));
+
+    p.components.add(new PlayerTransform(this.scene, Vector3.Zero(), Vector3.Zero(), Vector3.Forward(), nav));
     p.components.add(new PlayerDebug(this.scene));
-    p.components.add(new PlayerView(this.scene, sessionId));
-    p.components.add(new InitNametag(this.scene, 20, sessionId));
+
+    const pv = new PlayerView(this.scene, netPlayer.sessionId);
+    p.components.add(pv);
+    //p.components.addListener({onRemoved: pv.dispose.bind(pv)})// doesn't work
+
+    p.components.add(new InitNametag(this.scene, 20, netPlayer.sessionId));
 
     const repaint = () => {
       const nt = p.components.get(Nametag);
       if (!nt) return;
       const painter = new RepaintNametag();
 
-      painter.repaint(nt.tx, player.nick);
+      painter.repaint(nt.tx, netPlayer.nick);
     };
-    player.listen("nick", repaint);
+    netPlayer.listen("nick", repaint);
     // at the moment, p still has InitNametag, not Nametag
     setTimeout(repaint, 1000);
 
-    if (me) {
+    if (isMe) {
+      this.me = p;
+      p.components.add(new LocallyDriven());
       p.components.add(new LocalCam(this.scene));
       p.components.get(LocalCam).cam.lockedTarget = p.components.get(PlayerView).aimAt as AbstractMesh;
-      this.me = p;
       p.components.get(PlayerTransform).pos = new Vector3(-2.3, 0, -2);
       p.components.get(PlayerTransform).facing = new Vector3(0, 0, 1);
     }
   }
-  removePlayer(sessionId: playerSessionId) {
-    this.playersWithSession(sessionId).forEach((e: IdEntity) => {
-      log.info("rm entity", e.id);
+  removePlayerEntity(netPlayer: NetPlayer) {
+    const e = this.world.entities.find((e) => e.components.get(ServerRepresented)?.netPlayer == netPlayer);
+    if (e) {
+      e.components.get(PlayerView).dispose(); // haven't found how to listen for this yet
+      const nt = e.components.get(Nametag);
+      nt.plane.dispose();
+      nt.tx.dispose();
       this.world.entities.remove(e);
-    });
+    }
   }
-  getMe(): IdEntity {
-    return this.me!;
+}
+
+type playerSessionId = string;
+class ServerRepresented implements Component {
+  public lastSentTime = 0; // ms
+  public lastSent: any;
+  public receivedPos = Vector3.Zero();
+  public receivedFacing = Vector3.Forward();
+  constructor(
+    public worldRoom: Colyseus.Room<WorldState>,
+    public netPlayer: NetPlayer // with latest server state
+  ) {}
+}
+
+class ServerReceive extends AbstractEntitySystem<IdEntity> {
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
+    const sr = entity.components.get(ServerRepresented);
+    const np = sr.netPlayer;
+    // this is rewriting a lot- we could use a watcher on the colyseus half
+    sr.receivedPos = new Vector3(np.x, np.y, np.z);
+    sr.receivedFacing = new Vector3(np.facingX, np.facingY, np.facingZ);
   }
-  setPlayerPosFromNet(name: string, pos: Vector3) {
-    const pls = this.playersWithSession(name);
-    const pl = pls[0];
-    pl.components.get(PlayerTransform).pos = pos;
+}
+
+class CorrectLocalSimulation extends AbstractEntitySystem<IdEntity> {
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
+    if (entity.components.get(LocallyDriven)) {
+      // it's me; server is not authoritative yet, and we don't have correction code
+      return;
+    }
+    const pt = entity.components.get(PlayerTransform);
+    const sr = entity.components.get(ServerRepresented);
+    pt.pos = sr.receivedPos;
+    pt.facing = sr.receivedFacing;
   }
-  setAll(players: PlayerMap) {
-    players.forEach((pl, id) => {
-      const pents = this.playersWithSession(id);
-      const p = pents[0];
-      if (!p) {
-        log.error(`net update for id=${id}, not found`);
-        return;
-      }
-      p.components.get(PlayerTransform).pos = new Vector3(pl.x, pl.y, pl.z);
-      p.components.get(PlayerTransform).facing = new Vector3(pl.facingX, pl.facingY, pl.facingZ);
-      // log.info(`facing update for ${id} to ${pm.facing.toString()}`)
-    });
+}
+
+// - to replace with input commands
+class SendUntrustedLocalPos extends AbstractEntitySystem<IdEntity> {
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
+    const pt = entity.components.get(PlayerTransform);
+    const sr = entity.components.get(ServerRepresented);
+
+    const pos = pt.pos;
+    const facing = pt.facing;
+    const now = Date.now();
+    const minSendPeriodMs = 100;
+    if (sr.lastSentTime > now - minSendPeriodMs) return;
+
+    if (
+      sr.lastSent !== undefined && //
+      sr.lastSent.x == pos.x &&
+      sr.lastSent.y == pos.y &&
+      sr.lastSent.z == pos.z &&
+      sr.lastSent.facingX == facing.x &&
+      sr.lastSent.facingY == facing.y &&
+      sr.lastSent.facingZ == facing.z
+    ) {
+      return;
+    }
+    sr.lastSent = { x: pos.x, y: pos.y, z: pos.z, facingX: facing.x, facingY: facing.y, facingZ: facing.z };
+    sr.worldRoom.send("playerMove", sr.lastSent);
+    sr.lastSentTime = now;
   }
+}
+
+class LocallyDriven implements Component {
+  // temporary tag for the local player that recvs input
+  constructor() {}
 }
 
 class BjsMesh implements Component {
@@ -200,25 +199,27 @@ class Twirl implements Component {
   constructor(public degPerSec = 1) {}
 }
 
+class SimpleMove extends AbstractEntitySystem<IdEntity> {
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: any) {
+    const degPerSec = entity.components.get(Twirl).degPerSec;
+    const object: AbstractMesh = entity.components.get(BjsMesh).object;
+
+    object.rotation.y += degPerSec * options.dt;
+  }
+}
+
 function ecsInit(): Engine {
   const world = new Engine();
-
-  class SimpleMove extends AbstractEntitySystem<IdEntity> {
-    processEntity(entity: IdEntity, index: number, entities: unknown, options: any) {
-      const degPerSec = entity.components.get(Twirl).degPerSec;
-      const object: AbstractMesh = entity.components.get(BjsMesh).object;
-
-      object.rotation.y += degPerSec * options.dt;
-    }
-  }
   world.systems.add(new SimpleMove(/*priority=*/ 0, /*all=*/ [Twirl, BjsMesh]));
-
   world.systems.add(new PlayerViewMovement(0, [PlayerTransform, PlayerView]));
-  world.systems.add(new PlayerMovement(0, [PlayerTransform, PlayerDebug]));
   world.systems.add(new LocalCamFollow(0, [PlayerTransform, LocalCam]));
   world.systems.add(new PlayerJump(0, [PlayerTransform, InitJump]));
   world.systems.add(new CreateNametag(1, [PlayerView, InitNametag]));
   world.systems.add(new RepaintNametag(1, [Nametag]));
+  world.systems.add(new LocalMovement(0, [PlayerTransform, PlayerDebug, LocallyDriven]));
+  world.systems.add(new ServerReceive(0, [ServerRepresented, PlayerTransform]));
+  world.systems.add(new CorrectLocalSimulation(1, [ServerRepresented, PlayerTransform]));
+  world.systems.add(new SendUntrustedLocalPos(2, [ServerRepresented, PlayerTransform, LocallyDriven]));
 
   world.systems.forEach((s) => s.addListener({ onError: (e: Error) => log.error(e) }));
 
@@ -243,32 +244,29 @@ async function go() {
   const world = ecsInit();
   const status = new StatusLine();
   status.setPlayer(nick);
-
-  const net = new Net(status);
-  const ret = await net.joinWorld();
-  const mePlayer = ret.me;
-  const others = ret.others;
-
-  net.world!.send("setNick", nick);
-
   const scene = setupScene("renderCanvas");
-  ecsCard(world, scene);
-  const game = new Game(scene, world);
-  const env = new Env.World(scene);
-  await env.load(Env.GraphicsLevel.texture);
-  game.trackServerPlayers(net, mePlayer, others, status);
+  const game = new Game(status, world, scene, nick);
 
-  net.world!.onStateChange((state) => {
-    game.setAll(net.world!.state.players);
-  });
+  {
+    const env = new Env.World(scene);
+    await env.load(Env.GraphicsLevel.grid);
+  }
+
+  {
+    const nav = scene.getMeshByName("navmesh") as Mesh;
+    nav.updateFacetData();
+    await game.joinWorld(nav);
+  }
+
+  ecsCard(world, scene);
 
   const userInput = new UserInput(scene, function onAction(name: Actions) {
     if (name == Actions.Jump) {
-      game.getMe().components.add(new InitJump());
+      game.me!.components.add(new InitJump());
     } else if (name == Actions.ToggleNavmeshView) {
       Env.toggleNavmeshView(scene);
     } else if (name == Actions.ToggleBirdsEyeView) {
-      game.getMe().components.get(LocalCam).toggleBirdsEyeView();
+      game.me!.components.get(LocalCam).toggleBirdsEyeView();
     }
   });
 
@@ -281,8 +279,6 @@ async function go() {
     } as WorldRunOptions);
 
     userInput.step(dt);
-
-    net.uploadMe(game.getMe());
   };
   if (slowStep) {
     setInterval(() => gameStep(0.1), 100);
