@@ -243,7 +243,6 @@ async function go() {
   const nick = getOrCreateNick();
   const world = ecsInit();
   const status = new StatusLine();
-  status.setPlayer(nick);
   const scene = setupScene("renderCanvas");
   const game = new Game(status, world, scene, nick);
 
@@ -255,6 +254,7 @@ async function go() {
   {
     const nav = scene.getMeshByName("navmesh") as Mesh;
     nav.updateFacetData();
+    status.setPlayer(nick);
     await game.joinWorld(nav);
   }
 
