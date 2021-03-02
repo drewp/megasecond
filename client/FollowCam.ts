@@ -1,8 +1,17 @@
+import { AbstractEntitySystem } from "@trixt0r/ecs";
+import { Component } from "@trixt0r/ecs";
 import { AbstractMesh, FollowCamera, Scene, TransformNode, Vector3 } from "babylonjs";
+import { IdEntity } from "./IdEntity";
+import { WorldRunOptions } from "./types";
 
-export class FollowCam {
-  private cam: FollowCamera;
-  birds_eye_view = false;
+import createLogger from "logging";
+import { PlayerTransform } from "./PlayerMotion";
+
+const log = createLogger("PlayerMotion");
+
+export class LocalCam implements Component {
+  public cam: FollowCamera;
+  public birds_eye_view = false;
   constructor(scene: Scene) {
     this.cam = new FollowCamera("cam", new Vector3(-1.4, 1.5, -4), scene);
     this.cam.inputs.clear();
@@ -13,9 +22,7 @@ export class FollowCam {
     this.cam.cameraAcceleration = 0.5;
     scene.switchActiveCamera(this.cam);
   }
-  setTarget(me: TransformNode) {
-    this.cam.lockedTarget = me as AbstractMesh;
-  }
+
   toggleBirdsEyeView() {
     if (!this.birds_eye_view) {
       this.cam.heightOffset += 100;
@@ -25,12 +32,19 @@ export class FollowCam {
       this.birds_eye_view = false;
     }
   }
-  onMouseY(movementY: number) {
-    this.cam.heightOffset += 0.0003 * movementY;
-  }
-  step(dt: number, pos: Vector3, heading: number) {
+}
+
+export class LocalCamFollow extends AbstractEntitySystem<IdEntity> {
+  processEntity(entity: IdEntity, index: number, entities: unknown, options: WorldRunOptions) {
+    const dt = options.dt;
+    const cc = entity.components;
+    const cam = cc.get(LocalCam).cam;
+    const heading = cc.get(PlayerTransform).heading;
+
+    cam.heightOffset += 0.0003 * options.userInput.mouseY;
+
     // try to get behind player, don't crash walls
-    let r = this.cam.rotationOffset;
+    let r = cam.rotationOffset;
     if (Math.abs(r - heading) > 180) {
       if (r < heading) {
         r += 360;
@@ -39,6 +53,6 @@ export class FollowCam {
       }
     }
 
-    this.cam.rotationOffset = (r + dt * 10 * (heading - r)) % 360;
+    cam.rotationOffset = (r + dt * 10 * (heading - r)) % 360;
   }
 }

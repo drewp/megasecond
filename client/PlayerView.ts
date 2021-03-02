@@ -1,76 +1,72 @@
-import {
-  AxesViewer,
-  StandardMaterial,
-  DynamicTexture,
-  InstancedMesh,
-  Mesh,
-  Scene,
-  ShadowGenerator,
-  TransformNode,
-  Vector3,
-  AbstractMesh,
-  PlaneBuilder,
-} from "babylonjs";
-import { Player } from "../shared/WorldRoom";
-import { FollowCam } from "./FollowCam";
+import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
+import { DynamicTexture, InstancedMesh, Mesh, PlaneBuilder, Scene, ShadowGenerator, StandardMaterial, TransformNode } from "babylonjs";
 import createLogger from "logging";
+import { removeComponent } from "./EcsOps";
+import { IdEntity } from "./IdEntity";
+import { PlayerTransform } from "./PlayerMotion";
+import { WorldRunOptions } from "./types";
 
-const log = createLogger("PlaeyrView");
+const log = createLogger("PlayerView");
 
-export class PlayerView {
-  // makes one player from base models. owns scene objects. low-level controls.
-  //
+export class PlayerView implements Component {
   // X=left, Y=up, Z=fwd
-  private body?: InstancedMesh;
-  private aimAt?: TransformNode;
-  private nametag?: AbstractMesh;
-  constructor(private scene: Scene, public player: Player) {
-    this.makeInstance();
-  }
-  makeInstance() {
-    const playerReferenceModel = this.scene.getMeshByName("player");
-    const refAim = this.scene.getTransformNodeByName("player_aim")!;
+  public body: InstancedMesh;
+  public aimAt: TransformNode;
+  // public nametag: AbstractMesh;
+  constructor(scene: Scene, playerId: string) {
+    const playerReferenceModel = scene.getMeshByName("player");
+    const refAim = scene.getTransformNodeByName("player_aim")!;
     if (!playerReferenceModel || !refAim) {
       throw new Error("no ref yet");
     }
-    this.body = (playerReferenceModel as Mesh).createInstance(`${this.player.sessionId}-body`);
-    this.aimAt = new TransformNode(`${this.player.sessionId}-aim`);
+    this.body = (playerReferenceModel as Mesh).createInstance(`${playerId}-body`);
+    this.aimAt = new TransformNode(`${playerId}-aim`);
     this.aimAt.parent = this.body;
 
     const refOffset = refAim.position.subtract(playerReferenceModel.position);
     this.aimAt.position = this.body.position.add(refOffset);
 
-    this.nametag = this.makeNametag();
+    // this.nametag = this.makeNametag();
 
     const sunCaster = (window as any).gen as ShadowGenerator; // todo
     if (sunCaster) {
       sunCaster.addShadowCaster(this.body);
     }
   }
+  onRemoved() {
+    // where does this go?
+    this.body?.dispose();
+  }
+}
 
-  makeNametag() {
+// i want a nametag
+export class InitNametag implements Component {
+  constructor(public scene: Scene, public offsetY = 20, public suffix: string) {}
+}
+
+// i have a nametag
+export class Nametag implements Component {
+  constructor(public plane: Mesh, public tx: DynamicTexture) {}
+}
+
+export class CreateNametag extends AbstractEntitySystem<IdEntity> {
+  processEntity(entity: IdEntity, index: number, entities: unknown, options: WorldRunOptions) {
+    const init = entity.components.get(InitNametag);
+    const pv = entity.components.get(PlayerView);
     const scl = 0.2;
-    const plane = PlaneBuilder.CreatePlane(`nametag-${this.player.sessionId}`, { width: 480 * scl, height: 64 * scl }, this.scene);
-    plane.parent = this.aimAt!;
-    plane.position.y = 20;
+    const plane = PlaneBuilder.CreatePlane(`nametag-${init.suffix}`, { width: 480 * scl, height: 64 * scl }, init.scene);
+    plane.parent = pv.aimAt;
+    plane.position.y = init.offsetY;
 
-    var tx = new DynamicTexture(
-      `nametag-${this.player.sessionId}`,
+    const tx = new DynamicTexture(
+      `nametag-${init.suffix}`,
       { width: 256, height: 64 },
-      this.scene,
+      init.scene,
       false // types bug made this nonoptional?
     );
     tx.hasAlpha = true;
-    const repaint = () => {
-      log.info(`repaint ${this.player.sessionId} to nick=${this.player.nick}`);
-      tx.getContext().fillStyle = "#00000000";
-      tx.clear();
-      tx.drawText(this.player.nick, 0, 50, "45px sans", "#ffffffff", "#00000000", true, true);
-    };
-    repaint();
-    this.player.listen("nick", repaint);
 
-    var mat = new StandardMaterial(`nametag-${this.player.sessionId}`, this.scene);
+    var mat = new StandardMaterial(`nametag-${init.suffix}`, init.scene);
     mat.diffuseTexture = tx;
     mat.disableLighting = true;
     mat.transparencyMode = 3;
@@ -78,22 +74,28 @@ export class PlayerView {
     plane.material = mat;
     plane.billboardMode = TransformNode.BILLBOARDMODE_ALL;
 
-    return plane;
+    entity.components.add(new Nametag(plane, tx));
+    removeComponent(entity, InitNametag);
   }
+}
 
-  dispose() {
-    this.body?.dispose();
-    this.nametag?.dispose();
+export class RepaintNametag extends AbstractEntitySystem<IdEntity> {
+  processEntity(entity: IdEntity, index: number, entities: unknown, options: WorldRunOptions) {}
+
+  repaint(tx: DynamicTexture, msg: string) {
+    tx.getContext().fillStyle = "#00000000";
+    tx.clear();
+    tx.drawText(msg, 0, 50, "45px sans", "#ffffffff", "#00000000", true, true);
   }
-  step(dt: number, pos: Vector3, facing: Vector3, heading: number, fcam: FollowCam | undefined) {
-    const b = this.body!;
-    b.position.copyFrom(pos);
-    b.lookAt(b.position.add(facing)); // todo: maybe with animation
-    if (fcam) {
-      fcam.step(dt, pos, heading);
-    }
-  }
-  getCamTarget(): TransformNode {
-    return this.aimAt!;
+  // onRemoved() {
+  //   this.nametag?.dispose();
+  // }
+}
+
+export class PlayerViewMovement extends AbstractEntitySystem<IdEntity> {
+  processEntity(entity: IdEntity, index: number, entities: unknown, options: WorldRunOptions) {
+    const b = entity.components.get(PlayerView).body;
+    b.position.copyFrom(entity.components.get(PlayerTransform).pos);
+    b.lookAt(b.position.add(entity.components.get(PlayerTransform).facing)); // todo: maybe with animation
   }
 }
