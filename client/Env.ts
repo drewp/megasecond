@@ -33,7 +33,7 @@ export class World {
   async load(graphicsLevel: GraphicsLevel) {
     const scene = this.scene;
     this.buildData = await (await fetch("./asset_build/world.json")).json();
-    
+
     SceneLoader.ShowLoadingScreen = false;
     await SceneLoader.AppendAsync("./asset_build/", "wrap.glb", scene);
 
@@ -57,22 +57,27 @@ export class World {
     this.groundBump.level = 0.43;
     this.groundBump.uScale = this.groundBump.vScale = 400;
 
+    this.gridEverything();
     if (graphicsLevel == GraphicsLevel.grid) {
-      const grid = new GridMaterial("grid", this.scene);
-      grid.gridRatio = 0.1;
-      grid.majorUnitFrequency = 5;
-      grid.mainColor = new Color3(0.3, 0.3, 0.3);
-      grid.backFaceCulling = false;
-
-      for (let m of Object.keys(this.buildData.objs)) {
-        try {
-          this.scene.getMeshByName(m)!.material = grid;
-        } catch (err) {}
-      }
+      // show grid first even if maps are coming
     } else {
       this.loadMaps(Vector3.Zero(), 100);
     }
     // this.setupSkybox(scene);
+  }
+
+  gridEverything() {
+    const grid = new GridMaterial("grid", this.scene);
+    grid.gridRatio = 0.1;
+    grid.majorUnitFrequency = 5;
+    grid.mainColor = new Color3(0.3, 0.3, 0.3);
+    grid.backFaceCulling = false;
+
+    for (let m of Object.keys(this.buildData.objs)) {
+      try {
+        this.scene.getMeshByName(m)!.material = grid;
+      } catch (err) {}
+    }
   }
 
   loadMaps(center: Vector3, maxDist: number) {
@@ -136,11 +141,13 @@ export class World {
       return;
     }
     const mat = new PBRMaterial("pbr_" + objName, this.scene); //obj.material as PBRMaterial;
-    obj.material = mat;
     mat.unlit = true;
     mat.albedoTexture = this.bakedTx(`bake_${objName}_dif.jpg`);
     // mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
     // mat.useLightmapAsShadowmap = true;
+    Texture.WhenAllReady([mat.albedoTexture], () => {
+      obj.material = mat;
+    });
   }
 
   private setupNavMesh() {
