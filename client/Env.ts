@@ -33,9 +33,9 @@ export class World {
   async load(graphicsLevel: GraphicsLevel) {
     const scene = this.scene;
     this.buildData = await (await fetch("./asset_build/world.json")).json();
-
+    
+    SceneLoader.ShowLoadingScreen = false;
     await SceneLoader.AppendAsync("./asset_build/", "wrap.glb", scene);
-    console.log("loaded gltf");
 
     scene.clearColor = new Color4(0.419, 0.517, 0.545, 1);
 
