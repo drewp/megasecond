@@ -9,10 +9,12 @@ import * as Env from "./Env";
 import { LocalCam, LocalCamFollow } from "./FollowCam";
 import { IdEntity } from "./IdEntity";
 import { getOrCreateNick } from "./nick";
-import { InitJump, LocalMovement, PlayerDebug, PlayerJump, PlayerTransform, UsesNav } from "./PlayerMotion";
+import { LocalMovement, Transform} from "./Motion";
+import { InitJump, PlayerJump } from "./jump";
 import { CreateNametag, InitNametag, Nametag, PlayerView, PlayerViewMovement, RepaintNametag } from "./PlayerView";
 import { WorldRunOptions } from "./types";
 import { Actions, UserInput } from "./UserInput";
+import { PlayerDebug, UsesNav } from "./walkAlongNavMesh";
 
 const log = createLogger("WorldRoom");
 
@@ -81,7 +83,7 @@ class Game {
 
     p.components.add(new ServerRepresented(this.worldRoom!, netPlayer));
 
-    p.components.add(new PlayerTransform(this.scene, Vector3.Zero(), Vector3.Zero(), Vector3.Forward()));
+    p.components.add(new Transform(Vector3.Zero(), Vector3.Zero(), Vector3.Forward()));
     p.components.add(new PlayerDebug(this.scene));
 
     const pv = new PlayerView(this.scene, netPlayer.sessionId);
@@ -107,8 +109,8 @@ class Game {
       p.components.add(new UsesNav(nav));
       p.components.add(new LocalCam(this.scene));
       p.components.get(LocalCam).cam.lockedTarget = p.components.get(PlayerView).aimAt as AbstractMesh;
-      p.components.get(PlayerTransform).pos = new Vector3(-2.3, 0, -2);
-      p.components.get(PlayerTransform).facing = new Vector3(0, 0, 1);
+      p.components.get(Transform).pos = new Vector3(-2.3, 0, -2);
+      p.components.get(Transform).facing = new Vector3(0, 0, 1);
     }
   }
   removePlayerEntity(netPlayer: NetPlayer) {
@@ -151,7 +153,7 @@ class CorrectLocalSimulation extends AbstractEntitySystem<IdEntity> {
       // it's me; server is not authoritative yet, and we don't have correction code
       return;
     }
-    const pt = entity.components.get(PlayerTransform);
+    const pt = entity.components.get(Transform);
     const sr = entity.components.get(ServerRepresented);
     pt.pos = sr.receivedPos;
     pt.facing = sr.receivedFacing;
@@ -161,7 +163,7 @@ class CorrectLocalSimulation extends AbstractEntitySystem<IdEntity> {
 // - to replace with input commands
 class SendUntrustedLocalPos extends AbstractEntitySystem<IdEntity> {
   processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
-    const pt = entity.components.get(PlayerTransform);
+    const pt = entity.components.get(Transform);
     const sr = entity.components.get(ServerRepresented);
 
     const pos = pt.pos;
@@ -212,15 +214,15 @@ class SimpleMove extends AbstractEntitySystem<IdEntity> {
 function ecsInit(): Engine {
   const world = new Engine();
   world.systems.add(new SimpleMove(/*priority=*/ 0, /*all=*/ [Twirl, BjsMesh]));
-  world.systems.add(new PlayerViewMovement(0, [PlayerTransform, PlayerView]));
-  world.systems.add(new LocalCamFollow(0, [PlayerTransform, LocalCam]));
-  world.systems.add(new PlayerJump(0, [PlayerTransform, InitJump]));
+  world.systems.add(new PlayerViewMovement(0, [Transform, PlayerView]));
+  world.systems.add(new LocalCamFollow(0, [Transform, LocalCam]));
+  world.systems.add(new PlayerJump(0, [Transform, InitJump]));
   world.systems.add(new CreateNametag(1, [PlayerView, InitNametag]));
   world.systems.add(new RepaintNametag(1, [Nametag]));
-  world.systems.add(new LocalMovement(0, [PlayerTransform, PlayerDebug, LocallyDriven, UsesNav]));
-  world.systems.add(new ServerReceive(0, [ServerRepresented, PlayerTransform]));
-  world.systems.add(new CorrectLocalSimulation(1, [ServerRepresented, PlayerTransform]));
-  world.systems.add(new SendUntrustedLocalPos(2, [ServerRepresented, PlayerTransform, LocallyDriven]));
+  world.systems.add(new LocalMovement(0, [Transform, PlayerDebug, LocallyDriven, UsesNav]));
+  world.systems.add(new ServerReceive(0, [ServerRepresented, Transform]));
+  world.systems.add(new CorrectLocalSimulation(1, [ServerRepresented, Transform]));
+  world.systems.add(new SendUntrustedLocalPos(2, [ServerRepresented, Transform, LocallyDriven]));
 
   world.systems.forEach((s) => s.addListener({ onError: (e: Error) => log.error(e) }));
 

@@ -3,7 +3,7 @@ import { DynamicTexture, InstancedMesh, Mesh, PlaneBuilder, Scene, ShadowGenerat
 import createLogger from "logging";
 import { removeComponent } from "./EcsOps";
 import { IdEntity } from "./IdEntity";
-import { PlayerTransform } from "./PlayerMotion";
+import { Transform } from "./Motion";
 import { WorldRunOptions } from "./types";
 
 const log = createLogger("PlayerView");
@@ -94,7 +94,7 @@ export class RepaintNametag extends AbstractEntitySystem<IdEntity> {
 export class PlayerViewMovement extends AbstractEntitySystem<IdEntity> {
   processEntity(entity: IdEntity, index: number, entities: unknown, options: WorldRunOptions) {
     const b = entity.components.get(PlayerView).body;
-    b.position.copyFrom(entity.components.get(PlayerTransform).pos);
-    b.lookAt(b.position.add(entity.components.get(PlayerTransform).facing)); // todo: maybe with animation
+    b.position.copyFrom(entity.components.get(Transform).pos);
+    b.lookAt(b.position.add(entity.components.get(Transform).facing)); // todo: maybe with animation
   }
 }

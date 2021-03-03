@@ -5,7 +5,7 @@ import { IdEntity } from "./IdEntity";
 import { WorldRunOptions } from "./types";
 
 import createLogger from "logging";
-import { PlayerTransform } from "./PlayerMotion";
+import { Transform } from "./Motion";
 
 const log = createLogger("PlayerMotion");
 
@@ -39,7 +39,7 @@ export class LocalCamFollow extends AbstractEntitySystem<IdEntity> {
     const dt = options.dt;
     const cc = entity.components;
     const cam = cc.get(LocalCam).cam;
-    const heading = cc.get(PlayerTransform).heading;
+    const heading = cc.get(Transform).heading;
 
     cam.heightOffset += 0.0003 * options.userInput.mouseY;
 
