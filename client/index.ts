@@ -1,6 +1,5 @@
-import { MapSchema } from "@colyseus/schema";
 import { AbstractEntitySystem, Component, Engine } from "@trixt0r/ecs";
-import { AbstractMesh, Color3, Mesh, MeshBuilder, Scene, StandardMaterial, Vector3 } from "babylonjs";
+import { Mesh, Scene, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import createLogger from "logging";
 import { Player as NetPlayer, WorldState } from "../shared/WorldRoom";
@@ -8,10 +7,11 @@ import { setupScene, StatusLine } from "./BrowserWindow";
 import * as Env from "./Env";
 import { LocalCam, LocalCamFollow } from "./FollowCam";
 import { IdEntity } from "./IdEntity";
-import { getOrCreateNick } from "./nick";
-import { LocalMovement, Transform} from "./Motion";
 import { InitJump, PlayerJump } from "./jump";
-import { CreateNametag, InitNametag, Nametag, PlayerView, PlayerViewMovement, RepaintNametag } from "./PlayerView";
+import { LocalMovement, SimpleMove, Transform, Twirl } from "./Motion";
+import { CreateNametag, InitNametag, Nametag, RepaintNametag } from "./Nametag";
+import { getOrCreateNick } from "./nick";
+import { BjsMesh, CreateCard, CreatePlayer, TransformMesh } from "./PlayerView";
 import { playerSessionId, WorldRunOptions } from "./types";
 import { Actions, UserInput } from "./UserInput";
 import { PlayerDebug, UsesNav } from "./walkAlongNavMesh";
@@ -78,18 +78,13 @@ class Game {
 
   addPlayerEntity(netPlayer: NetPlayer, isMe: boolean, nav: Mesh) {
     log.info("addPlayer", netPlayer.sessionId);
-    const p = new IdEntity();
-    this.world.entities.add(p);
+
+    const p = CreatePlayer(this.scene, netPlayer.sessionId);
 
     p.components.add(new ServerRepresented(this.worldRoom!, netPlayer));
 
     p.components.add(new Transform(Vector3.Zero(), Vector3.Zero(), Vector3.Forward()));
     p.components.add(new PlayerDebug(this.scene));
-
-    const pv = new PlayerView(this.scene, netPlayer.sessionId);
-    p.components.add(pv);
-    //p.components.addListener({onRemoved: pv.dispose.bind(pv)})// doesn't work
-
     p.components.add(new InitNametag(this.scene, 20, netPlayer.sessionId));
 
     const repaint = () => {
@@ -108,15 +103,16 @@ class Game {
       p.components.add(new LocallyDriven());
       p.components.add(new UsesNav(nav));
       p.components.add(new LocalCam(this.scene));
-      p.components.get(LocalCam).cam.lockedTarget = p.components.get(PlayerView).aimAt as AbstractMesh;
       p.components.get(Transform).pos = new Vector3(-2.3, 0, -2);
       p.components.get(Transform).facing = new Vector3(0, 0, 1);
     }
+    this.world.entities.add(p);
   }
+  
   removePlayerEntity(netPlayer: NetPlayer) {
     const e = this.world.entities.find((e) => e.components.get(ServerRepresented)?.netPlayer == netPlayer);
     if (e) {
-      e.components.get(PlayerView).dispose(); // haven't found how to listen for this yet
+      e.components.get(BjsMesh).dispose(); // haven't found how to listen for this yet
       const nt = e.components.get(Nametag);
       nt.plane.dispose();
       nt.tx.dispose();
@@ -193,30 +189,13 @@ class LocallyDriven implements Component {
   constructor() {}
 }
 
-class BjsMesh implements Component {
-  constructor(public object: AbstractMesh) {}
-}
-
-class Twirl implements Component {
-  constructor(public degPerSec = 1) {}
-}
-
-class SimpleMove extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: any) {
-    const degPerSec = entity.components.get(Twirl).degPerSec;
-    const object: AbstractMesh = entity.components.get(BjsMesh).object;
-
-    object.rotation.y += degPerSec * options.dt;
-  }
-}
-
 function ecsInit(): Engine {
   const world = new Engine();
-  world.systems.add(new SimpleMove(/*priority=*/ 0, /*all=*/ [Twirl, BjsMesh]));
-  world.systems.add(new PlayerViewMovement(0, [Transform, PlayerView]));
-  world.systems.add(new LocalCamFollow(0, [Transform, LocalCam]));
+  world.systems.add(new SimpleMove(/*priority=*/ 0, /*all=*/ [BjsMesh, Transform, Twirl]));
+  world.systems.add(new TransformMesh(0, [BjsMesh, Transform]));
+  world.systems.add(new LocalCamFollow(0, [BjsMesh, Transform, LocalCam]));
   world.systems.add(new PlayerJump(0, [Transform, InitJump]));
-  world.systems.add(new CreateNametag(1, [PlayerView, InitNametag]));
+  world.systems.add(new CreateNametag(1, [BjsMesh, InitNametag]));
   world.systems.add(new RepaintNametag(1, [Nametag]));
   world.systems.add(new LocalMovement(0, [Transform, PlayerDebug, LocallyDriven, UsesNav]));
   world.systems.add(new ServerReceive(0, [ServerRepresented, Transform]));
@@ -226,19 +205,6 @@ function ecsInit(): Engine {
   world.systems.forEach((s) => s.addListener({ onError: (e: Error) => log.error(e) }));
 
   return world;
-}
-
-function ecsCard(world: Engine, scene: Scene) {
-  var cardMesh = MeshBuilder.CreateBox("box", { size: 3 }, scene);
-  var material = new StandardMaterial("material", scene);
-  material.diffuseColor = new Color3(1, 1, 1);
-  cardMesh.material = material;
-
-  const card = new IdEntity();
-  card.components.add(new Twirl(/*degPerSec=*/ 1));
-  card.components.add(new BjsMesh(cardMesh));
-
-  world.entities.add(card);
 }
 
 async function go() {
@@ -260,7 +226,7 @@ async function go() {
     await game.joinWorld(nav);
   }
 
-  ecsCard(world, scene);
+  world.entities.add(CreateCard(scene));
 
   const userInput = new UserInput(scene, function onAction(name: Actions) {
     if (name == Actions.Jump) {

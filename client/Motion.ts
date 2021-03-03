@@ -5,8 +5,7 @@ import { IdEntity } from "./IdEntity";
 import { WorldRunOptions } from "./types";
 import { PlayerDebug, UsesNav, walkAlongNavMesh } from "./walkAlongNavMesh";
 
-const log = createLogger("PlayerMotion");
-
+const log = createLogger("Motion");
 
 export class Transform implements Component {
   constructor(
@@ -17,6 +16,10 @@ export class Transform implements Component {
   get heading(): number {
     return (360 / (2 * Math.PI)) * Math.atan2(-this.facing.z, this.facing.x) + 270;
   }
+}
+
+export class Twirl implements Component {
+  constructor(public degPerSec = 1) {}
 }
 
 // server will run this too
@@ -76,5 +79,18 @@ export class LocalMovement extends AbstractEntitySystem<IdEntity> {
 
     const yComp = vel.multiplyByFloats(0, 1, 0);
     return xzComp.add(yComp);
+  }
+}
+
+export class SimpleMove extends AbstractEntitySystem<IdEntity> {
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: WorldRunOptions) {
+    const tr = entity.components.get(Transform);
+    const tw = entity.components.get(Twirl);
+
+    // (accumulates error)
+    const rot = Quaternion.RotationAxis(Vector3.Up(), tw.degPerSec * options.dt);
+    const nf = Vector3.Zero();
+    tr.facing.rotateByQuaternionAroundPointToRef(rot, Vector3.Zero(), nf);
+    tr.facing.copyFrom(nf);
   }
 }

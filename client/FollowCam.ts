@@ -1,11 +1,10 @@
-import { AbstractEntitySystem } from "@trixt0r/ecs";
-import { Component } from "@trixt0r/ecs";
-import { AbstractMesh, FollowCamera, Scene, TransformNode, Vector3 } from "babylonjs";
-import { IdEntity } from "./IdEntity";
-import { WorldRunOptions } from "./types";
-
+import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
+import { FollowCamera, Scene, Vector3 } from "babylonjs";
 import createLogger from "logging";
+import { IdEntity } from "./IdEntity";
 import { Transform } from "./Motion";
+import { BjsMesh } from "./PlayerView";
+import { WorldRunOptions } from "./types";
 
 const log = createLogger("PlayerMotion");
 
@@ -40,7 +39,8 @@ export class LocalCamFollow extends AbstractEntitySystem<IdEntity> {
     const cc = entity.components;
     const cam = cc.get(LocalCam).cam;
     const heading = cc.get(Transform).heading;
-
+    const bm = cc.get(BjsMesh);
+    cam.lockedTarget = bm.aimAt;
     cam.heightOffset += 0.0003 * options.userInput.mouseY;
 
     // try to get behind player, don't crash walls
