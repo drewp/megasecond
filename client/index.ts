@@ -12,7 +12,7 @@ import { getOrCreateNick } from "./nick";
 import { LocalMovement, Transform} from "./Motion";
 import { InitJump, PlayerJump } from "./jump";
 import { CreateNametag, InitNametag, Nametag, PlayerView, PlayerViewMovement, RepaintNametag } from "./PlayerView";
-import { WorldRunOptions } from "./types";
+import { playerSessionId, WorldRunOptions } from "./types";
 import { Actions, UserInput } from "./UserInput";
 import { PlayerDebug, UsesNav } from "./walkAlongNavMesh";
 
@@ -125,7 +125,6 @@ class Game {
   }
 }
 
-type playerSessionId = string;
 class ServerRepresented implements Component {
   public lastSentTime = 0; // ms
   public lastSent: any;

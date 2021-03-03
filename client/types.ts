@@ -4,3 +4,5 @@ export type WorldRunOptions = {
   dt: number;
   userInput: UserInput;
 };
+
+export type playerSessionId = string;
