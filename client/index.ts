@@ -9,7 +9,7 @@ import * as Env from "./Env";
 import { LocalCam, LocalCamFollow } from "./FollowCam";
 import { IdEntity } from "./IdEntity";
 import { getOrCreateNick } from "./nick";
-import { InitJump, LocalMovement, PlayerDebug, PlayerJump, PlayerTransform } from "./PlayerMotion";
+import { InitJump, LocalMovement, PlayerDebug, PlayerJump, PlayerTransform, UsesNav } from "./PlayerMotion";
 import { CreateNametag, InitNametag, Nametag, PlayerView, PlayerViewMovement, RepaintNametag } from "./PlayerView";
 import { WorldRunOptions } from "./types";
 import { Actions, UserInput } from "./UserInput";
@@ -81,7 +81,7 @@ class Game {
 
     p.components.add(new ServerRepresented(this.worldRoom!, netPlayer));
 
-    p.components.add(new PlayerTransform(this.scene, Vector3.Zero(), Vector3.Zero(), Vector3.Forward(), nav));
+    p.components.add(new PlayerTransform(this.scene, Vector3.Zero(), Vector3.Zero(), Vector3.Forward()));
     p.components.add(new PlayerDebug(this.scene));
 
     const pv = new PlayerView(this.scene, netPlayer.sessionId);
@@ -104,6 +104,7 @@ class Game {
     if (isMe) {
       this.me = p;
       p.components.add(new LocallyDriven());
+      p.components.add(new UsesNav(nav));
       p.components.add(new LocalCam(this.scene));
       p.components.get(LocalCam).cam.lockedTarget = p.components.get(PlayerView).aimAt as AbstractMesh;
       p.components.get(PlayerTransform).pos = new Vector3(-2.3, 0, -2);
@@ -216,7 +217,7 @@ function ecsInit(): Engine {
   world.systems.add(new PlayerJump(0, [PlayerTransform, InitJump]));
   world.systems.add(new CreateNametag(1, [PlayerView, InitNametag]));
   world.systems.add(new RepaintNametag(1, [Nametag]));
-  world.systems.add(new LocalMovement(0, [PlayerTransform, PlayerDebug, LocallyDriven]));
+  world.systems.add(new LocalMovement(0, [PlayerTransform, PlayerDebug, LocallyDriven, UsesNav]));
   world.systems.add(new ServerReceive(0, [ServerRepresented, PlayerTransform]));
   world.systems.add(new CorrectLocalSimulation(1, [ServerRepresented, PlayerTransform]));
   world.systems.add(new SendUntrustedLocalPos(2, [ServerRepresented, PlayerTransform, LocallyDriven]));

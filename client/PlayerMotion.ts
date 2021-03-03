@@ -1,5 +1,5 @@
 import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
-import { Color3, Matrix, Mesh, Quaternion, Ray, Scene, Vector2, Vector3 } from "babylonjs";
+import { Color3, Mesh, Quaternion, Ray, Scene, Vector2, Vector3 } from "babylonjs";
 import createLogger from "logging";
 import { ShowPoint, ShowSegment } from "./Debug";
 import { removeComponent } from "./EcsOps";
@@ -20,14 +20,17 @@ export class PlayerTransform implements Component {
     public scene: Scene,
     public pos: Vector3,
     public vel: Vector3, // move this to a motion component
-    public facing: Vector3,
-    public nav: Mesh, // move to Grounded?
-    public currentNavFaceId = 0,
-    public grounded = false
+    public facing: Vector3
   ) {}
   get heading(): number {
     return (360 / (2 * Math.PI)) * Math.atan2(-this.facing.z, this.facing.x) + 270;
   }
+}
+
+export class UsesNav implements Component {
+  public currentNavFaceId = 0;
+  public grounded = false;
+  constructor(public nav: Mesh) {}
 }
 
 export class PlayerDebug implements Component {
@@ -37,7 +40,7 @@ export class PlayerDebug implements Component {
   constructor(scene: Scene) {
     this.debugNavHit = new ShowSegment(scene, Color3.Red(), Color3.Blue());
     this.debugNavRay = new ShowSegment(scene, Color3.Magenta(), Color3.Magenta());
-    this.debugCurNavFace = [0, 1, 2].map((i) => new ShowPoint(scene, Color3.Green()));
+    this.debugCurNavFace = [0, 1, 2].map(() => new ShowPoint(scene, Color3.Green()));
   }
 }
 
@@ -46,9 +49,10 @@ export class InitJump implements Component {
 }
 
 export class PlayerJump extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, index: number, entities: unknown, options: WorldRunOptions) {
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
     const pt = entity.components.get(PlayerTransform);
-    if (pt.grounded) {
+    const un = entity.components.get(UsesNav);
+    if (un.grounded) {
       pt.vel.y = 3;
     }
 
@@ -151,10 +155,11 @@ function currentNavFace(nav: Mesh, currentNavFaceId: number): Vector3[] {
 }
 
 export class LocalMovement extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, index: number, entities: unknown, options: WorldRunOptions) {
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: WorldRunOptions) {
     const dt = options.dt;
     const pt = entity.components.get(PlayerTransform);
     const pd = entity.components.get(PlayerDebug);
+    const un = entity.components.get(UsesNav);
 
     const mouseX = options.userInput.mouseX,
       stick = new Vector2(options.userInput.stickX, options.userInput.stickY);
@@ -162,15 +167,7 @@ export class LocalMovement extends AbstractEntitySystem<IdEntity> {
     this.onMouseX(mouseX, pt.facing, pt.vel);
     pt.vel = this.setXZVel(stick, pt.facing, pt.vel);
 
-    [pt.pos, pt.vel, pt.facing, pt.grounded, pt.currentNavFaceId] = playerStep(
-      dt,
-      pt.pos,
-      pt.vel,
-      pt.facing,
-      pt.nav,
-      pd,
-      pt.currentNavFaceId
-    );
+    [pt.pos, pt.vel, pt.facing, un.grounded, un.currentNavFaceId] = playerStep(dt, pt.pos, pt.vel, pt.facing, un.nav, pd, un.currentNavFaceId);
   }
 
   private onMouseX(movementX: number, facing: Vector3 /*mutated*/, vel: Vector3 /*mutated*/) {
