@@ -30,7 +30,8 @@ class Bake:
         self.samples = samples
         self.on_bake_done = on_bake_done
         # 'screen' context is not immediately ready
-        later(1, self._withScreen)
+        #later(1, self._withScreen)
+        self._withScreen()
 
     def _withScreen(self):
         log.info(f'{self.obj_name} bake start')
@@ -133,8 +134,7 @@ class Bake:
             bakeData['save_time'] = round(time.time() - t2, 2)
 
         self.runs.pop(0)
-        # sometimes the next bake wouldn't start
-        later(.1, self.nextBake)
+        self.nextBake()
 
 
 def async_bake(objs, outData, cb):
@@ -160,6 +160,7 @@ def main():
     outData = world_json.load()
 
     def run_bakes(cb):
+        log.info('run_bakes')
         to_bake = []
         job = os.environ['EXPORT_JOB']
         for obj_name in all_mesh_objects(bpy.data.objects['env']):
@@ -172,14 +173,14 @@ def main():
             elif job == 'debug':
                 if obj_name.startswith('sign_board'):
                     to_bake.append(obj_name)
-
+        log.info(f'{len(to_bake)} objs to bake')
         async_bake(to_bake, outData, cb)
 
     def done():
         world_json.rewrite(outData)
         bpy.ops.wm.quit_blender()
 
-    later(2, run_bakes, done)
+    run_bakes(done)
 
 
 main()

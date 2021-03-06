@@ -6,8 +6,7 @@ _wj = dest / 'world.json'
 
 
 def delete():
-    if _wj.exists():
-        _wj.unlink()
+    rewrite({})
 
 
 def load():

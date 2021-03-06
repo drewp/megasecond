@@ -7,7 +7,7 @@ import bpy
 sys.path.append(os.path.dirname(__file__))
 
 import world_json
-from dirs import dest
+from dirs import src, dest
 from selection import all_mesh_objects, select_object
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
@@ -75,12 +75,19 @@ def write_glb():
     # now run https://github.com/zeux/meshoptimizer/tree/master/gltf
 
 
+def export_blend_scene(outData, blend_path, out_glb_path, bake_mats=False, select=None):
+    bpy.ops.wm.open_mainfile(filepath=str(blend_path))
+    if bake_mats:
+        switch_to_lightmap_uvs(outData)
+    dest.mkdir(parents=True, exist_ok=True)
+    write_glb(out_glb_path, select=select, with_materials=not bake_mats)
+
+
 def main():
     outData = world_json.load()
 
-    bpy.ops.wm.open_mainfile(filepath=str(dest / 'edit.blend'))
-    switch_to_lightmap_uvs(outData)
-    write_glb()
+    export_blend_scene(outData, dest / 'edit.blend', dest / "wrap.glb")
+
     bpy.ops.wm.quit_blender()
 
 

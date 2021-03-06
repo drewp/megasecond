@@ -1,4 +1,6 @@
 from pathlib import Path
 
-src = Path("../client/asset")
-dest = Path("../build/asset/")
+here = Path(__file__).parent
+
+src = here / "../client/asset"
+dest = here / "../build/asset/"

@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import sys
 from typing import Union
 
@@ -92,30 +93,27 @@ def storeExistingUvLayer(outData, obj):
 
 
 def main():
+    log.info('main start')
     outData = world_json.load()
 
     bpy.ops.wm.open_mainfile(filepath=str(src / 'wrap/wrap.blend'))
 
-    def done():
-        world_json.rewrite(outData)
-        bpy.ops.wm.save_as_mainfile(filepath=str(dest / 'edit.blend'))
-        bpy.ops.wm.quit_blender()
-
-    def dice_ground(cb):
+    def dice_ground():
+        log.info('dice_ground')
         for xsplit in range(-750, 750, 250):
             for ysplit in range(-750, 750, 250):
                 separate_rect('gnd.001', -750, xsplit + 250, -750,
                               ysplit + 250)
-        cb()
 
-    def separate_materials(cb):
+    def separate_materials():
+        log.info('separate_materials')
         for obj_name in all_mesh_objects(bpy.data.objects['env']):
             if len(bpy.data.objects[obj_name].material_slots) > 1:
                 select_object(obj_name)
                 bpy.ops.mesh.separate(type='MATERIAL')
-        cb()
 
-    def lightmaps(cb):
+    def lightmaps():
+        log.info('lightmaps')
         for obj_name in all_mesh_objects(bpy.data.objects['env']):
             # if not obj_name.startswith('sign_board'): continue
 
@@ -138,9 +136,25 @@ def main():
                 )
             except Exception as exc:
                 log.warning(f'lightmap_pack failed on {obj_name}: {exc!r}')
-        cb()
 
-    later(2, dice_ground, lambda: separate_materials(lambda: lightmaps(done)))
+    def rel_paths():
+        log.info('rel_paths')
+        # bpy.ops.file.make_paths_relative() is not working; it makes like
+        # '//../../../home/drewp/own/proj_shared/megasecond/client/asset/wrap/gnd_dif.png'
+        for img in bpy.data.images.values():
+            prev = img.filepath
+            img.filepath = re.sub(r'.*/megasecond/client/asset/wrap/', '//',
+                                  img.filepath)
+            if img.filepath != prev:
+                log.info(f'fix path from {prev} to {img.filepath}')
+            log.info(f'- image at {img.filepath}')
+
+    dice_ground()
+    separate_materials()
+    lightmaps()
+    rel_paths()
+    world_json.rewrite(outData)
+    bpy.ops.wm.save_as_mainfile(filepath=str(dest / 'edit.blend'))
     # also, delete player and other setup stuff, maybe save a non-env scene with props and chars
 
 
