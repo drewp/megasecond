@@ -142,7 +142,7 @@ export class World {
     }
     const mat = new PBRMaterial("pbr_" + objName, this.scene); //obj.material as PBRMaterial;
     mat.unlit = true;
-    mat.albedoTexture = this.bakedTx(`bake_${objName}_dif.jpg`);
+    mat.albedoTexture = this.bakedTx(`bake/bake_${objName}_dif.jpg`);
     // mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
     // mat.useLightmapAsShadowmap = true;
     Texture.WhenAllReady([mat.albedoTexture], () => {

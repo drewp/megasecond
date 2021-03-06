@@ -129,7 +129,7 @@ class Bake:
         else:
             # these should be named by content since some will be the same (dup object under 2 lights will have some of the same maps)
             t2 = time.time()
-            image.save(self.img, dest / f'bake_{self.obj_name}_{out_name}.jpg')
+            image.save(self.img, dest / f'bake/bake_{self.obj_name}_{out_name}.png')
             bakeData['save_time'] = round(time.time() - t2, 2)
 
         self.runs.pop(0)

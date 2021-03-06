@@ -8,6 +8,8 @@ log = logging.getLogger()
 
 def save_builtin(img, path):
     # having blender save was turning the image back to black!
+    path.parent.mkdir(parents=True, exist_ok=True)
+
     img.filepath = str(path).replace('.png', '-builtinsave.png')
     img.file_format = "PNG"
     img.save()
@@ -15,6 +17,7 @@ def save_builtin(img, path):
 
 
 def save(img, path):
+    path.parent.mkdir(parents=True, exist_ok=True)
     log.info(f'{path}: preparing image data')
     ar = numpy.array(img.pixels).reshape((img.size[0], img.size[1], 4))
     ar = ar[::-1, :, :]
