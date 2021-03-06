@@ -9,6 +9,7 @@ or https://github.com/leukbaars/EasyBake/blob/master/EasyBake.py
 import os
 import shutil
 import subprocess
+from pathlib import Path
 
 import world_json
 from dirs import dest, src
@@ -61,6 +62,10 @@ def export_bake_maps():
                               ],
                               env=cur_env)
 
+def convert_bake_maps():
+    for p in Path('../build/asset/bake').glob('*.png'):
+        subprocess.check_call(['convert', '-quality', '80', str(p), str(p).replace('.png', '.jpg')])
+
 
 world_json.delete()
 
@@ -68,5 +73,6 @@ export_static_images()
 export_env_scene()
 export_geom()
 export_bake_maps()
+convert_bake_maps()
 
 world_json.dump()
