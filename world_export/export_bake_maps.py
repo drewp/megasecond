@@ -63,7 +63,7 @@ class Bake:
             # ('COMBINED', 'comb', 'sRGB'),
             ('DIFFUSE', 'dif', 'sRGB'),
             # ('AO', 'ao', 'Non-Color'),
-            # ('SHADOW', 'shad', 'Non-Color'),
+            ('SHADOW', 'shad', 'Non-Color'),
             # ('NORMAL', 'norm', 'Non-Color'),
             # ('ROUGHNESS', 'ruff', 'Non-Color'),
             # ('GLOSSY', 'glos', 'Non-Color'),
@@ -150,7 +150,7 @@ def async_bake(objs, outData, cb):
             map_size = 4096
         if obj in ['building_022.outer.003']:
             map_size = 2048
-        Bake(obj, outData, map_size=map_size, samples=10, on_bake_done=pump)
+        Bake(obj, outData, map_size=map_size, samples=50, on_bake_done=pump)
 
     pump()
 
