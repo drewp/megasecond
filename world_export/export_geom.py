@@ -26,9 +26,16 @@ def switch_to_lightmap_uvs(outData):
                     obj.data.uv_layers.remove(lyr)
 
 
-def write_glb():
-    dest.mkdir(parents=True, exist_ok=True)
-    glb_out = dest / "wrap.glb"
+def write_glb(glb_out, select=None, with_materials=False):
+
+    if select:
+        # gltf exporter use_selection maybe has no effect
+        log.info(f'objs {len(bpy.data.objects)}')
+        select_object(select)
+        bpy.ops.object.select_all(action='INVERT')
+        bpy.ops.object.delete(use_global=False, confirm=False)
+        log.info(f'objs reduced to {len(bpy.data.objects)}')
+        select = None
 
     # workaround for gltf export bug, from https://blender.stackexchange.com/questions/200616/script-to-export-gltf-fails-with-context-object-has-no-attribute-active-objec
     ctx = bpy.context.copy()
@@ -57,19 +64,18 @@ def write_glb():
         export_frame_range=False,
         export_frame_step=1,
         export_image_format='JPEG',
-        export_materials='PLACEHOLDER',
+        export_materials='EXPORT' if with_materials else 'PLACEHOLDER',
         export_morph_normal=True,
         export_morph_tangent=False,
         export_morph=True,
         export_nla_strips=True,
         export_normals=True,
-        export_selected=False,
         export_skins=True,
         export_tangents=False,
         export_texcoords=True,
         export_texture_dir="",
         export_yup=True,
-        use_selection=False,
+        use_selection=bool(select),
     )
     log.info("glb size %.1fKb" % (os.path.getsize(glb_out) / 1024))
     # now run https://github.com/zeux/meshoptimizer/tree/master/gltf
@@ -87,6 +93,7 @@ def main():
     outData = world_json.load()
 
     export_blend_scene(outData, dest / 'edit.blend', dest / "wrap.glb")
+    export_blend_scene(outData, src / 'wrap/card.blend', dest / "obj_card.glb", bake_mats=False, select='card')
 
     bpy.ops.wm.quit_blender()
 
