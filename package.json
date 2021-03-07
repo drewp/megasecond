@@ -28,7 +28,6 @@
     "express": "^4.16.4",
     "express-jwt": "^5.3.1",
     "logging": "^3.3.0",
-    "miski": "phughesmcr/Miski#e48aed91f0511f5b06d1043490bf1f1ad0673616",
     "rollup": "^2.37.1",
     "ts-node-dev": "^1.1.1",
     "tslib": "^2.1.0",
