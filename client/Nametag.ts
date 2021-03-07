@@ -4,10 +4,11 @@ import { removeComponent } from "./EcsOps";
 import { IdEntity } from "./IdEntity";
 import { BjsMesh } from "./PlayerView";
 import { WorldRunOptions } from "./types";
+import { Player as NetPlayer, WorldState } from "../shared/WorldRoom";
 
 // i want a nametag
 export class InitNametag implements Component {
-  constructor(public scene: Scene, public offsetY = 20, public suffix: string) {}
+  constructor(public scene: Scene, public offsetY = 20, public netPlayer: NetPlayer) {}
 }
 
 // i have a nametag
@@ -20,25 +21,37 @@ export class CreateNametag extends AbstractEntitySystem<IdEntity> {
     const init = entity.components.get(InitNametag);
     const bm = entity.components.get(BjsMesh);
     const scl = 0.2;
-    const plane = PlaneBuilder.CreatePlane(`nametag-${init.suffix}`, { width: 480 * scl, height: 64 * scl }, init.scene);
+    const suffix = init.netPlayer.sessionId;
+    const plane = PlaneBuilder.CreatePlane(`nametag-${suffix}`, { width: 480 * scl, height: 64 * scl }, init.scene);
     plane.parent = bm.aimAt;
     plane.position.y = init.offsetY;
 
     const tx = new DynamicTexture(
-      `nametag-${init.suffix}`,
+      `nametag-${suffix}`,
       { width: 256, height: 64 },
       init.scene,
       false // types bug made this nonoptional?
     );
     tx.hasAlpha = true;
 
-    var mat = new StandardMaterial(`nametag-${init.suffix}`, init.scene);
+    var mat = new StandardMaterial(`nametag-${suffix}`, init.scene);
     mat.diffuseTexture = tx;
     mat.disableLighting = true;
     mat.transparencyMode = 3;
     mat.useAlphaFromDiffuseTexture = true;
     plane.material = mat;
     plane.billboardMode = TransformNode.BILLBOARDMODE_ALL;
+
+    const netPlayer = init.netPlayer;
+
+    {
+      // where does this go? In RepaintNametag somehow?
+      const onNickChanged = () => {
+        new RepaintNametag().repaint(tx, netPlayer.nick);
+      };
+      netPlayer.listen("nick", onNickChanged);
+      onNickChanged();
+    }
 
     entity.components.add(new Nametag(plane, tx));
     removeComponent(entity, InitNametag);

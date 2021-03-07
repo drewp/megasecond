@@ -1,4 +1,7 @@
 import { AxesViewer, Color3, Mesh, MeshBuilder, Scene, StandardMaterial, TransformNode, Vector3 } from "babylonjs";
+import createLogger from "logging";
+
+const log = createLogger("Debug");
 
 export function AddBabylonExplorer(scene: Scene) {
   scene.debugLayer
@@ -9,7 +12,7 @@ export function AddBabylonExplorer(scene: Scene) {
     })
     .then(() => {
       scene.debugLayer.onPropertyChangedObservable.add((result: any) => {
-        console.log(result.object.name, result.property, result.value);
+        log.info(result.object.name, result.property, result.value);
       });
     });
 }
@@ -21,7 +24,6 @@ export function showOrigin(scene: Scene, obj: TransformNode) {
   localOrigin.yAxis.parent = obj;
   localOrigin.zAxis.parent = obj;
 }
-
 
 export class ShowPoint {
   private m: Mesh;

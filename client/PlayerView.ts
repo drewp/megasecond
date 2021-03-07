@@ -43,11 +43,7 @@ export function CreatePlayer(scene: Scene, prefix: string) {
   return p;
 }
 
-export function CreateCard(scene: Scene): IdEntity {
-  var cardMesh = MeshBuilder.CreateBox("box", { size: 3 }, scene);
-  var material = new StandardMaterial("material", scene);
-  material.diffuseColor = new Color3(1, 1, 1);
-  cardMesh.material = material;
+export function CreateCard(scene: Scene, cardMesh: Mesh): IdEntity {
 
   const card = new IdEntity();
   card.components.add(new BjsMesh(cardMesh));

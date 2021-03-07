@@ -38,13 +38,10 @@ class Game {
     this.status.setConnection("connected...");
     worldRoom.send("setNick", this.nick);
 
-    return new Promise<{ me: IdEntity }>((resolve, _reject) => {
+    return new Promise<void>((resolve, _reject) => {
       worldRoom.onStateChange.once((state) => {
         this.trackPlayers(state, nav);
-        if (!this.me) {
-          throw new Error("player list didn't include me");
-        }
-        resolve({ me: this.me });
+        resolve();
       });
     });
   }
@@ -57,7 +54,7 @@ class Game {
     });
 
     this.worldRoom!.state.players.onAdd = (player: NetPlayer, sessionId: string) => {
-      log.info(`\nnet onAdd ${sessionId} ${this.worldRoom!.sessionId}`);
+      log.info(`net onAdd ${sessionId} ${this.worldRoom!.sessionId}`);
       this.addPlayerEntity(player, /*isMe=*/ sessionId == this.worldRoom!.sessionId, nav);
       this.status.setConnection(`connected (${Array.from(this.worldRoom!.state.players.keys()).length} players)`);
     };
@@ -85,18 +82,7 @@ class Game {
 
     p.components.add(new Transform(Vector3.Zero(), Vector3.Zero(), Vector3.Forward()));
     p.components.add(new PlayerDebug(this.scene));
-    p.components.add(new InitNametag(this.scene, 20, netPlayer.sessionId));
-
-    const repaint = () => {
-      const nt = p.components.get(Nametag);
-      if (!nt) return;
-      const painter = new RepaintNametag();
-
-      painter.repaint(nt.tx, netPlayer.nick);
-    };
-    netPlayer.listen("nick", repaint);
-    // at the moment, p still has InitNametag, not Nametag
-    setTimeout(repaint, 1000);
+    p.components.add(new InitNametag(this.scene, /*offsetY=*/ 20, netPlayer));
 
     if (isMe) {
       this.me = p;
@@ -108,7 +94,7 @@ class Game {
     }
     this.world.entities.add(p);
   }
-  
+
   removePlayerEntity(netPlayer: NetPlayer) {
     const e = this.world.entities.find((e) => e.components.get(ServerRepresented)?.netPlayer == netPlayer);
     if (e) {
@@ -214,19 +200,19 @@ async function go() {
   const scene = setupScene("renderCanvas");
   const game = new Game(status, world, scene, nick);
 
-  {
-    const env = new Env.World(scene);
-    await env.load(Env.GraphicsLevel.grid);
-  }
-
+  const env = new Env.World(scene);
+  await env.load(Env.GraphicsLevel.texture);
+  scene.switchActiveCamera(scene.cameras[0]); // in case player cam  isn't ready
   {
     const nav = scene.getMeshByName("navmesh") as Mesh;
     nav.updateFacetData();
     status.setPlayer(nick);
     await game.joinWorld(nav);
+    // game.me is not guaranteed yet (or maybe if it's missing then the server is borked)
   }
 
-  world.entities.add(CreateCard(scene));
+  const card = await env.loadObj("card");
+  world.entities.add(CreateCard(scene, card));
 
   const userInput = new UserInput(scene, function onAction(name: Actions) {
     if (name == Actions.Jump) {

@@ -65,7 +65,18 @@ export class World {
     }
     // this.setupSkybox(scene);
   }
-
+  async loadObj(name: string): Promise<Mesh> {
+    const fn = `obj_${name}.glb`;
+    await SceneLoader.AppendAsync("./asset_build/", fn, this.scene);
+    const ret = this.scene.getMeshByName(name);
+    if (!ret) {
+      throw new Error(`file ${fn} did not provide object ${name}`);
+    }
+    const junkRoot = ret.parent;
+    ret.parent = null;
+    junkRoot?.dispose();
+    return ret as Mesh;
+  }
   gridEverything() {
     const grid = new GridMaterial("grid", this.scene);
     grid.gridRatio = 0.1;
@@ -89,7 +100,7 @@ export class World {
       }
       const obj = this.scene.getMeshByName(m);
       if (!obj) {
-        console.log(`data said ${m} but no mesh found in scene`);
+        log.info(`data said ${m} but no mesh found in scene`);
         continue;
       }
       const d = this.distToObject(obj, center);
@@ -102,7 +113,7 @@ export class World {
       try {
         this.assignTx(m);
       } catch (err) {
-        console.log("no tx for mesh", m, err);
+        log.info("no tx for mesh", m, err);
         continue;
       }
       if (m.startsWith("gnd.")) {
@@ -140,6 +151,10 @@ export class World {
     if (!obj) {
       return;
     }
+    if (!obj.material) {
+      // couldn't take the grid material earlier
+      return;
+    }
     const mat = new PBRMaterial("pbr_" + objName, this.scene); //obj.material as PBRMaterial;
     mat.unlit = true;
     mat.albedoTexture = this.bakedTx(`bake/bake_${objName}_dif.jpg`);
@@ -147,7 +162,12 @@ export class World {
     // mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
     // mat.useLightmapAsShadowmap = true;
     Texture.WhenAllReady([mat.albedoTexture], () => {
-      obj.material = mat;
+      // log.info("objname", objName);
+      try {
+        obj.material = mat;
+      } catch (e) {
+        log.error(e); // another instance of a repeated object?
+      }
     });
   }
 
