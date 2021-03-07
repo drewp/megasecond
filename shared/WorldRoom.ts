@@ -1,6 +1,6 @@
 import { MapSchema, Schema, type } from "@colyseus/schema";
 import { Client, Room } from "colyseus";
-import createLogger from "logging";
+import createLogger from "./logsetup";
 
 const log = createLogger("WorldRoom");
 

@@ -1,7 +1,6 @@
 import { AbstractEntitySystem, Component, Engine } from "@trixt0r/ecs";
 import { Mesh, Scene, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
-import createLogger from "logging";
 import { Player as NetPlayer, WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
 import * as Env from "./Env";
@@ -15,8 +14,12 @@ import { BjsMesh, CreateCard, CreatePlayer, TransformMesh } from "./PlayerView";
 import { playerSessionId, WorldRunOptions } from "./types";
 import { Actions, UserInput } from "./UserInput";
 import { PlayerDebug, UsesNav } from "./walkAlongNavMesh";
+import createLogger from "../shared/logsetup";
+
 
 const log = createLogger("WorldRoom");
+
+log.info("hello log");
 
 type PlayerMap = Map<playerSessionId, NetPlayer>;
 

@@ -5,6 +5,8 @@ import { IdEntity } from "./IdEntity";
 import { BjsMesh } from "./PlayerView";
 import { WorldRunOptions } from "./types";
 import { Player as NetPlayer, WorldState } from "../shared/WorldRoom";
+import createLogger from "../shared/logsetup";
+const log = createLogger("Nametag");
 
 // i want a nametag
 export class InitNametag implements Component {
@@ -33,6 +35,7 @@ export class CreateNametag extends AbstractEntitySystem<IdEntity> {
       false // types bug made this nonoptional?
     );
     tx.hasAlpha = true;
+    log.info('created texture')
 
     var mat = new StandardMaterial(`nametag-${suffix}`, init.scene);
     mat.diffuseTexture = tx;
@@ -47,8 +50,10 @@ export class CreateNametag extends AbstractEntitySystem<IdEntity> {
     {
       // where does this go? In RepaintNametag somehow?
       const onNickChanged = () => {
+        log.info('onNickChanged', netPlayer.nick)
         new RepaintNametag().repaint(tx, netPlayer.nick);
       };
+      log.info('listtning for nick change on ', netPlayer.sessionId)
       netPlayer.listen("nick", onNickChanged);
       onNickChanged();
     }
@@ -64,6 +69,7 @@ export class RepaintNametag extends AbstractEntitySystem<IdEntity> {
   repaint(tx: DynamicTexture, msg: string) {
     tx.getContext().fillStyle = "#00000000";
     tx.clear();
+    log.info('repaint', msg)
     tx.drawText(msg, 0, 50, "45px sans", "#ffffffff", "#00000000", true, true);
   }
 }

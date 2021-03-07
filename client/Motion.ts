@@ -1,6 +1,6 @@
 import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
 import { Color3, Mesh, Quaternion, Scene, Vector2, Vector3 } from "babylonjs";
-import createLogger from "logging";
+import createLogger from "../shared/logsetup";
 import { IdEntity } from "./IdEntity";
 import { WorldRunOptions } from "./types";
 import { PlayerDebug, UsesNav, walkAlongNavMesh } from "./walkAlongNavMesh";

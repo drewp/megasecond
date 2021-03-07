@@ -1,7 +1,7 @@
 import { Engine } from "@trixt0r/ecs";
 import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
 import { AbstractMesh, Color3, Mesh, MeshBuilder, Scene, ShadowGenerator, StandardMaterial, TransformNode, Vector3 } from "babylonjs";
-import createLogger from "logging";
+import createLogger from "../shared/logsetup";
 import { IdEntity } from "./IdEntity";
 import { Transform, Twirl } from "./Motion";
 import { WorldRunOptions } from "./types";
@@ -11,6 +11,7 @@ const log = createLogger("PlayerView");
 export class BjsMesh implements Component {
   public aimAt: AbstractMesh;
   constructor(public root: AbstractMesh, aimAt?: AbstractMesh) {
+    log.info('made bjsmesh with', root, this.root)
     this.aimAt = aimAt || root;
   }
   dispose() {

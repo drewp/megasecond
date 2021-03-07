@@ -1,5 +1,5 @@
 import { AxesViewer, Color3, Mesh, MeshBuilder, Scene, StandardMaterial, TransformNode, Vector3 } from "babylonjs";
-import createLogger from "logging";
+import createLogger from "../shared/logsetup";
 
 const log = createLogger("Debug");
 

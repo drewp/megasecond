@@ -16,7 +16,7 @@ import {
   Vector3,
 } from "babylonjs";
 import { GridMaterial, SkyMaterial } from "babylonjs-materials";
-import createLogger from "logging";
+import createLogger from "../shared/logsetup";
 
 const log = createLogger("Env");
 

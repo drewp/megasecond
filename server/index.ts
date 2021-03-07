@@ -3,7 +3,7 @@ import { Server } from "colyseus";
 import express from "express";
 import http from "http";
 import path from "path";
-import createLogger from "logging";
+import createLogger from "../shared/logsetup";
 const log = createLogger("server");
 
 import { WorldRoom } from "../shared/WorldRoom";

@@ -1,6 +1,6 @@
 import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
 import { FollowCamera, Scene, Vector3 } from "babylonjs";
-import createLogger from "logging";
+import createLogger from "../shared/logsetup";
 import { IdEntity } from "./IdEntity";
 import { Transform } from "./Motion";
 import { BjsMesh } from "./PlayerView";
