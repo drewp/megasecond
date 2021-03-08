@@ -1,4 +1,10 @@
-import json
+"""
+read source in ../client/asset/, write what babylonjs will use in ../build/asset/
+
+see https://github.com/Naxela/The_Lightmapper for a possible replacement
+or https://github.com/danielenger/Principled-Baker
+or https://github.com/leukbaars/EasyBake/blob/master/EasyBake.py
+"""
 import logging
 import os
 import sys
@@ -9,7 +15,6 @@ import bpy
 sys.path.append(os.path.dirname(__file__))
 import image
 import world_json
-from blender_async import later
 from dirs import dest
 from selection import all_mesh_objects, select_object
 
@@ -160,15 +165,15 @@ def main():
     outData = world_json.load()
 
     def run_bakes(cb):
-        log.info('run_bakes')
+        job=sys.argv[-1].replace('--job=', '')
+        log.info(f'run_bakes; job={job} argv={sys.argv}')
         to_bake = []
-        job = os.environ['EXPORT_JOB']
         for obj_name in all_mesh_objects(bpy.data.objects['env']):
             if job == 'gnd.023':
                 if obj_name == 'gnd.023': to_bake.append(obj_name)
-            elif job == 'other gnd':
+            elif job == 'other_gnd':
                 if obj_name != 'gnd.023': to_bake.append(obj_name)
-            elif job == 'not gnd':
+            elif job == 'not_gnd':
                 if not obj_name.startswith('gnd'): to_bake.append(obj_name)
             elif job == 'debug':
                 if obj_name.startswith('sign_board'):

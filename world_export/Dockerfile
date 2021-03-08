@@ -37,7 +37,8 @@ RUN apt-get install -y \
 	libgl1-mesa-glx \ 
 	xz-utils \
 	libjpeg8 \
-	imagemagick-6.q16
+	imagemagick-6.q16 \
+	strace
 
 # Download and install Blender
 RUN wget https://mirror.clarkson.edu/blender/release/Blender2.92/blender-2.92.0-linux64.tar.xz \ 

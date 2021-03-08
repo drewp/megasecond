@@ -11,7 +11,6 @@ from mathutils import Vector
 
 sys.path.append(os.path.dirname(__file__))
 import world_json
-from blender_async import later
 from dirs import dest, src
 from selection import all_mesh_objects, editmode, select_object
 

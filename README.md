@@ -47,9 +47,12 @@ hg bookmark -r default master && hg push
 Export geometry and textures (writes to `build/`):
 
 ```
-apt install blender python3-numpy python3-pil
-python3 world_export/run_export.py
+cd world_export
+make docker_build
+make export
 ```
+
+or `make export_forever` to watch for changes and rebuild.
 
 ### Deploy
 
