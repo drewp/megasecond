@@ -1,0 +1,10 @@
+{
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
+  "python.linting.enabled": true,
+  "python.pythonPath": "/home/drewp/.venvs/world_export/bin/python",
+  "python.formatting.provider": "yapf",
+  "files.watcherExclude": {
+    "_darcs_old/**": true
+  }
+}

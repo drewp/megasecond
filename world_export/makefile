@@ -4,5 +4,11 @@ docker_build:
 show_docker_blender_version:
 	docker run mega_blender blender -v
 
-export:
+old_export:
 	python3 ./run_export.py
+
+shell:
+	docker run -it -v `pwd`/..:/workspace mega_blender /bin/bash
+
+export:
+	docker run -v `pwd`/..:/workspace mega_blender doit -f world_export/doit_tasks.py run

@@ -1,0 +1,4 @@
+# overwritten by /home/drewp/bin/setup_home_venv
+[style]
+based_on_style = google
+column_limit = 130

@@ -35,7 +35,9 @@ RUN apt-get install -y \
 	libfontconfig1 \ 
 	libxrender1 \ 
 	libgl1-mesa-glx \ 
-	xz-utils
+	xz-utils \
+	libjpeg8 \
+	imagemagick-6.q16
 
 # Download and install Blender
 RUN wget https://mirror.clarkson.edu/blender/release/Blender2.92/blender-2.92.0-linux64.tar.xz \ 
@@ -54,7 +56,7 @@ RUN wget https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tgz \
 RUN rm -rf ${BLENDER_PATH}/python/lib/python3.7/site-packages/numpy 
 
 # Must first ensurepip to install Blender pip3 and then new numpy
-RUN ${BLENDERPY} -m ensurepip && ${BLENDERPIP} install --upgrade pip && ${BLENDERPIP} install numpy
+RUN ${BLENDERPY} -m ensurepip && ${BLENDERPIP} install --upgrade pip 
 
-RUN ${BLENDERPIP} install pillow==8.1.2
-RUN apt-get install -y libjpeg8
+COPY requirements.txt ./
+RUN ${BLENDERPIP} install -r requirements.txt
