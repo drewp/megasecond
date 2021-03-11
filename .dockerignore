@@ -1,1 +1,11 @@
+# this is for the game-serving image, not the asset pipeline one
 .hg
+asset/layout
+asset/map
+asset/material
+asset/model
+build/stage
+ref
+client/asset
+
+

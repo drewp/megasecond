@@ -48,12 +48,12 @@ export class World {
     }
     setupSunShadows(scene);
 
-    scene.getLightByName("Spot")!.intensity /= 1000;
-    scene.getLightByName("Spot.001")!.intensity /= 1000;
-    scene.getLightByName("Spot")!.diffuse = Color3.FromHexString("#68534D");
-    scene.getLightByName("Spot.001")!.diffuse = Color3.FromHexString("#730F4C");
+    // scene.getLightByName("Spot")!.intensity /= 1000;
+    // scene.getLightByName("Spot.001")!.intensity /= 1000;
+    // scene.getLightByName("Spot")!.diffuse = Color3.FromHexString("#68534D");
+    // scene.getLightByName("Spot.001")!.diffuse = Color3.FromHexString("#730F4C");
 
-    this.groundBump = new Texture("./asset_build/normal1.png", scene);
+    this.groundBump = new Texture("./asset_build/map/normal1.png", scene);
     this.groundBump.level = 0.43;
     this.groundBump.uScale = this.groundBump.vScale = 400;
 
@@ -66,8 +66,8 @@ export class World {
     // this.setupSkybox(scene);
   }
   async loadObj(name: string): Promise<Mesh> {
-    const fn = `obj_${name}.glb`;
-    await SceneLoader.AppendAsync("./asset_build/", fn, this.scene);
+    const fn = `${name}.glb`;
+    await SceneLoader.AppendAsync("./asset_build/model/", fn, this.scene);
     const ret = this.scene.getMeshByName(name);
     if (!ret) {
       throw new Error(`file ${fn} did not provide object ${name}`);
@@ -157,7 +157,7 @@ export class World {
     }
     const mat = new PBRMaterial("pbr_" + objName, this.scene); //obj.material as PBRMaterial;
     mat.unlit = true;
-    mat.albedoTexture = this.bakedTx(`bake/bake_${objName}_dif.jpg`);
+    mat.albedoTexture = this.bakedTx(`bake/${objName}_dif.jpg`);
     mat.albedoTexture.coordinatesIndex = 1; // lightmap
     // mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
     // mat.useLightmapAsShadowmap = true;

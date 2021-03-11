@@ -33,6 +33,6 @@ COPY server ./server
 COPY shared ./shared
 
 # built offline and synced into containers
-COPY build/asset ./asset_build
+COPY build/serve ./asset_build
 
 CMD ["pnpm", "run_server"]
