@@ -16,9 +16,12 @@ shared_code_deps = [
 
 
 def task_static_images():
-    for f in (list(src.glob("*.jpg")) +  #
-              list(src.glob("*.png")) + list(src.glob("wrap/*.png"))):
-        target = dest / f.name
+    for f in (list((src/'logo').glob("*.jpg")) +  #
+              list((src/'logo').glob("*.png")) +
+              list((src/'map').glob("*.jpg")) +  #
+              list((src/'map').glob("*.png"))
+              ):
+        target = dest / 'serve/map' / f.name
         yield {
             'name': str(target.relative_to(dest)),
             'file_dep': [f],
@@ -28,15 +31,23 @@ def task_static_images():
 
 
 def task_env_scene():
+# def task_env_scene():
+#     return {
+#         'file_dep': [
+#             'asset/layout/env.blend',
+#             'world_export/export_env_scene.py',
+#         ] + shared_code_deps,
+#         'actions': ['blender --background --python world_export/export_env_scene.py'],
+#         'targets': ['build/stage/env_edit.blend'],
+#     }
+
+def task_layout():
+    """blend scene full of instanced collections -> json for Env.ts"""
     return {
         'file_dep': [
-            'client/asset/wrap/wrap.blend',
-            'world_export/export_env_scene.py',
+            'asset/layout/env.blend',
+            'world_export/export_layout.py',
         ] + shared_code_deps,
-        'actions': ['blender --background --python world_export/export_env_scene.py'],
-        'targets': ['build/asset/edit.blend'],
-    }
-
 
 def task_geom():
     return {
@@ -50,6 +61,7 @@ def task_geom():
             'build/asset/obj_card.glb',
             'build/asset/wrap.glb',
         ],
+        'actions': ['blender --background --python world_export/export_layout.py'],
     }
 
 
