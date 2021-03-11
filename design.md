@@ -8,6 +8,7 @@ should be something like:
             
             env/
                 building_022.blend
+                sign.blend (multiple objs ok)
             prop/
                 card.blend
         layout/
