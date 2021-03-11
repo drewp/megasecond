@@ -27,14 +27,13 @@ def switch_to_lightmap_uvs(outData):
 
 
 def write_glb(glb_out, select=None, with_materials=False):
+    glb_out.parent.mkdir(parents=True, exist_ok=True)
 
     if select:
         # gltf exporter use_selection maybe has no effect
-        log.info(f'objs {len(bpy.data.objects)}')
         select_object(select)
         bpy.ops.object.select_all(action='INVERT')
         bpy.ops.object.delete(use_global=False, confirm=False)
-        log.info(f'objs reduced to {len(bpy.data.objects)}')
         select = None
 
     # workaround for gltf export bug, from https://blender.stackexchange.com/questions/200616/script-to-export-gltf-fails-with-context-object-has-no-attribute-active-objec
@@ -77,7 +76,7 @@ def write_glb(glb_out, select=None, with_materials=False):
         export_yup=True,
         use_selection=bool(select),
     )
-    log.info("glb size %.1fKb" % (os.path.getsize(glb_out) / 1024))
+    log.info(f"{glb_out}: {len(bpy.data.objects)} objs, size %.1fKb" % (os.path.getsize(glb_out) / 1024))
     # now run https://github.com/zeux/meshoptimizer/tree/master/gltf
 
 
@@ -97,5 +96,5 @@ def main():
 
     bpy.ops.wm.quit_blender()
 
-
-main()
+if __name__ == '__main__':
+    main()

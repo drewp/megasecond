@@ -2,7 +2,7 @@ import json
 
 from dirs import dest
 
-_wj = dest / 'world.json'
+_wj = dest / 'serve/world.json'
 
 
 def delete():

@@ -16,11 +16,9 @@ shared_code_deps = [
 
 
 def task_static_images():
-    for f in (list((src/'logo').glob("*.jpg")) +  #
-              list((src/'logo').glob("*.png")) +
-              list((src/'map').glob("*.jpg")) +  #
-              list((src/'map').glob("*.png"))
-              ):
+    for f in (list((src / 'logo').glob("*.jpg")) +  #
+              list((src / 'logo').glob("*.png")) + list((src / 'map').glob("*.jpg")) +  #
+              list((src / 'map').glob("*.png"))):
         target = dest / 'serve/map' / f.name
         yield {
             'name': str(target.relative_to(dest)),
@@ -48,20 +46,8 @@ def task_layout():
             'asset/layout/env.blend',
             'world_export/export_layout.py',
         ] + shared_code_deps,
-
-def task_geom():
-    return {
-        'file_dep': [
-            'build/asset/edit.blend',
-            'client/asset/wrap/card.blend',
-            'world_export/export_geom.py',
-        ] + shared_code_deps,
-        'actions': ['blender --background --python world_export/export_geom.py'],
-        'targets': [
-            'build/asset/obj_card.glb',
-            'build/asset/wrap.glb',
-        ],
         'actions': ['blender --background --python world_export/export_layout.py'],
+        'targets': ['build/serve/layout.json'],
     }
 
 
@@ -72,28 +58,24 @@ def task_bake_maps():
             'not_gnd',
             # 'debug',
     ]:
+def task_model():
+    for f in (src / 'model').glob('*/*.blend'):
+        output_export = dest / 'serve' / f.relative_to(src).parent / f.name.replace('.blend', '.glb')
+
         yield {
             'name':
                 job,
+            'name': str(f.relative_to(src / 'model')),
             'file_dep': [
                 'build/asset/edit.blend',
-                'client/asset/wrap/flag_rainbow_dif.png',
-                'client/asset/wrap/gnd_dif.png',
-                'client/asset/wrap/sign_dif.png',
-                'client/asset/wrap/stair_dif.png',
-                'world_export/export_bake_maps.py',
-                'world_export/image.py',
+                str(f),
+                'world_export/export_model.py',
             ] + shared_code_deps,
-            'params': [{
-                'name': 'job',
-                'env_var': 'EXPORT_JOB',
-                'default': 'debug'
-            }],
-            'actions': [f'blender --background --python world_export/export_bake_maps.py -- --job={job}'],
-            # 'targets': [
-            #     'build/asset/bake/bake_sign_board_dif.png',
-            #     'build/asset/bake/bake_sign_board_shad.png',
-            # ]
+            'actions': [f'blender --background --python world_export/export_model.py -- read {f}'],
+            'targets': [
+                output_export,
+                # plus a descriptor with mats, etc
+            ],
         }
 
 

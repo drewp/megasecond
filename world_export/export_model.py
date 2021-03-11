@@ -1,3 +1,4 @@
+from pathlib import Path
 import logging
 import os
 import re
@@ -18,14 +19,11 @@ logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
 
 
-def separate_rect(obj_name: str, xlo: float, xhi: float, ylo: float,
-                  yhi: float) -> Union[str, None]:
+def separate_rect(obj_name: str, xlo: float, xhi: float, ylo: float, yhi: float) -> Union[str, None]:
     names_before = set(o.name for o in bpy.data.objects)
     select_object(obj_name)
     with editmode():
-        bpy.ops.mesh.select_mode(use_extend=False,
-                                 use_expand=False,
-                                 type='VERT')
+        bpy.ops.mesh.select_mode(use_extend=False, use_expand=False, type='VERT')
         bpy.ops.mesh.select_all(action='DESELECT')
         mesh = bmesh.from_edit_mesh(bpy.data.objects[obj_name].data)
         sel_verts = set()
@@ -51,13 +49,10 @@ def separate_rect(obj_name: str, xlo: float, xhi: float, ylo: float,
 
     select_object(new_name)
     with editmode():
-        bpy.ops.mesh.select_mode(use_extend=False,
-                                 use_expand=False,
-                                 type='FACE')
+        bpy.ops.mesh.select_mode(use_extend=False, use_expand=False, type='FACE')
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.uv.cube_project(
-            cube_size=1, scale_to_bounds=True
-        )  # todo needs to go to a separate uv, to not break the big ground dif texture
+            cube_size=1, scale_to_bounds=True)  # todo needs to go to a separate uv, to not break the big ground dif texture
     return new_name
 
 
@@ -76,10 +71,7 @@ def objectBbox(obj):
     centerWorld = numpy.average(ptsWorld, axis=0)
     centerToPts = ptsWorld - centerWorld
     radius = numpy.linalg.norm(centerToPts, axis=1).max()
-    return {
-        'center': [round(x, 3) for x in centerWorld],
-        'radius': round(radius, 3)
-    }
+    return {'center': [round(x, 3) for x in centerWorld], 'radius': round(radius, 3)}
 
 
 def storeExistingUvLayer(outData, obj):
@@ -92,17 +84,19 @@ def storeExistingUvLayer(outData, obj):
 
 
 def main():
-    log.info('main start')
-    outData = world_json.load()
+    input_scene = Path(sys.argv[-1])
+    output_export = dest / 'serve' / input_scene.relative_to(src).parent / input_scene.name.replace('.blend', '.glb')
+    output_export.parent.mkdir(parents=True, exist_ok=True)
+    outData = {}
 
-    bpy.ops.wm.open_mainfile(filepath=str(src / 'wrap/wrap.blend'))
+    log.info(f'open collection {input_scene}')
+    bpy.ops.wm.open_mainfile(filepath=str(input_scene))
 
     def dice_ground():
         log.info('dice_ground')
         for xsplit in range(-750, 750, 250):
             for ysplit in range(-750, 750, 250):
-                separate_rect('gnd.001', -750, xsplit + 250, -750,
-                              ysplit + 250)
+                separate_rect('gnd.001', -750, xsplit + 250, -750, ysplit + 250)
 
     def separate_materials():
         log.info('separate_materials')
@@ -117,16 +111,13 @@ def main():
             # if not obj_name.startswith('sign_board'): continue
 
             obj = select_object(obj_name)
-            outData.setdefault('objs', {}).setdefault(
-                obj_name, {})['worldBbox'] = objectBbox(obj)
+            outData.setdefault('objs', {}).setdefault(obj_name, {})['worldBbox'] = objectBbox(obj)
 
             storeExistingUvLayer(outData, obj)
             lyr = make_lightmap_uv_layer(obj, outData)
             obj.data.uv_layers.active = lyr
 
-            log.info(
-                f'start lightmap_pack on {obj_name}; active uv is {obj.data.uv_layers.active.name}'
-            )
+            log.info(f'start lightmap_pack on {obj_name}; active uv is {obj.data.uv_layers.active.name}')
             try:
                 bpy.ops.uv.lightmap_pack(
                     PREF_CONTEXT='ALL_FACES',
@@ -142,19 +133,20 @@ def main():
         # '//../../../home/drewp/own/proj_shared/megasecond/client/asset/wrap/gnd_dif.png'
         for img in bpy.data.images.values():
             prev = img.filepath
-            img.filepath = re.sub(r'.*/megasecond/client/asset/wrap/', '//',
-                                  img.filepath)
+            img.filepath = re.sub(r'.*/megasecond/client/asset/wrap/', '//', img.filepath)
             if img.filepath != prev:
                 log.info(f'fix path from {prev} to {img.filepath}')
-            log.info(f'- image at {img.filepath}')
+            log.info(f' * image at {img.filepath}')
 
-    dice_ground()
-    separate_materials()
-    lightmaps()
+    if 'gnd.001' in bpy.data.objects:
+        dice_ground()
+
+    # separate_materials()
+    # lightmaps()
     rel_paths()
-    world_json.rewrite(outData)
-    bpy.ops.wm.save_as_mainfile(filepath=str(dest / 'edit.blend'))
-    # also, delete player and other setup stuff, maybe save a non-env scene with props and chars
+
+    from export_geom import write_glb
+    write_glb(output_export, select=None, with_materials=True)
 
 
 main()
