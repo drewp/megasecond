@@ -6,6 +6,7 @@ import {
   Color4,
   DirectionalLight,
   Effect,
+  Matrix,
   Mesh,
   PBRMaterial,
   Scene,
@@ -13,6 +14,7 @@ import {
   ShaderMaterial,
   ShadowGenerator,
   Texture,
+  TransformNode,
   Vector3,
 } from "babylonjs";
 import { GridMaterial, SkyMaterial } from "babylonjs-materials";
@@ -26,48 +28,96 @@ export enum GraphicsLevel {
   texture,
 }
 
+interface LayoutInstance {
+  name: string;
+  model: string;
+  transform_baby: number[];
+}
+interface LayoutJson {
+  instances: LayoutInstance[];
+}
+
+function setWorldMatrix(node: TransformNode, baby_mat: Matrix) {
+  // todo
+  // const pos = baby_mat.getTranslation();
+  // node.position = pos;
+
+  // node.freezeWorldMatrix(baby_mat)
+  node.setPivotMatrix(baby_mat, false);
+}
+
 export class World {
   buildData: any;
   groundBump: Texture | undefined;
+  graphicsLevel: GraphicsLevel = GraphicsLevel.grid;
+  loaded: TransformNode[] = [];
   constructor(public scene: Scene) {}
+  disposeLoaded() {
+    this.loaded.forEach((n) => n.dispose());
+    this.loaded = [];
+  }
+  async reloadLayoutInstances() {
+    const scene = this.scene;
+
+    const layout = (await (await fetch("./asset_build/layout.json")).json()) as LayoutJson;
+    this.disposeLoaded();
+    for (let inst of layout.instances) {
+      // if (inst.name != 'rock_arch') continue;
+      const node = new TransformNode("inst_" + inst.name, scene);
+      this.loaded.push(node);
+      const mat = Matrix.FromArray(inst.transform_baby);
+      log.info("mat", mat.toArray());
+      const loaded = await SceneLoader.ImportMeshAsync("", "./asset_build/", inst.model, scene);
+      loaded.meshes.forEach((m) => {
+        if (m.name == "__root__") {
+          m.name = m.id = "blender_coords";
+          m.parent = node;
+        }
+      });
+      setWorldMatrix(node, mat);
+      log.info(inst.name, node.computeWorldMatrix().toArray());
+    }
+    this.postEnvLoad();
+  }
   async load(graphicsLevel: GraphicsLevel) {
     const scene = this.scene;
-    this.buildData = await (await fetch("./asset_build/world.json")).json();
+    this.graphicsLevel = graphicsLevel;
 
     SceneLoader.ShowLoadingScreen = false;
-    await SceneLoader.AppendAsync("./asset_build/", "wrap.glb", scene);
-
     scene.clearColor = new Color4(0.419, 0.517, 0.545, 1);
 
+    await SceneLoader.AppendAsync("./asset_build/", "model/player/player.glb", scene);
     scene.getMeshByName("player")!.isVisible = false;
+
+    await SceneLoader.AppendAsync("./asset_build/", "model/env/navmesh.glb", scene);
     this.setupNavMesh();
 
-    if (graphicsLevel == GraphicsLevel.wire) {
-      scene.forceWireframe = true;
-      return;
-    }
-    setupSunShadows(scene);
+    await this.reloadLayoutInstances();
 
-    // scene.getLightByName("Spot")!.intensity /= 1000;
-    // scene.getLightByName("Spot.001")!.intensity /= 1000;
-    // scene.getLightByName("Spot")!.diffuse = Color3.FromHexString("#68534D");
-    // scene.getLightByName("Spot.001")!.diffuse = Color3.FromHexString("#730F4C");
+    // setupSunShadows(scene);
 
     this.groundBump = new Texture("./asset_build/map/normal1.png", scene);
     this.groundBump.level = 0.43;
     this.groundBump.uScale = this.groundBump.vScale = 400;
 
-    this.gridEverything();
-    if (graphicsLevel == GraphicsLevel.grid) {
-      // show grid first even if maps are coming
-    } else {
-      this.loadMaps(Vector3.Zero(), 100);
-    }
     // this.setupSkybox(scene);
   }
+  private postEnvLoad() {
+    if (this.graphicsLevel == GraphicsLevel.wire) {
+      this.scene.forceWireframe = true;
+      return;
+    }
+    this.gridEverything();
+    if (this.graphicsLevel == GraphicsLevel.grid) {
+      // show grid first even if maps are coming
+    } else {
+      // to rewrite // this.loadMaps(Vector3.Zero(), 100);
+    }
+  }
+
   async loadObj(name: string): Promise<Mesh> {
-    const fn = `${name}.glb`;
-    await SceneLoader.AppendAsync("./asset_build/model/", fn, this.scene);
+    const fn = `model/prop/${name}.glb`;
+    await SceneLoader.AppendAsync("./asset_build/", fn, this.scene);
     const ret = this.scene.getMeshByName(name);
     if (!ret) {
       throw new Error(`file ${fn} did not provide object ${name}`);
@@ -84,9 +134,9 @@ export class World {
     grid.mainColor = new Color3(0.3, 0.3, 0.3);
     grid.backFaceCulling = false;
 
-    for (let m of Object.keys(this.buildData.objs)) {
+    for (let m of this.scene.meshes) {
       try {
-        this.scene.getMeshByName(m)!.material = grid;
+        m.material = grid;
       } catch (err) {}
     }
   }
@@ -94,6 +144,7 @@ export class World {
   loadMaps(center: Vector3, maxDist: number) {
     let objsInRange = 0,
       objsTooFar = 0;
+
     for (let m of Object.keys(this.buildData.objs)) {
       if (m == "navmesh" || m == "__root__" || m == "player") {
         continue;

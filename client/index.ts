@@ -16,7 +16,6 @@ import { Actions, UserInput } from "./UserInput";
 import { PlayerDebug, UsesNav } from "./walkAlongNavMesh";
 import createLogger from "../shared/logsetup";
 
-
 const log = createLogger("WorldRoom");
 
 log.info("hello log");
@@ -224,6 +223,8 @@ async function go() {
       Env.toggleNavmeshView(scene);
     } else if (name == Actions.ToggleBirdsEyeView) {
       game.me!.components.get(LocalCam).toggleBirdsEyeView();
+    } else if (name == Actions.ReloadEnv) {
+      env.reloadLayoutInstances().then(() => env.gridEverything());
     }
   });
 

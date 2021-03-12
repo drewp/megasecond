@@ -5,6 +5,7 @@ export enum Actions {
   Activate,
   ToggleNavmeshView,
   ToggleBirdsEyeView,
+  ReloadEnv,
 }
 
 class MobileSticks {
@@ -111,6 +112,9 @@ export class UserInput {
         break;
       case "b":
         this.onAction(Actions.ToggleBirdsEyeView);
+        break;
+      case "r":
+        this.onAction(Actions.ReloadEnv);
         break;
     }
   }
