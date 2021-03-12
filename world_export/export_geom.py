@@ -91,8 +91,8 @@ def export_blend_scene(outData, blend_path, out_glb_path, bake_mats=False, selec
 def main():
     outData = world_json.load()
 
-    export_blend_scene(outData, dest / 'edit.blend', dest / "wrap.glb")
-    export_blend_scene(outData, src / 'wrap/card.blend', dest / "obj_card.glb", bake_mats=False, select='card')
+    export_blend_scene(outData, dest / 'stage/env_edit.blend', dest / "serve/model/env.glb")
+    export_blend_scene(outData, src / 'model/prop/card.blend', dest / "serve/model/card.glb", bake_mats=False, select='card')
 
     bpy.ops.wm.quit_blender()
 

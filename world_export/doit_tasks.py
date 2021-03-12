@@ -28,17 +28,6 @@ def task_static_images():
         }
 
 
-def task_env_scene():
-# def task_env_scene():
-#     return {
-#         'file_dep': [
-#             'asset/layout/env.blend',
-#             'world_export/export_env_scene.py',
-#         ] + shared_code_deps,
-#         'actions': ['blender --background --python world_export/export_env_scene.py'],
-#         'targets': ['build/stage/env_edit.blend'],
-#     }
-
 def task_layout():
     """blend scene full of instanced collections -> json for Env.ts"""
     return {
@@ -51,23 +40,13 @@ def task_layout():
     }
 
 
-def task_bake_maps():
-    for job in [
-            'gnd.023',
-            'other_gnd',
-            'not_gnd',
-            # 'debug',
-    ]:
 def task_model():
     for f in (src / 'model').glob('*/*.blend'):
         output_export = dest / 'serve' / f.relative_to(src).parent / f.name.replace('.blend', '.glb')
 
         yield {
-            'name':
-                job,
             'name': str(f.relative_to(src / 'model')),
             'file_dep': [
-                'build/asset/edit.blend',
                 str(f),
                 'world_export/export_model.py',
             ] + shared_code_deps,
@@ -79,16 +58,61 @@ def task_model():
         }
 
 
-@create_after(executed='bake_maps')
-def task_convert_bake_maps():
-    for p in (dest / 'bake').glob('*.png'):
-        t = str(p).replace('.png', '.jpg')
-        yield {
-            'name': p.name,
-            'file_dep': [p],
-            'actions': [f"convert -quality 80 {p} {t}"],
-            'targets': [t],
-        }
+# def task_geom():
+#     return {
+#         'file_dep': [
+#             'build/stage/env_edit.blend',
+#             'asset/model/prop/card.blend',
+#             'world_export/export_geom.py',
+#         ] + shared_code_deps,
+#         'actions': ['blender --background --python world_export/export_geom.py'],
+#         'targets': [
+#             'build/serve/model/card.glb',
+#             'build/serve/model/env.glb',
+#         ],
+#     }
 
+# def task_bake_maps():
+#     for job in [
+#             #'gnd.023',
+#             #'other_gnd',
+#             'not_gnd',
+#             # 'debug',
+#     ]:
+#         yield {
+#             'name':
+#                 job,
+#             'file_dep': [
+#                 'build/stage/env_edit.blend',
+#                 'asset/map/flag_rainbow_dif.png',
+#                 'asset/map/gnd_dif.png',
+#                 'asset/map/sign_dif.png',
+#                 'asset/map/stair_dif.png',
+#                 'world_export/export_bake_maps.py',
+#                 'world_export/image.py',
+#             ] + shared_code_deps,
+#             'params': [{
+#                 'name': 'job',
+#                 'env_var': 'EXPORT_JOB',
+#                 'default': 'debug'
+#             }],
+#             'actions': [f'blender --background --python world_export/export_bake_maps.py -- --job={job}'],
+#             # 'targets': [
+#             #     'build/stage/bake/sign_board_dif.png',
+#             #     'build/stage/bake/sign_board_shad.png',
+#             # ]
+#         }
+
+# @create_after(executed='bake_maps')
+# def task_convert_bake_maps():
+#     for p in (dest / 'stage/bake').glob('*.png'):
+#         t = dest / 'serve/bake' / p.name.replace('.png', '.jpg')
+#         t.parent.mkdir(parents=True, exist_ok=True)
+#         yield {
+#             'name': p.name,
+#             'file_dep': [p],
+#             'actions': [f"convert -quality 80 {p} {t}"],
+#             'targets': [t],
+#         }
 
 # world.json currently not ever being cleared
