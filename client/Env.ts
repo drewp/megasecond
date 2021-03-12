@@ -92,13 +92,20 @@ export class World {
     await SceneLoader.AppendAsync("./asset_build/", "model/env/navmesh.glb", scene);
     this.setupNavMesh();
 
-    await this.reloadLayoutInstances();
-
-    // setupSunShadows(scene);
-
     this.groundBump = new Texture("./asset_build/map/normal1.png", scene);
     this.groundBump.level = 0.43;
     this.groundBump.uScale = this.groundBump.vScale = 400;
+
+    await this.reloadLayoutInstances();
+    setupSunShadows(scene);
+    scene.meshes.forEach((m) => {
+      if (m.name == "rock_arch_obj" || m.name == "stair_base" || m.name == "signpost") {
+        const sunCaster = (window as any).gen as ShadowGenerator; // todo
+        if (sunCaster) {
+          sunCaster.addShadowCaster(m);
+        }
+      }
+    });
 
     // this.setupSkybox(scene);
   }
@@ -107,11 +114,12 @@ export class World {
       this.scene.forceWireframe = true;
       return;
     }
-    this.gridEverything();
+    //this.gridEverything();
     if (this.graphicsLevel == GraphicsLevel.grid) {
       // show grid first even if maps are coming
     } else {
       // to rewrite // this.loadMaps(Vector3.Zero(), 100);
+      (this.scene.getMaterialByName("gnd") as PBRMaterial).bumpTexture = this.groundBump!;
     }
   }
 
@@ -295,7 +303,8 @@ function setupSunShadows(scene: Scene) {
   const gen = new ShadowGenerator(4096, light);
   (window as any).gen = gen;
   gen.bias = 0.001;
-  gen.filter = 4;
+  gen.filter = 6;
+  gen.filteringQuality = 1;
   scene.meshes.forEach((m) => {
     try {
       m.receiveShadows = true;
