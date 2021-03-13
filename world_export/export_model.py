@@ -13,7 +13,7 @@ from mathutils import Vector
 sys.path.append(os.path.dirname(__file__))
 import world_json
 from dirs import dest, src
-from selection import all_mesh_objects, editmode, select_object
+from selection import all_mesh_objects, editmode, select_object, select_objects_in_collection
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
@@ -83,6 +83,19 @@ def storeExistingUvLayer(outData, obj):
         pass
 
 
+def delete_extra_objs():
+    try:
+        key_collection, = [c for c in bpy.data.collections if c.name != 'Collection' and c.library is None]
+    except ValueError:
+        log.error(list(bpy.data.collections))
+        raise
+    select_objects_in_collection(key_collection)
+    keep =  len(bpy.context.selected_objects)
+    bpy.ops.object.select_all(action='INVERT')
+    dump =  len(bpy.context.selected_objects)
+    log.info(f'keeping {keep} objects, deleting {dump}')
+    bpy.ops.object.delete(confirm=False)
+
 def main():
     input_scene = Path(sys.argv[-1])
     output_export = dest / 'serve' / input_scene.relative_to(src).parent / input_scene.name.replace('.blend', '.glb')
@@ -138,12 +151,16 @@ def main():
                 log.info(f'fix path from {prev} to {img.filepath}')
             log.info(f' * image at {img.filepath}')
 
+    delete_extra_objs()
+
     if 'gnd.001' in bpy.data.objects:
         dice_ground()
 
     # separate_materials()
     # lightmaps()
     rel_paths()
+
+
 
     from export_geom import write_glb
     write_glb(output_export, select=None, with_materials=True)

@@ -1,4 +1,5 @@
 import bpy
+import bpy_types
 import contextlib
 
 
@@ -23,6 +24,11 @@ def all_mesh_objects(root):
     rec(root)
     return expanded
 
+
+def select_objects_in_collection(c: bpy_types.Collection):
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in c.objects:
+        obj.select_set(True)
 
 @contextlib.contextmanager
 def editmode():
