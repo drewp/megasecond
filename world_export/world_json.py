@@ -1,3 +1,5 @@
+import re
+import itertools
 import json
 
 from dirs import dest
@@ -26,3 +28,20 @@ def rewrite(outData):
 
 def dump():
     print(open(_wj).read())
+
+
+def json_serialize_with_pretty_matrices(obj):
+    j = json.dumps(obj, indent=2, sort_keys=True)
+
+    def reindent_mat(match: re.Match):
+        pre, cells, post = match.groups()
+        seen = itertools.count(1)
+
+        def maybe_break(m: re.Match) -> str:
+            post = m.groups()[0] if next(seen) % 4 == 0 else '  '
+            return ',' + post
+
+        cells = re.sub(r',(\n\s*)', maybe_break, cells)
+        return pre + cells + post
+
+    return re.sub(r'((?:_baby|_blender)": \[)(.*?)(\s*\])', reindent_mat, j, flags=re.DOTALL)
