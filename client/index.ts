@@ -203,8 +203,7 @@ async function go() {
   const game = new Game(status, world, scene, nick);
 
   const env = new Env.World(scene);
-  await env.load(Env.GraphicsLevel.texture);
-  scene.switchActiveCamera(scene.cameras[0]); // in case player cam  isn't ready
+  await env.load(Env.GraphicsLevel.grid);
   {
     const nav = scene.getMeshByName("navmesh") as Mesh;
     nav.updateFacetData();

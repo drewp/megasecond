@@ -13,6 +13,7 @@ import {
   SceneLoader,
   ShaderMaterial,
   ShadowGenerator,
+  SpotLight,
   Texture,
   TransformNode,
   Vector3,
@@ -46,6 +47,36 @@ function setWorldMatrix(node: TransformNode, baby_mat: Matrix) {
   node.setPivotMatrix(baby_mat, false);
 }
 
+class Collection {
+  // 1 blender scene, 1 blender collection, multiple objects, all instanced multiple times in bjs
+  private objs: AbstractMesh[] = [];
+  private firstNode: TransformNode;
+  constructor(public path: string, public scene: Scene) {
+    this.firstNode = new TransformNode("hold_after_load", scene);
+  }
+
+  async load() {
+    const loaded = await SceneLoader.ImportMeshAsync("", "./asset_build/", this.path, this.scene);
+    loaded.meshes.forEach((m) => {
+      this.objs.push(m);
+      if (m.name == "__root__") {
+        m.name = m.id = "blender_coords";
+        m.parent = this.firstNode;
+      }
+    });
+  }
+
+  makeInstance(parent: TransformNode) {
+    if (!this.firstNode.parent) {
+      this.firstNode.parent = parent;
+      return;
+    }
+    this.objs.forEach((obj) => {});
+  }
+
+  dispose() {}
+}
+
 export class World {
   buildData: any;
   groundBump: Texture | undefined;
@@ -62,20 +93,16 @@ export class World {
     const layout = (await (await fetch("./asset_build/layout.json")).json()) as LayoutJson;
     this.disposeLoaded();
     for (let inst of layout.instances) {
-      // if (inst.name != 'rock_arch') continue;
+      // if (inst.name == "sign") break;
       const node = new TransformNode("inst_" + inst.name, scene);
       this.loaded.push(node);
       const mat = Matrix.FromArray(inst.transform_baby);
       log.info("mat", mat.toArray());
-      const loaded = await SceneLoader.ImportMeshAsync("", "./asset_build/", inst.model, scene);
-      loaded.meshes.forEach((m) => {
-        if (m.name == "__root__") {
-          m.name = m.id = "blender_coords";
-          m.parent = node;
-        }
-      });
       setWorldMatrix(node, mat);
-      log.info(inst.name, node.computeWorldMatrix().toArray());
+
+      const col = new Collection(inst.model, scene);
+      await col.load();
+      col.makeInstance(node);
     }
     this.postEnvLoad();
   }
@@ -97,7 +124,13 @@ export class World {
     this.groundBump.uScale = this.groundBump.vScale = 400;
 
     await this.reloadLayoutInstances();
-    setupSunShadows(scene);
+
+    // not sure why imported sun light doesn't work
+    const sun2 = new SpotLight("sun2", new Vector3(0, 100, 0), new Vector3(0, -1, 0), 2, 0, scene);
+    sun2.shadowEnabled = false;
+    sun2.intensity = 10000;
+    setupSunShadows(scene, "sun2");
+
     scene.meshes.forEach((m) => {
       if (m.name == "rock_arch_obj" || m.name == "stair_base" || m.name == "signpost") {
         const sunCaster = (window as any).gen as ShadowGenerator; // todo
@@ -297,8 +330,8 @@ function checkerboardMaterial(scene: Scene) {
   return shaderMaterial;
 }
 
-function setupSunShadows(scene: Scene) {
-  const light = scene.getLightByName("light_sun_light") as DirectionalLight;
+function setupSunShadows(scene: Scene, name = "light_sun_light") {
+  const light = scene.getLightByName(name) as DirectionalLight;
   light.autoCalcShadowZBounds = true;
   const gen = new ShadowGenerator(4096, light);
   (window as any).gen = gen;
