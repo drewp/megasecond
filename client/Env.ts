@@ -38,74 +38,87 @@ interface LayoutJson {
   instances: LayoutInstance[];
 }
 
-function setWorldMatrix(node: TransformNode, baby_mat: Matrix) {
-  // todo
-  // const pos = baby_mat.getTranslation();
-  // node.position = pos;
-
-  // node.freezeWorldMatrix(baby_mat)
-  node.setPivotMatrix(baby_mat, false);
-}
-
 class Collection {
   // 1 blender scene, 1 blender collection, multiple objects, all instanced multiple times in bjs
   private objs: AbstractMesh[] = [];
-  private firstNode: TransformNode;
-  constructor(public path: string, public scene: Scene) {
-    this.firstNode = new TransformNode("hold_after_load", scene);
-  }
+  private insts: Map<string, [TransformNode, Promise<void>]> = new Map();
+  constructor(public path: string, public scene: Scene) {}
 
-  async load() {
+  async load(parent: TransformNode) {
+    log.info(`collection ${this.path}: start load`);
     const loaded = await SceneLoader.ImportMeshAsync("", "./asset_build/", this.path, this.scene);
     loaded.meshes.forEach((m) => {
       this.objs.push(m);
       if (m.name == "__root__") {
         m.name = m.id = "blender_coords";
-        m.parent = this.firstNode;
+        m.parent = parent;
       }
+      log.info(`collection ${this.path}: done load`);
     });
   }
 
-  makeInstance(parent: TransformNode) {
-    if (!this.firstNode.parent) {
-      this.firstNode.parent = parent;
-      return;
+  async makeInstance(name: string, mat: Matrix) {
+    log.info(`collection ${this.path}: new instance ${name}`);
+    const node = new TransformNode("inst_" + name, this.scene);
+    node.setPivotMatrix(mat, false);
+
+    if (this.insts.size > 0) {
+      const inst = this.insts.values().next()
+      const [existingRoot, loadPromise] = inst.value as [TransformNode, Promise<void>];
+      log.info(`collection ${this.path}: instancing from ${existingRoot.name}`);
+      this.insts.set(name, [node, loadPromise]);
+      await loadPromise;
+      existingRoot.instantiateHierarchy(node);
+    } else {
+      const lp = this.load(node);
+      this.insts.set(name, [node, lp]);
+      await lp;
     }
-    this.objs.forEach((obj) => {});
   }
 
-  dispose() {}
+  disposeInstance(name: string) {
+    const inst =this.insts.get(name); 
+    if (!inst) return;
+    const [node, _lp]  =inst;
+    node.getDescendants().forEach((obj) => obj.dispose());
+    node.dispose();
+    this.insts.delete(name);
+  }
+
+  disposeCollection() {
+    this.objs.forEach((obj) => obj.dispose());
+  }
 }
 
 export class World {
   buildData: any;
   groundBump: Texture | undefined;
   graphicsLevel: GraphicsLevel = GraphicsLevel.grid;
-  loaded: TransformNode[] = [];
+  loaded: Map<string, Collection> = new Map();
   constructor(public scene: Scene) {}
-  disposeLoaded() {
-    this.loaded.forEach((n) => n.dispose());
-    this.loaded = [];
-  }
-  async reloadLayoutInstances() {
-    const scene = this.scene;
 
+  disposeLoaded() {
+    this.loaded.forEach((col, _name) => col.disposeCollection());
+  }
+
+  async reloadLayoutInstances() {
     const layout = (await (await fetch("./asset_build/layout.json")).json()) as LayoutJson;
     this.disposeLoaded();
     for (let inst of layout.instances) {
       // if (inst.name == "sign") break;
-      const node = new TransformNode("inst_" + inst.name, scene);
-      this.loaded.push(node);
       const mat = Matrix.FromArray(inst.transform_baby);
-      log.info("mat", mat.toArray());
-      setWorldMatrix(node, mat);
 
-      const col = new Collection(inst.model, scene);
-      await col.load();
-      col.makeInstance(node);
+      let col = this.loaded.get(inst.model);
+      log.info(`loading ${inst.model}, existing=${col}`);
+      if (!col) {
+        col = new Collection(inst.model, this.scene);
+        this.loaded.set(inst.model, col);
+      }
+      col.makeInstance(inst.name, mat);
     }
     this.postEnvLoad();
   }
+
   async load(graphicsLevel: GraphicsLevel) {
     const scene = this.scene;
     this.graphicsLevel = graphicsLevel;
@@ -142,6 +155,7 @@ export class World {
 
     // this.setupSkybox(scene);
   }
+
   private postEnvLoad() {
     if (this.graphicsLevel == GraphicsLevel.wire) {
       this.scene.forceWireframe = true;
