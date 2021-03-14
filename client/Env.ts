@@ -38,14 +38,27 @@ interface LayoutJson {
   instances: LayoutInstance[];
 }
 
+class Instance {
+  constructor(public name: string, public node: TransformNode, public loaded: Promise<void>) {}
+  static makeInstanceOf(name: string, node: TransformNode, other: Instance): Instance {
+    const me = new Instance(name, node, other.loaded);
+    other.loaded.then(() => {
+      // race- either other or me could be dead by now
+      other.node.instantiateHierarchy(me.node);
+    });
+    return me;
+  }
+}
+
 class Collection {
   // 1 blender scene, 1 blender collection, multiple objects, all instanced multiple times in bjs
   private objs: AbstractMesh[] = [];
-  private insts: Map<string, [TransformNode, Promise<void>]> = new Map();
+  private primaryInstName: string | undefined;
+  private insts: Map<string, Instance> = new Map();
   constructor(public path: string, public scene: Scene) {}
 
-  async load(parent: TransformNode) {
-    log.info(`collection ${this.path}: start load`);
+  private async load(parent: TransformNode) {
+    log.info(`    Collection(${this.path}) start load`);
     const loaded = await SceneLoader.ImportMeshAsync("", "./asset_build/", this.path, this.scene);
     loaded.meshes.forEach((m) => {
       this.objs.push(m);
@@ -53,35 +66,40 @@ class Collection {
         m.name = m.id = "blender_coords";
         m.parent = parent;
       }
-      log.info(`collection ${this.path}: done load`);
     });
+    log.info(`    Collection(${this.path}) done load`);
   }
 
-  async makeInstance(name: string, mat: Matrix) {
-    log.info(`collection ${this.path}: new instance ${name}`);
+  async makeInstance(name: string): Promise<TransformNode> {
+    log.info(`    Collection(${this.path}).makeInstance(${name})`);
     const node = new TransformNode("inst_" + name, this.scene);
-    node.setPivotMatrix(mat, false);
 
     if (this.insts.size > 0) {
-      const inst = this.insts.values().next()
-      const [existingRoot, loadPromise] = inst.value as [TransformNode, Promise<void>];
-      log.info(`collection ${this.path}: instancing from ${existingRoot.name}`);
-      this.insts.set(name, [node, loadPromise]);
-      await loadPromise;
-      existingRoot.instantiateHierarchy(node);
+      const existingInst = this.insts.values().next().value as Instance;
+      log.info(`      have objs from ${existingInst.name} and their load is`, existingInst.loaded);
+      this.insts.set(name, Instance.makeInstanceOf(name, node, existingInst));
     } else {
+      this.primaryInstName = name;
       const lp = this.load(node);
-      this.insts.set(name, [node, lp]);
+      this.insts.set(name, new Instance(name, node, lp));
       await lp;
     }
+    return node;
+  }
+
+  getInstance(name: string): TransformNode | undefined {
+    const inst = this.insts.get(name);
+
+    if (!inst) return undefined;
+    return inst.node;
   }
 
   disposeInstance(name: string) {
-    const inst =this.insts.get(name); 
+    if (name == this.primaryInstName) throw new Error("todo");
+    const inst = this.insts.get(name);
     if (!inst) return;
-    const [node, _lp]  =inst;
-    node.getDescendants().forEach((obj) => obj.dispose());
-    node.dispose();
+    inst.node.getDescendants().forEach((obj) => obj.dispose());
+    inst.node.dispose();
     this.insts.delete(name);
   }
 
@@ -90,53 +108,59 @@ class Collection {
   }
 }
 
-export class World {
-  buildData: any;
-  groundBump: Texture | undefined;
-  graphicsLevel: GraphicsLevel = GraphicsLevel.grid;
-  loaded: Map<string, Collection> = new Map();
+class Instances {
+  // owns all the Collections in the scene
+  private collsByPath: Map<string, Collection> = new Map();
+  //
+  private collsByInstance: Map<string, Collection> = new Map();
   constructor(public scene: Scene) {}
 
-  disposeLoaded() {
-    this.loaded.forEach((col, _name) => col.disposeCollection());
-  }
+  async makeInstance(path: string, instanceName: string): Promise<TransformNode> {
+    log.info(`  makeInstance(${path}, ${instanceName})`);
 
-  async reloadLayoutInstances() {
-    const layout = (await (await fetch("./asset_build/layout.json")).json()) as LayoutJson;
-    this.disposeLoaded();
-    for (let inst of layout.instances) {
-      // if (inst.name == "sign") break;
-      const mat = Matrix.FromArray(inst.transform_baby);
-
-      let col = this.loaded.get(inst.model);
-      log.info(`loading ${inst.model}, existing=${col}`);
-      if (!col) {
-        col = new Collection(inst.model, this.scene);
-        this.loaded.set(inst.model, col);
-      }
-      col.makeInstance(inst.name, mat);
+    let col = this.collsByPath.get(path);
+    if (!col) {
+      col = new Collection(path, this.scene);
+      this.collsByPath.set(path, col);
     }
-    this.postEnvLoad();
+
+    this.collsByInstance.set(instanceName, col);
+    const node = await col.makeInstance(instanceName);
+    return node;
   }
 
-  async load(graphicsLevel: GraphicsLevel) {
-    const scene = this.scene;
+  getInstance(instanceName: string): TransformNode | undefined {
+    return this.collsByInstance.get(instanceName)?.getInstance(instanceName);
+  }
+
+  allInstanceNames(): string[] {
+    return Array.from(this.collsByInstance.keys());
+  }
+
+  removeInstance(instanceName: string) {
+    this.collsByInstance.get(instanceName)?.disposeInstance(instanceName);
+    this.collsByInstance.delete(instanceName);
+  }
+
+  reloadFile(path: string) {
+    // todo- have the builder tell us (via a colyseus message) that a glb has been updated
+  }
+}
+
+export class World {
+  buildData: any;
+  groundBump: Texture;
+  instances: Instances;
+  constructor(public scene: Scene, public graphicsLevel: GraphicsLevel) {
     this.graphicsLevel = graphicsLevel;
+    this.instances = new Instances(scene);
 
     SceneLoader.ShowLoadingScreen = false;
     scene.clearColor = new Color4(0.419, 0.517, 0.545, 1);
 
-    await SceneLoader.AppendAsync("./asset_build/", "model/player/player.glb", scene);
-    scene.getMeshByName("player")!.isVisible = false;
-
-    await SceneLoader.AppendAsync("./asset_build/", "model/env/navmesh.glb", scene);
-    this.setupNavMesh();
-
     this.groundBump = new Texture("./asset_build/map/normal1.png", scene);
     this.groundBump.level = 0.43;
     this.groundBump.uScale = this.groundBump.vScale = 400;
-
-    await this.reloadLayoutInstances();
 
     // not sure why imported sun light doesn't work
     const sun2 = new SpotLight("sun2", new Vector3(0, 100, 0), new Vector3(0, -1, 0), 2, 0, scene);
@@ -144,7 +168,41 @@ export class World {
     sun2.intensity = 10000;
     setupSunShadows(scene, "sun2");
 
-    scene.meshes.forEach((m) => {
+    // this.setupSkybox(scene);
+  }
+
+  async load() {
+    this.scene.getMeshByName("player")?.dispose();
+    await SceneLoader.AppendAsync("./asset_build/", "model/player/player.glb", this.scene);
+    this.scene.getMeshByName("player")!.isVisible = false;
+
+    await SceneLoader.AppendAsync("./asset_build/", "model/env/navmesh.glb", this.scene);
+    this.setupNavMesh();
+  }
+
+  async reloadLayoutInstances() {
+    // read updates from layout.json but not necessarily from model glb files
+    const layout = (await (await fetch("./asset_build/layout.json")).json()) as LayoutJson;
+    const noLongerPresent = new Set<string>(this.instances.allInstanceNames());
+    for (let inst of layout.instances) {
+      let node = this.instances.getInstance(inst.name);
+      if (!node) {
+        node = await this.instances.makeInstance(inst.model, inst.name);
+      }
+      noLongerPresent.delete(inst.name);
+
+      const mat = Matrix.FromArray(inst.transform_baby);
+      node.setPivotMatrix(mat, false);
+    }
+    for (let name of noLongerPresent) {
+      log.info(`cleaning up collection ${name}`);
+      this.instances.removeInstance(name);
+    }
+    this.postEnvLoad();
+  }
+
+  private postEnvLoad() {
+    this.scene.meshes.forEach((m) => {
       if (m.name == "rock_arch_obj" || m.name == "stair_base" || m.name == "signpost") {
         const sunCaster = (window as any).gen as ShadowGenerator; // todo
         if (sunCaster) {
@@ -153,10 +211,6 @@ export class World {
       }
     });
 
-    // this.setupSkybox(scene);
-  }
-
-  private postEnvLoad() {
     if (this.graphicsLevel == GraphicsLevel.wire) {
       this.scene.forceWireframe = true;
       return;

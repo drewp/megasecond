@@ -202,8 +202,10 @@ async function go() {
   const scene = setupScene("renderCanvas");
   const game = new Game(status, world, scene, nick);
 
-  const env = new Env.World(scene);
-  await env.load(Env.GraphicsLevel.grid);
+  const env = new Env.World(scene, Env.GraphicsLevel.texture);
+  await env.load();
+  await env.reloadLayoutInstances();
+
   {
     const nav = scene.getMeshByName("navmesh") as Mesh;
     nav.updateFacetData();
@@ -223,7 +225,7 @@ async function go() {
     } else if (name == Actions.ToggleBirdsEyeView) {
       game.me!.components.get(LocalCam).toggleBirdsEyeView();
     } else if (name == Actions.ReloadEnv) {
-      env.reloadLayoutInstances().then(() => env.gridEverything());
+      env.reloadLayoutInstances();
     }
   });
 
