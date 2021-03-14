@@ -11,7 +11,7 @@ def select_object(name):
     return obj
 
 
-def all_mesh_objects(root):
+def all_mesh_objects(root=None):
     # Need linked dups that share a mesh to be separately returned
     expanded = []
 
@@ -21,7 +21,12 @@ def all_mesh_objects(root):
         for child in cur.children:
             rec(child)
 
-    rec(root)
+    if root is None:
+        for obj in bpy.data.objects:
+            if obj.type == 'MESH':
+                expanded.append(obj.name)
+    else:
+        rec(root)
     return expanded
 
 

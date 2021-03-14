@@ -53,6 +53,7 @@ def task_model():
             'actions': [f'blender --background --python world_export/export_model.py -- read {f}'],
             'targets': [
                 output_export,
+                dest / 'stage/bake' / f.relative_to(src),
                 # plus a descriptor with mats, etc
             ],
         }

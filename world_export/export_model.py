@@ -14,7 +14,7 @@ sys.path.append(os.path.dirname(__file__))
 import world_json
 from dirs import dest, src
 from selection import all_mesh_objects, editmode, select_object, select_objects_in_collection
-
+from blender_file import saveScene, writeGlb
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
 
@@ -90,11 +90,12 @@ def delete_extra_objs():
         log.error(list(bpy.data.collections))
         raise
     select_objects_in_collection(key_collection)
-    keep =  len(bpy.context.selected_objects)
+    keep = len(bpy.context.selected_objects)
     bpy.ops.object.select_all(action='INVERT')
-    dump =  len(bpy.context.selected_objects)
+    dump = len(bpy.context.selected_objects)
     log.info(f'keeping {keep} objects, deleting {dump}')
     bpy.ops.object.delete(confirm=False)
+
 
 def main():
     input_scene = Path(sys.argv[-1])
@@ -113,17 +114,21 @@ def main():
 
     def separate_materials():
         log.info('separate_materials')
-        for obj_name in all_mesh_objects(bpy.data.objects['env']):
+        for obj_name in all_mesh_objects():
             if len(bpy.data.objects[obj_name].material_slots) > 1:
                 select_object(obj_name)
                 bpy.ops.mesh.separate(type='MATERIAL')
 
     def lightmaps():
         log.info('lightmaps')
-        for obj_name in all_mesh_objects(bpy.data.objects['env']):
+        for obj_name in all_mesh_objects():
             # if not obj_name.startswith('sign_board'): continue
+            try:
+                obj = select_object(obj_name)
+            except Exception as exc:
+                log.warning(f'lightmap_pack failed on {obj_name}: {exc!r}')
+                continue
 
-            obj = select_object(obj_name)
             outData.setdefault('objs', {}).setdefault(obj_name, {})['worldBbox'] = objectBbox(obj)
 
             storeExistingUvLayer(outData, obj)
@@ -156,14 +161,15 @@ def main():
     if 'gnd.001' in bpy.data.objects:
         dice_ground()
 
-    # separate_materials()
-    # lightmaps()
+    separate_materials()
+    lightmaps()
     rel_paths()
 
+    # write obj list so we can make deps?
 
+    saveScene(dest / 'stage/bake' / input_scene.relative_to(src))
 
-    from export_geom import write_glb
-    write_glb(output_export, select=None, with_materials=True)
+    writeGlb(output_export, select=None, with_materials=True)
 
 
 main()
