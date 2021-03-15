@@ -6,6 +6,7 @@ import {
   Color4,
   DirectionalLight,
   Effect,
+  InstancedMesh,
   Matrix,
   Mesh,
   PBRMaterial,
@@ -36,6 +37,13 @@ interface LayoutInstance {
 }
 interface LayoutJson {
   instances: LayoutInstance[];
+}
+
+function bakedTx(name: string, scene: Scene): Texture {
+  const tx = new Texture(`./asset_build/` + name, scene);
+  tx.vScale = -1;
+  tx.coordinatesIndex = 0;
+  return tx;
 }
 
 class Instance {
@@ -84,7 +92,20 @@ class Collection {
       this.insts.set(name, new Instance(name, node, lp));
       await lp;
     }
+    this.applyLightmaps(node, name);
     return node;
+  }
+
+  private applyLightmaps(node: TransformNode, instanceName: string) {
+    for (let m of node.getDescendants() as InstancedMesh[]) {
+      const mat = m.material as PBRMaterial | null;
+      if (!mat) continue;
+      const sourceName = m.sourceMesh ? m.sourceMesh.name : m.name;
+      if (instanceName == "gnd" && sourceName != "gnd.023") continue;
+      mat.useLightmapAsShadowmap = true;
+      mat.lightmapTexture = bakedTx(`map/bake/${instanceName}/${sourceName}_shad.jpg`, this.scene);
+      mat.lightmapTexture.coordinatesIndex = 1; // lightmap
+    }
   }
 
   getInstance(name: string): TransformNode | undefined {
@@ -165,7 +186,7 @@ export class World {
     // not sure why imported sun light doesn't work
     const sun2 = new SpotLight("sun2", new Vector3(0, 100, 0), new Vector3(0, -1, 0), 2, 0, scene);
     sun2.shadowEnabled = false;
-    sun2.intensity = 10000;
+    sun2.intensity = 80000;
     setupSunShadows(scene, "sun2");
 
     // this.setupSkybox(scene);
@@ -300,12 +321,6 @@ export class World {
     skyboxMaterial.turbidity = 40;
   }
 
-  bakedTx(name: string): Texture {
-    const tx = new Texture(`./asset_build/` + name, this.scene);
-    tx.vScale = -1;
-    tx.coordinatesIndex = 0;
-    return tx;
-  }
   assignTx(objName: string) {
     const obj = this.scene.getMeshByName(objName);
     if (!obj) {
@@ -317,7 +332,7 @@ export class World {
     }
     const mat = new PBRMaterial("pbr_" + objName, this.scene); //obj.material as PBRMaterial;
     mat.unlit = true;
-    mat.albedoTexture = this.bakedTx(`bake/${objName}_dif.jpg`);
+    mat.albedoTexture = bakedTx(`bake/${objName}_dif.jpg`, this.scene);
     mat.albedoTexture.coordinatesIndex = 1; // lightmap
     // mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
     // mat.useLightmapAsShadowmap = true;

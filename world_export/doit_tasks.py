@@ -1,3 +1,4 @@
+import json
 from doit import create_after
 
 from dirs import src, dest
@@ -13,6 +14,9 @@ shared_code_deps = [
     'world_export/selection.py',
     'world_export/world_json.py',
 ]
+
+layout_json = 'build/serve/layout.json'
+relocated_layout_for_bakes = 'build/stage/bake/layout/env.blend'
 
 
 def task_static_images():
@@ -36,7 +40,7 @@ def task_layout():
             'world_export/export_layout.py',
         ] + shared_code_deps,
         'actions': ['blender --background --python world_export/export_layout.py'],
-        'targets': ['build/serve/layout.json'],
+        'targets': [layout_json],
     }
 
 
@@ -59,61 +63,44 @@ def task_model():
         }
 
 
-# def task_geom():
-#     return {
-#         'file_dep': [
-#             'build/stage/env_edit.blend',
-#             'asset/model/prop/card.blend',
-#             'world_export/export_geom.py',
-#         ] + shared_code_deps,
-#         'actions': ['blender --background --python world_export/export_geom.py'],
-#         'targets': [
-#             'build/serve/model/card.glb',
-#             'build/serve/model/env.glb',
-#         ],
-#     }
+def task_bake_precopy():
+    return {
+        'file_dep': ['asset/layout/env.blend'],
+        'actions': [f'install -D asset/layout/env.blend {relocated_layout_for_bakes}'],
+        'targets': [relocated_layout_for_bakes]
+    }
 
-# def task_bake_maps():
-#     for job in [
-#             #'gnd.023',
-#             #'other_gnd',
-#             'not_gnd',
-#             # 'debug',
-#     ]:
-#         yield {
-#             'name':
-#                 job,
-#             'file_dep': [
-#                 'build/stage/env_edit.blend',
-#                 'asset/map/flag_rainbow_dif.png',
-#                 'asset/map/gnd_dif.png',
-#                 'asset/map/sign_dif.png',
-#                 'asset/map/stair_dif.png',
-#                 'world_export/export_bake_maps.py',
-#                 'world_export/image.py',
-#             ] + shared_code_deps,
-#             'params': [{
-#                 'name': 'job',
-#                 'env_var': 'EXPORT_JOB',
-#                 'default': 'debug'
-#             }],
-#             'actions': [f'blender --background --python world_export/export_bake_maps.py -- --job={job}'],
-#             # 'targets': [
-#             #     'build/stage/bake/sign_board_dif.png',
-#             #     'build/stage/bake/sign_board_shad.png',
-#             # ]
-#         }
 
-# @create_after(executed='bake_maps')
-# def task_convert_bake_maps():
-#     for p in (dest / 'stage/bake').glob('*.png'):
-#         t = dest / 'serve/bake' / p.name.replace('.png', '.jpg')
-#         t.parent.mkdir(parents=True, exist_ok=True)
-#         yield {
-#             'name': p.name,
-#             'file_dep': [p],
-#             'actions': [f"convert -quality 80 {p} {t}"],
-#             'targets': [t],
-#         }
+@create_after(executed='layout')
+def task_bake_maps():
+    layout = json.load(open(layout_json))
+    for inst in layout['instances']:
+        coll = inst['name']
+        yield {
+            'name':
+                coll,
+            'file_dep': [
+                'world_export/export_bake_maps.py',
+                relocated_layout_for_bakes,
+            ] + shared_code_deps,
+            'actions': [f'blender --background --python world_export/export_bake_maps.py -- coll {coll}'],
+            'targets': [
+                f'build/serve/map/bake/{coll}.json',
+                # plus imgs: 'build/stage/bake/render/{coll}/{obj}_{bake_type}.jpg',
+            ]
+        }
 
-# world.json currently not ever being cleared
+
+@create_after(executed='bake_maps')
+def task_convert_bake_maps():
+    for instanceDir in (dest / 'stage/bake/render').glob('*'):
+        targetDir = dest / 'serve/map/bake' / instanceDir.name
+        targetDir.mkdir(parents=True, exist_ok=True)
+        for renderedPng in instanceDir.glob('*.png'):
+            targetJpg = targetDir / renderedPng.name.replace('.png', '.jpg')
+            yield {
+                'name': f'{instanceDir.name}/{targetJpg.name}',
+                'file_dep': [renderedPng],
+                'actions': [f"convert -quality 80 {renderedPng} {targetJpg}"],
+                'targets': [targetJpg],
+            }

@@ -14,59 +14,41 @@ import bpy
 
 sys.path.append(os.path.dirname(__file__))
 import image
-import world_json
-from dirs import dest
+from dirs import dest, src
+from map_quality import get_map_size
 from selection import all_mesh_objects, select_object
+from world_json import json_serialize_with_pretty_matrices
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 log = logging.getLogger()
 
 
 class Bake:
-    def __init__(self,
-                 obj_name,
-                 outData,
-                 map_size=1024,
-                 samples=100,
-                 on_bake_done=lambda: None):
-        self.obj_name = obj_name
+
+    def __init__(self, inst_name, obj, outData, map_size=1024, samples=100):
+        self.inst_name = inst_name
+        self.obj = obj
         self.outData = outData
         self.map_size = map_size
         self.samples = samples
-        self.on_bake_done = on_bake_done
-        # 'screen' context is not immediately ready
-        #later(1, self._withScreen)
-        self._withScreen()
 
-    def _withScreen(self):
-        log.info(f'{self.obj_name} bake start')
-        bpy.context.scene.cycles.use_denoising = True
-        bpy.context.scene.cycles.samples = 30
+        select_object(self.obj.name)
 
-        select_object(self.obj_name)
+        self.objData = self.outData.setdefault('objs', {}).setdefault(self.obj.name, {})
 
-        self.objData = self.outData.setdefault('objs', {}).setdefault(
-            self.obj_name, {})
-        obj = bpy.data.objects[self.obj_name]
-
-        slots = list(obj.material_slots)
-        if len(slots) == 0:
-            log.warning(f'{self.obj_name} has no mat slots')
-            self.on_bake_done()
+        mat = self._objMaterial(obj)
+        if mat is None:
             return
-        elif len(slots) == 1:
-            self.objData['material'] = {'name': slots[0].material.name}
-        else:
-            raise NotImplementedError("separate_materials didn't work")
+        self.objData['material'] = {'name': mat.name}
 
         self._selectUvs(obj)
         mat = obj.material_slots.values()[0].material
 
         self._prepBakeImage(mat)
 
-        self.runs = [
+        runs = [
             # ('COMBINED', 'comb', 'sRGB'),
-            ('DIFFUSE', 'dif', 'sRGB'),
+            # ('DIFFUSE', 'dif', 'sRGB'),
             # ('AO', 'ao', 'Non-Color'),
             ('SHADOW', 'shad', 'Non-Color'),
             # ('NORMAL', 'norm', 'Non-Color'),
@@ -74,7 +56,19 @@ class Bake:
             # ('GLOSSY', 'glos', 'Non-Color'),
         ]
 
-        self.nextBake()
+        for bake_type, out_name, cs in runs:
+            self._bakeAndSave(bake_type, out_name, cs)
+        self.delete_node()
+
+    def _objMaterial(self, obj):
+        slots = list(obj.material_slots)
+        if len(slots) == 0:
+            log.warning(f'    {self.obj.name} has no mat slots')
+            return None
+        elif len(slots) == 1:
+            return slots[0].material
+        else:
+            raise NotImplementedError("separate_materials didn't work")
 
     def _selectUvs(self, obj):
         uvs = obj.data.uv_layers
@@ -85,14 +79,10 @@ class Bake:
                 uvs.active = lyr  # bake writes with this
 
     def _prepBakeImage(self, mat):
-        self.img = bpy.data.images.new('bake_out',
-                                       self.map_size,
-                                       self.map_size,
-                                       alpha=False,
-                                       is_data=True)
+        self.img = bpy.data.images.new('bake_out', self.map_size, self.map_size, alpha=False, is_data=True)
 
         nodes = mat.node_tree.nodes
-        log.info(f'{self.obj_name} mat had {len(nodes)} nodes')
+        log.info(f'    {self.obj.name} mat {mat.name} has {len(nodes)} nodes')
 
         tx = nodes.new('ShaderNodeTexImage')
         self.delete_node = lambda: nodes.remove(tx)
@@ -101,19 +91,8 @@ class Bake:
         tx.select = True  # bake writes to the selected node
         nodes.active = tx
 
-    def nextBake(self):
-        if not self.runs:
-            log.info(f'{self.obj_name} bake jobs done')
-            self.delete_node()
-            self.on_bake_done()
-            return
-
-        self.bakeAndSave()
-
-    def bakeAndSave(self):
-        bake_type, out_name, cs = self.runs[0]
-        log.info(f'{self.obj_name} start {bake_type} bake '
-                 f'(size={self.img.generated_width}, samples={self.samples})')
+    def _bakeAndSave(self, bake_type, out_name, cs):
+        log.info(f'    {self.obj.name} start {bake_type} bake ' f'(size={self.img.generated_width}, samples={self.samples})')
         self.img.colorspace_settings.name = cs
 
         bpy.context.scene.render.engine = 'CYCLES'
@@ -122,70 +101,66 @@ class Bake:
         bpy.context.scene.cycles.use_denoising = True
         bpy.context.scene.cycles.bake_type = bake_type
 
-        bakeData = self.objData.setdefault('bake',
-                                           {}).setdefault(bake_type, {})
+        bakeData = self.objData.setdefault('bake', {}).setdefault(bake_type, {})
         bakeData['res'] = self.img.generated_width
         bakeData['samples'] = bpy.context.scene.cycles.samples
+
+        self.obj.select_set(state=True)
+
         try:
             t1 = time.time()
-            bpy.ops.object.bake(type=bake_type, use_clear=True)
+            bpy.ops.object.bake('INVOKE_DEFAULT', type=bake_type, use_clear=True)
             bakeData['bake_time'] = round(time.time() - t1, 2)
         except Exception as err:
             log.warning(err)
         else:
             # these should be named by content since some will be the same (dup object under 2 lights will have some of the same maps)
             t2 = time.time()
-            image.save(self.img, dest / f'bake/bake_{self.obj_name}_{out_name}.png')
+            image.save(self.img, dest / f'stage/bake/render/{self.inst_name}/{self.obj.name}_{out_name}.png', logPrefix='      ')
             bakeData['save_time'] = round(time.time() - t2, 2)
 
-        self.runs.pop(0)
-        self.nextBake()
 
+def localize(col_name):
+    bpy.data.collections.new('to_bake')
 
-def async_bake(objs, outData, cb):
-    def pump():
-        if not objs:
-            cb()
-            return
-        obj = objs.pop()
-        log.info(f'{len(objs)+1} left')
-        map_size = 512
-        # maybe let a custom attr raise this sometimes, or determine it from obj size?
-        if obj.startswith('gnd.'):
-            map_size = 4096
-        if obj in ['building_022.outer.003']:
-            map_size = 2048
-        Bake(obj, outData, map_size=map_size, samples=50, on_bake_done=pump)
+    select_object(col_name)  # an empty
+    bpy.ops.object.duplicates_make_real()
+    # now there are child objs dumped at the top level
 
-    pump()
+    objs = []
+    for obj in bpy.context.selectable_objects:
+        if obj.type != 'MESH':
+            continue
+        bpy.ops.object.make_local(type='SELECT_OBDATA_MATERIAL')
+        objs.append(obj)
+
+    return objs
 
 
 def main():
-    bpy.ops.wm.open_mainfile(filepath=str(dest / 'edit.blend'))
-    outData = world_json.load()
+    coll = sys.argv[-1]
 
-    def run_bakes(cb):
-        job=sys.argv[-1].replace('--job=', '')
-        log.info(f'run_bakes; job={job} argv={sys.argv}')
-        to_bake = []
-        for obj_name in all_mesh_objects(bpy.data.objects['env']):
-            if job == 'gnd.023':
-                if obj_name == 'gnd.023': to_bake.append(obj_name)
-            elif job == 'other_gnd':
-                if obj_name != 'gnd.023': to_bake.append(obj_name)
-            elif job == 'not_gnd':
-                if not obj_name.startswith('gnd'): to_bake.append(obj_name)
-            elif job == 'debug':
-                if obj_name.startswith('sign_board'):
-                    to_bake.append(obj_name)
-        log.info(f'{len(to_bake)} objs to bake')
-        async_bake(to_bake, outData, cb)
+    # relative links will now prefer dest/stage/bake/model, which have lightmaps
+    changed_path = dest / 'stage/bake/layout/env.blend'
+    log.info(f'loading {changed_path}')
+    bpy.ops.wm.open_mainfile(filepath=str(changed_path))
 
-    def done():
-        world_json.rewrite(outData)
-        bpy.ops.wm.quit_blender()
+    log.info(f'  localize {coll}')
+    objs_to_bake = localize(coll)
 
-    run_bakes(done)
+    outData = {}
+    for i, obj in enumerate(objs_to_bake):  # todo- bake into one atlas for the collection?
+        map_size = get_map_size(obj.name)
+        if map_size is None:
+            continue
+        log.info(f'  bake [{i}/{len(objs_to_bake)}] {obj.name}')
+        Bake(coll, obj, outData, map_size=map_size)
+
+    out_path = dest / f'serve/map/bake/{coll}.json'
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, 'w') as out:
+        out.write(json_serialize_with_pretty_matrices(outData))
 
 
-main()
+if __name__ == '__main__':
+    main()
