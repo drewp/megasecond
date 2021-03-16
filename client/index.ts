@@ -91,7 +91,7 @@ class Game {
       p.components.add(new LocallyDriven());
       p.components.add(new UsesNav(nav));
       p.components.add(new LocalCam(this.scene));
-      p.components.get(Transform).pos = new Vector3(-2.3, 0, -2);
+      p.components.get(Transform).pos = new Vector3(1, 0, -2);
       p.components.get(Transform).facing = new Vector3(0, 0, 1);
     }
     this.world.entities.add(p);

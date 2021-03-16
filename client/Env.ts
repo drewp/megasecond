@@ -86,6 +86,7 @@ class Collection {
       const existingInst = this.insts.values().next().value as Instance;
       log.info(`      have objs from ${existingInst.name} and their load is`, existingInst.loaded);
       this.insts.set(name, Instance.makeInstanceOf(name, node, existingInst));
+      await existingInst.loaded;
     } else {
       this.primaryInstName = name;
       const lp = this.load(node);
@@ -97,14 +98,27 @@ class Collection {
   }
 
   private applyLightmaps(node: TransformNode, instanceName: string) {
+    // a src/Materials/effect.ts gets to munge the glsl code, so that could be a
+    // way to jam in a separate-lightmap-tx-per-instance feature
+
     for (let m of node.getDescendants() as InstancedMesh[]) {
       const mat = m.material as PBRMaterial | null;
       if (!mat) continue;
       const sourceName = m.sourceMesh ? m.sourceMesh.name : m.name;
       if (instanceName == "gnd" && sourceName != "gnd.023") continue;
-      mat.useLightmapAsShadowmap = true;
+
+      mat.emissiveTexture = bakedTx(`map/bake/${instanceName}/${sourceName}_dif.jpg`, this.scene);
+      mat.emissiveTexture.coordinatesIndex = 1; // lightmap
+      mat.emissiveColor = Color3.White();
+
       mat.lightmapTexture = bakedTx(`map/bake/${instanceName}/${sourceName}_shad.jpg`, this.scene);
+      if (instanceName == "sign.001") (window as any).lm = mat.lightmapTexture;
       mat.lightmapTexture.coordinatesIndex = 1; // lightmap
+      mat.lightmapTexture.gammaSpace = true;
+
+      // https://github.com/BabylonJS/Babylon.js/blob/master/src/Shaders/ShadersInclude/pbrBlockFinalColorComposition.fx
+      // false: add lightmapcolor; true: multiply lightmapcolor
+      mat.useLightmapAsShadowmap = true;
     }
   }
 
@@ -184,10 +198,27 @@ export class World {
     this.groundBump.uScale = this.groundBump.vScale = 400;
 
     // not sure why imported sun light doesn't work
-    const sun2 = new SpotLight("sun2", new Vector3(0, 100, 0), new Vector3(0, -1, 0), 2, 0, scene);
-    sun2.shadowEnabled = false;
-    sun2.intensity = 80000;
-    setupSunShadows(scene, "sun2");
+    // const sun2 = new SpotLight("sun2", new Vector3(0, 100, 0), new Vector3(0, -1, 0), 2, 0, scene);
+    // sun2.shadowEnabled = false;
+    // sun2.intensity = 80000;
+    // setupSunShadows(scene, "sun2");
+
+    function setupSunShadows(scene: Scene, name = "light_sun_light") {
+      const light = scene.getLightByName(name) as DirectionalLight;
+      light.autoCalcShadowZBounds = true;
+      const gen = new ShadowGenerator(4096, light);
+      (window as any).gen = gen;
+      gen.bias = 0.001;
+      gen.filter = 6;
+      gen.filteringQuality = 1;
+      scene.meshes.forEach((m) => {
+        try {
+          m.receiveShadows = true;
+        } catch (e) {
+          // some objs can't
+        }
+      });
+    }
 
     // this.setupSkybox(scene);
   }
@@ -411,21 +442,4 @@ function checkerboardMaterial(scene: Scene) {
 
   shaderMaterial.backFaceCulling = false;
   return shaderMaterial;
-}
-
-function setupSunShadows(scene: Scene, name = "light_sun_light") {
-  const light = scene.getLightByName(name) as DirectionalLight;
-  light.autoCalcShadowZBounds = true;
-  const gen = new ShadowGenerator(4096, light);
-  (window as any).gen = gen;
-  gen.bias = 0.001;
-  gen.filter = 6;
-  gen.filteringQuality = 1;
-  scene.meshes.forEach((m) => {
-    try {
-      m.receiveShadows = true;
-    } catch (e) {
-      // some objs can't
-    }
-  });
 }

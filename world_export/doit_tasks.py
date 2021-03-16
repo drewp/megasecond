@@ -75,7 +75,12 @@ def task_bake_precopy():
 def task_bake_maps():
     layout = json.load(open(layout_json))
     for inst in layout['instances']:
+        # todo- it would be tres cool if this could use the instance matrix as a
+        # dep, so only the moved or edited objects get rerun.
+        # todo- it would also be nice to update with a junky low-res map first
+        # the follow up with a full one.
         coll = inst['name']
+        # if coll not in ['sign.001', 'gnd']: continue
         yield {
             'name':
                 coll,
@@ -98,9 +103,12 @@ def task_convert_bake_maps():
         targetDir.mkdir(parents=True, exist_ok=True)
         for renderedPng in instanceDir.glob('*.png'):
             targetJpg = targetDir / renderedPng.name.replace('.png', '.jpg')
+            adjust = ''
+            if renderedPng.name.endswith('_shad.png'):
+                adjust = '-brightness-contrast 20'
             yield {
                 'name': f'{instanceDir.name}/{targetJpg.name}',
                 'file_dep': [renderedPng],
-                'actions': [f"convert -quality 80 {renderedPng} {targetJpg}"],
+                'actions': [f"convert {adjust} -quality 90 {renderedPng} {targetJpg}"],
                 'targets': [targetJpg],
             }

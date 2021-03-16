@@ -48,9 +48,9 @@ class Bake:
 
         runs = [
             # ('COMBINED', 'comb', 'sRGB'),
-            # ('DIFFUSE', 'dif', 'sRGB'),
+            ('DIFFUSE', 'dif', 'sRGB'),
             # ('AO', 'ao', 'Non-Color'),
-            ('SHADOW', 'shad', 'Non-Color'),
+            ('SHADOW', 'shad', 'Non-Color', ), # still coming out srgb
             # ('NORMAL', 'norm', 'Non-Color'),
             # ('ROUGHNESS', 'ruff', 'Non-Color'),
             # ('GLOSSY', 'glos', 'Non-Color'),
@@ -100,6 +100,8 @@ class Bake:
         bpy.context.scene.cycles.samples = self.samples
         bpy.context.scene.cycles.use_denoising = True
         bpy.context.scene.cycles.bake_type = bake_type
+        if bake_type == 'DIFFUSE':
+            bpy.context.scene.render.bake.use_pass_direct = False
 
         bakeData = self.objData.setdefault('bake', {}).setdefault(bake_type, {})
         bakeData['res'] = self.img.generated_width
@@ -150,11 +152,11 @@ def main():
 
     outData = {}
     for i, obj in enumerate(objs_to_bake):  # todo- bake into one atlas for the collection?
-        map_size = get_map_size(obj.name)
+        map_size, samples = get_map_size(obj.name)
         if map_size is None:
             continue
         log.info(f'  bake [{i}/{len(objs_to_bake)}] {obj.name}')
-        Bake(coll, obj, outData, map_size=map_size)
+        Bake(coll, obj, outData, map_size=map_size ,samples=samples)
 
     out_path = dest / f'serve/map/bake/{coll}.json'
     out_path.parent.mkdir(parents=True, exist_ok=True)
