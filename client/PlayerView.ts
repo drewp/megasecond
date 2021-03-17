@@ -11,12 +11,40 @@ const log = createLogger("PlayerView");
 export class BjsMesh implements Component {
   public aimAt: AbstractMesh;
   constructor(public root: AbstractMesh, aimAt?: AbstractMesh) {
-    log.info('made bjsmesh with', root, this.root)
+    log.info("made bjsmesh with", root, this.root);
     this.aimAt = aimAt || root;
   }
   dispose() {
     this.root.dispose();
   }
+}
+
+// merge this into a Bjs lifecycle system? not sure
+export class BjsDispose extends AbstractEntitySystem<IdEntity> {
+  processEntity() {
+    //nothing
+  }
+  onRemovedComponents?(entity: IdEntity, ...components: Component[]): void {
+    components.forEach((bm: Component) => {
+      if (!bm.root) return; //  might be some other comp!
+      (bm as BjsMesh).root.dispose();
+    });
+  }
+  // or killed entity too
+}
+
+// e.g. a player
+export class Toucher implements Component {
+  constructor(
+    public posOffset: Vector3, // relative to BjsMesh.root.position
+    public radius: number,
+    public currentlyTouching: Set<IdEntity>
+  ) {}
+}
+
+// e.g. a prize
+export class Touchable implements Component {
+  constructor() {}
 }
 
 export function CreatePlayer(scene: Scene, prefix: string) {
@@ -40,16 +68,17 @@ export function CreatePlayer(scene: Scene, prefix: string) {
     sunCaster.addShadowCaster(body);
   }
   p.components.add(new BjsMesh(body, aimAt as AbstractMesh));
+  p.components.add(new Toucher(/*posOffset=*/ new Vector3(0, 1.2, 0), /*radius=*/ 0.3, new Set()));
 
   return p;
 }
 
-export function CreateCard(scene: Scene, cardMesh: Mesh): IdEntity {
-
+export function CreateCard(scene: Scene, pos: Vector3, cardMesh: Mesh): IdEntity {
   const card = new IdEntity();
-  card.components.add(new BjsMesh(cardMesh));
-  card.components.add(new Transform(new Vector3(2, 2, 2), Vector3.Zero(), Vector3.Forward()));
+  card.components.add(new BjsMesh(cardMesh.clone()));
+  card.components.add(new Transform(pos, Vector3.Zero(), new Vector3(Math.random() - 0.5, 0, Math.random() - 0.5)));
   card.components.add(new Twirl(/*degPerSec=*/ 1));
+  card.components.add(new Touchable());
 
   return card;
 }

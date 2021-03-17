@@ -10,7 +10,7 @@ import { InitJump, PlayerJump } from "./jump";
 import { LocalMovement, SimpleMove, Transform, Twirl } from "./Motion";
 import { CreateNametag, InitNametag, Nametag, RepaintNametag } from "./Nametag";
 import { getOrCreateNick } from "./nick";
-import { BjsMesh, CreateCard, CreatePlayer, TransformMesh } from "./PlayerView";
+import { BjsMesh, CreateCard, CreatePlayer, TransformMesh, Touchable, Toucher, BjsDispose } from "./PlayerView";
 import { playerSessionId, WorldRunOptions } from "./types";
 import { Actions, UserInput } from "./UserInput";
 import { PlayerDebug, UsesNav } from "./walkAlongNavMesh";
@@ -177,8 +177,64 @@ class LocallyDriven implements Component {
   constructor() {}
 }
 
+// do collisions; write Toucher.currentlyTouching
+class TouchItem extends AbstractEntitySystem<IdEntity> {
+  // see https://github.com/Trixt0r/ecsts/blob/master/examples/rectangles/src/systems/renderer.ts#L13
+  process(options: WorldRunOptions) {
+    if (!this._engine) return;
+    const entities = this.aspect!.entities;
+    const touchers: IdEntity[] = [];
+    const touchables: IdEntity[] = [];
+    for (let i = 0, l = entities.length; i < l; i++) {
+      const ent = entities[i] as IdEntity;
+      if (ent.components.get(Toucher)) {
+        touchers.push(ent);
+      } else if (ent.components.get(Touchable)) {
+        touchables.push(ent);
+      }
+    }
+    for (let t1 of touchers) {
+      const toucher = t1.components.get(Toucher);
+      const currentlyTouching = toucher.currentlyTouching;
+      currentlyTouching.clear();
+      for (let t2 of touchables) {
+        if (!t2.components.get(BjsMesh)) continue;
+        const pos1 = t1.components.get(BjsMesh).root.position.add(toucher.posOffset);
+        const rad1 = toucher.radius;
+        const pos2 = t2.components.get(BjsMesh).root.position;
+        const rad2 = 0;
+
+        const dist = pos1.subtract(pos2).length();
+        if (dist < rad1 + rad2) {
+          currentlyTouching.add(t2);
+        }
+      }
+    }
+  }
+  processEntity() {
+    throw new Error();
+  }
+}
+
+class Pickup extends AbstractEntitySystem<IdEntity> {
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
+    if (!this.engine) return;
+    const tu = entity.components.get(Toucher);
+    if (tu.currentlyTouching.size > 0) {
+      tu.currentlyTouching.forEach((obj) => {
+        const m = obj.components.get(BjsMesh);
+        if (m) {
+          obj.components.remove(m);
+          //        this.engine!.entities.remove(obj);
+        }
+      });
+    }
+  }
+}
+
 function ecsInit(): Engine {
   const world = new Engine();
+  world.systems.add(new BjsDispose(0, [BjsMesh]));
   world.systems.add(new SimpleMove(/*priority=*/ 0, /*all=*/ [BjsMesh, Transform, Twirl]));
   world.systems.add(new TransformMesh(0, [BjsMesh, Transform]));
   world.systems.add(new LocalCamFollow(0, [BjsMesh, Transform, LocalCam]));
@@ -189,6 +245,8 @@ function ecsInit(): Engine {
   world.systems.add(new ServerReceive(0, [ServerRepresented, Transform]));
   world.systems.add(new CorrectLocalSimulation(1, [ServerRepresented, Transform]));
   world.systems.add(new SendUntrustedLocalPos(2, [ServerRepresented, Transform, LocallyDriven]));
+  world.systems.add(new TouchItem(0, undefined, undefined, /*one=*/ [Toucher, Touchable]));
+  world.systems.add(new Pickup(0, [Toucher]));
 
   world.systems.forEach((s) => s.addListener({ onError: (e: Error) => log.error(e) }));
 
@@ -215,8 +273,9 @@ async function go() {
   }
 
   const card = await env.loadObj("card");
-  world.entities.add(CreateCard(scene, card));
-
+  for (let z = 2; z < 100; z += 5) {
+    world.entities.add(CreateCard(scene, new Vector3(2, 1.2, z), card));
+  }
   const userInput = new UserInput(scene, function onAction(name: Actions) {
     if (name == Actions.Jump) {
       game.me!.components.add(new InitJump());
