@@ -1,20 +1,22 @@
-import { AbstractEntitySystem, Component, Engine } from "@trixt0r/ecs";
+import { Engine } from "@trixt0r/ecs";
 import { Mesh, Scene, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
+import { IdEntity } from "../shared/IdEntity";
+import { InitSystems as InitWorld } from "../shared/InitSystems";
+import createLogger from "../shared/logsetup";
+import { Transform } from "../shared/Transform";
+import { ClientWorldRunOptions, playerSessionId } from "../shared/types";
 import { Player as NetPlayer, WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
+import { LocallyDriven, ServerRepresented } from "./ClientNet";
 import * as Env from "./Env";
-import { LocalCam, LocalCamFollow } from "./FollowCam";
-import { IdEntity } from "./IdEntity";
-import { InitJump, PlayerJump } from "./jump";
-import { LocalMovement, SimpleMove, Transform, Twirl } from "./Motion";
-import { CreateNametag, InitNametag, Nametag, RepaintNametag } from "./Nametag";
+import { LocalCam } from "./FollowCam";
+import { InitJump } from "./jump";
+import { InitNametag, Nametag } from "./Nametag";
 import { getOrCreateNick } from "./nick";
-import { BjsMesh, CreateCard, CreatePlayer, TransformMesh, Touchable, Toucher, BjsDispose } from "./PlayerView";
-import { playerSessionId, WorldRunOptions } from "./types";
+import { BjsMesh, CreatePlayer } from "./PlayerView";
 import { Actions, UserInput } from "./UserInput";
 import { PlayerDebug, UsesNav } from "./walkAlongNavMesh";
-import createLogger from "../shared/logsetup";
 
 const log = createLogger("WorldRoom");
 
@@ -78,13 +80,13 @@ class Game {
   addPlayerEntity(netPlayer: NetPlayer, isMe: boolean, nav: Mesh) {
     log.info("addPlayer", netPlayer.sessionId);
 
-    const p = CreatePlayer(this.scene, netPlayer.sessionId);
+    const p = CreatePlayer();
 
     p.components.add(new ServerRepresented(this.worldRoom!, netPlayer));
 
     p.components.add(new Transform(Vector3.Zero(), Vector3.Zero(), Vector3.Forward()));
     p.components.add(new PlayerDebug(this.scene));
-    p.components.add(new InitNametag(this.scene, /*offsetY=*/ 20, netPlayer));
+    p.components.add(new InitNametag(/*offsetY=*/ .2, netPlayer));
 
     if (isMe) {
       this.me = p;
@@ -109,153 +111,29 @@ class Game {
   }
 }
 
-class ServerRepresented implements Component {
-  public lastSentTime = 0; // ms
-  public lastSent: any;
-  public receivedPos = Vector3.Zero();
-  public receivedFacing = Vector3.Forward();
-  constructor(
-    public worldRoom: Colyseus.Room<WorldState>,
-    public netPlayer: NetPlayer // with latest server state
-  ) {}
-}
-
-class ServerReceive extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
-    const sr = entity.components.get(ServerRepresented);
-    const np = sr.netPlayer;
-    // this is rewriting a lot- we could use a watcher on the colyseus half
-    sr.receivedPos = new Vector3(np.x, np.y, np.z);
-    sr.receivedFacing = new Vector3(np.facingX, np.facingY, np.facingZ);
-  }
-}
-
-class CorrectLocalSimulation extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
-    if (entity.components.get(LocallyDriven)) {
-      // it's me; server is not authoritative yet, and we don't have correction code
-      return;
-    }
-    const pt = entity.components.get(Transform);
-    const sr = entity.components.get(ServerRepresented);
-    pt.pos = sr.receivedPos;
-    pt.facing = sr.receivedFacing;
-  }
-}
-
-// - to replace with input commands
-class SendUntrustedLocalPos extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
-    const pt = entity.components.get(Transform);
-    const sr = entity.components.get(ServerRepresented);
-
-    const pos = pt.pos;
-    const facing = pt.facing;
-    const now = Date.now();
-    const minSendPeriodMs = 100;
-    if (sr.lastSentTime > now - minSendPeriodMs) return;
-
-    if (
-      sr.lastSent !== undefined && //
-      sr.lastSent.x == pos.x &&
-      sr.lastSent.y == pos.y &&
-      sr.lastSent.z == pos.z &&
-      sr.lastSent.facingX == facing.x &&
-      sr.lastSent.facingY == facing.y &&
-      sr.lastSent.facingZ == facing.z
-    ) {
-      return;
-    }
-    sr.lastSent = { x: pos.x, y: pos.y, z: pos.z, facingX: facing.x, facingY: facing.y, facingZ: facing.z };
-    sr.worldRoom.send("playerMove", sr.lastSent);
-    sr.lastSentTime = now;
-  }
-}
-
-class LocallyDriven implements Component {
-  // temporary tag for the local player that recvs input
-  constructor() {}
-}
-
-// do collisions; write Toucher.currentlyTouching
-class TouchItem extends AbstractEntitySystem<IdEntity> {
-  // see https://github.com/Trixt0r/ecsts/blob/master/examples/rectangles/src/systems/renderer.ts#L13
-  process(options: WorldRunOptions) {
-    if (!this._engine) return;
-    const entities = this.aspect!.entities;
-    const touchers: IdEntity[] = [];
-    const touchables: IdEntity[] = [];
-    for (let i = 0, l = entities.length; i < l; i++) {
-      const ent = entities[i] as IdEntity;
-      if (ent.components.get(Toucher)) {
-        touchers.push(ent);
-      } else if (ent.components.get(Touchable)) {
-        touchables.push(ent);
-      }
-    }
-    for (let t1 of touchers) {
-      const toucher = t1.components.get(Toucher);
-      const currentlyTouching = toucher.currentlyTouching;
-      currentlyTouching.clear();
-      for (let t2 of touchables) {
-        if (!t2.components.get(BjsMesh)) continue;
-        const pos1 = t1.components.get(BjsMesh).root.position.add(toucher.posOffset);
-        const rad1 = toucher.radius;
-        const pos2 = t2.components.get(BjsMesh).root.position;
-        const rad2 = 0;
-
-        const dist = pos1.subtract(pos2).length();
-        if (dist < rad1 + rad2) {
-          currentlyTouching.add(t2);
-        }
-      }
-    }
-  }
-  processEntity() {
-    throw new Error();
-  }
-}
-
-class Pickup extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
-    if (!this.engine) return;
-    const tu = entity.components.get(Toucher);
-    if (tu.currentlyTouching.size > 0) {
-      tu.currentlyTouching.forEach((obj) => {
-        const m = obj.components.get(BjsMesh);
-        if (m) {
-          obj.components.remove(m);
-          //        this.engine!.entities.remove(obj);
-        }
-      });
-    }
-  }
-}
-
-function ecsInit(): Engine {
-  const world = new Engine();
-  world.systems.add(new BjsDispose(0, [BjsMesh]));
-  world.systems.add(new SimpleMove(/*priority=*/ 0, /*all=*/ [BjsMesh, Transform, Twirl]));
-  world.systems.add(new TransformMesh(0, [BjsMesh, Transform]));
-  world.systems.add(new LocalCamFollow(0, [BjsMesh, Transform, LocalCam]));
-  world.systems.add(new PlayerJump(0, [Transform, InitJump]));
-  world.systems.add(new CreateNametag(1, [BjsMesh, InitNametag]));
-  world.systems.add(new RepaintNametag(1, [Nametag]));
-  world.systems.add(new LocalMovement(0, [Transform, PlayerDebug, LocallyDriven, UsesNav]));
-  world.systems.add(new ServerReceive(0, [ServerRepresented, Transform]));
-  world.systems.add(new CorrectLocalSimulation(1, [ServerRepresented, Transform]));
-  world.systems.add(new SendUntrustedLocalPos(2, [ServerRepresented, Transform, LocallyDriven]));
-  world.systems.add(new TouchItem(0, undefined, undefined, /*one=*/ [Toucher, Touchable]));
-  world.systems.add(new Pickup(0, [Toucher]));
-
-  world.systems.forEach((s) => s.addListener({ onError: (e: Error) => log.error(e) }));
-
-  return world;
-}
-
 async function go() {
   const nick = getOrCreateNick();
-  const world = ecsInit();
+  const world = InitWorld(/*isClient=*/true);
+
+  (window as any).ecsDump = () => {
+    world.entities.forEach((e) => {
+      log.info("entity", e.id);
+      e.components.sort((a, b) => a.constructor.name < b.constructor.name ? -1 : 1);
+      e.components.forEach((comp) => {
+        log.info("  component", comp.constructor.name);
+        for (let prop in comp) {
+          const v = comp[prop].toString();
+          if (v.match(/\[object/)) {
+            log.info(`    ${prop}`, comp[prop]);
+          } else {
+            log.info(`    ${prop} ${v}`);
+          }
+        }
+      });
+    });
+    return world;
+  };
+
   const status = new StatusLine();
   const scene = setupScene("renderCanvas");
   const game = new Game(status, world, scene, nick);
@@ -273,9 +151,8 @@ async function go() {
   }
 
   const card = await env.loadObj("card");
-  for (let z = 2; z < 100; z += 5) {
-    world.entities.add(CreateCard(scene, new Vector3(2, 1.2, z), card));
-  }
+  //on new entity with Model, associate card clone
+
   const userInput = new UserInput(scene, function onAction(name: Actions) {
     if (name == Actions.Jump) {
       game.me!.components.add(new InitJump());
@@ -293,8 +170,9 @@ async function go() {
   const gameStep = (dt: number) => {
     world.run({
       dt,
+      scene,
       userInput, // todo get this out of here
-    } as WorldRunOptions);
+    } as ClientWorldRunOptions);
 
     userInput.step(dt);
   };

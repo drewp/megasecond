@@ -14,7 +14,6 @@ import {
   SceneLoader,
   ShaderMaterial,
   ShadowGenerator,
-  SpotLight,
   Texture,
   TransformNode,
   Vector3,
@@ -23,6 +22,7 @@ import { GridMaterial, SkyMaterial } from "babylonjs-materials";
 import createLogger from "../shared/logsetup";
 
 const log = createLogger("Env");
+log.info = () => {}
 
 export enum GraphicsLevel {
   wire,
@@ -67,6 +67,7 @@ class Collection {
 
   private async load(parent: TransformNode) {
     log.info(`    Collection(${this.path}) start load`);
+    // if (this.path != "model/env/sign.glb" && this.path != "model/env/gnd.glb" && this.path != "model/env/sun.glb") return;
     const loaded = await SceneLoader.ImportMeshAsync("", "./asset_build/", this.path, this.scene);
     loaded.meshes.forEach((m) => {
       this.objs.push(m);
@@ -106,6 +107,7 @@ class Collection {
       if (!mat) continue;
       const sourceName = m.sourceMesh ? m.sourceMesh.name : m.name;
       if (instanceName == "gnd" && sourceName != "gnd.023") continue;
+      // if (instanceName != "sign.001" && instanceName != "gnd") continue;
 
       mat.emissiveTexture = bakedTx(`map/bake/${instanceName}/${sourceName}_dif.jpg`, this.scene);
       mat.emissiveTexture.coordinatesIndex = 1; // lightmap
@@ -224,10 +226,6 @@ export class World {
   }
 
   async load() {
-    this.scene.getMeshByName("player")?.dispose();
-    await SceneLoader.AppendAsync("./asset_build/", "model/player/player.glb", this.scene);
-    this.scene.getMeshByName("player")!.isVisible = false;
-
     await SceneLoader.AppendAsync("./asset_build/", "model/env/navmesh.glb", this.scene);
     this.setupNavMesh();
   }

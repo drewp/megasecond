@@ -1,10 +1,10 @@
 import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
-import { FollowCamera, Scene, Vector3 } from "babylonjs";
+import { AbstractMesh, FollowCamera, Scene, Vector3 } from "babylonjs";
+import { IdEntity } from "../shared/IdEntity";
 import createLogger from "../shared/logsetup";
-import { IdEntity } from "./IdEntity";
-import { Transform } from "./Motion";
-import { BjsMesh } from "./PlayerView";
-import { WorldRunOptions } from "./types";
+import { Transform } from "../shared/Transform";
+import { ClientWorldRunOptions } from "../shared/types";
+import { AimAt, BjsMesh } from "./PlayerView";
 
 const log = createLogger("PlayerMotion");
 
@@ -34,13 +34,20 @@ export class LocalCam implements Component {
 }
 
 export class LocalCamFollow extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, index: number, entities: unknown, options: WorldRunOptions) {
+  constructor(priority: number) {
+    super(priority, [BjsMesh, Transform, AimAt, LocalCam]);
+  }
+
+  processEntity(entity: IdEntity, index: number, entities: unknown, options: ClientWorldRunOptions) {
     const dt = options.dt;
-    const cc = entity.components;
-    const cam = cc.get(LocalCam).cam;
-    const heading = cc.get(Transform).heading;
-    const bm = cc.get(BjsMesh);
-    cam.lockedTarget = bm.aimAt;
+    const cam = entity.components.get(LocalCam).cam;
+    const heading = entity.components.get(Transform).heading;
+    const bm = entity.components.get(BjsMesh);
+    const aa = entity.components.get(AimAt);
+    const aimAt = aa.getAimObj(entity, options.scene);
+    if (aimAt) {
+      cam.lockedTarget = aimAt as AbstractMesh;
+    }
     cam.heightOffset += 0.0003 * options.userInput.mouseY;
 
     // try to get behind player, don't crash walls

@@ -1,8 +1,8 @@
 import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
-import { removeComponent } from "./EcsOps";
-import { IdEntity } from "./IdEntity";
-import { Transform } from "./Motion";
-import { WorldRunOptions } from "./types";
+import { removeComponent } from "../shared/EcsOps";
+import { IdEntity } from "../shared/IdEntity";
+import { Transform } from "../shared/Transform";
+import { ClientWorldRunOptions } from "../shared/types";
 import { UsesNav } from "./walkAlongNavMesh";
 
 export class InitJump implements Component {
@@ -10,7 +10,11 @@ export class InitJump implements Component {
 }
 
 export class PlayerJump extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
+  constructor(priority: number) {
+    super(priority, [Transform, InitJump]);
+  }
+
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
     const pt = entity.components.get(Transform);
     const un = entity.components.get(UsesNav);
     if (un.grounded) {

@@ -6,4 +6,8 @@ export class IdEntity extends AbstractEntity {
   constructor() {
     super(id++);
   }
+
+  localName(name: string): string {
+    return name + "_e" + this.id;
+  }
 }

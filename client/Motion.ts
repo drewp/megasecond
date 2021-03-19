@@ -1,22 +1,14 @@
 import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
-import { Color3, Mesh, Quaternion, Scene, Vector2, Vector3 } from "babylonjs";
+import { Mesh, Quaternion, Vector2, Vector3 } from "babylonjs";
+import { IdEntity } from "../shared/IdEntity";
 import createLogger from "../shared/logsetup";
-import { IdEntity } from "./IdEntity";
-import { WorldRunOptions } from "./types";
+import { Transform } from "../shared/Transform";
+import { ClientWorldRunOptions } from "../shared/types";
+import { LocallyDriven } from "./ClientNet";
+import { BjsMesh } from "./PlayerView";
 import { PlayerDebug, UsesNav, walkAlongNavMesh } from "./walkAlongNavMesh";
 
 const log = createLogger("Motion");
-
-export class Transform implements Component {
-  constructor(
-    public pos: Vector3,
-    public vel: Vector3, // move this to a motion component
-    public facing: Vector3
-  ) {}
-  get heading(): number {
-    return (360 / (2 * Math.PI)) * Math.atan2(-this.facing.z, this.facing.x) + 270;
-  }
-}
 
 export class Twirl implements Component {
   constructor(public degPerSec = 1) {}
@@ -46,7 +38,11 @@ function playerStep(
 }
 
 export class LocalMovement extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: WorldRunOptions) {
+  constructor(priority: number) {
+    super(priority, [Transform, PlayerDebug, LocallyDriven, UsesNav]);
+  }
+  
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const dt = options.dt;
     const pt = entity.components.get(Transform);
     const pd = entity.components.get(PlayerDebug);
@@ -83,7 +79,11 @@ export class LocalMovement extends AbstractEntitySystem<IdEntity> {
 }
 
 export class SimpleMove extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: WorldRunOptions) {
+  constructor(priority: number) {
+    super(priority, [BjsMesh, Transform, Twirl]);
+  }
+  
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const tr = entity.components.get(Transform);
     const tw = entity.components.get(Twirl);
 

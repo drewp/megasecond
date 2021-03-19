@@ -1,6 +1,11 @@
 import { MapSchema, Schema, type } from "@colyseus/schema";
+import { Engine } from "@trixt0r/ecs";
+import { Vector3 } from "babylonjs";
 import { Client, Room } from "colyseus";
+import { CreateCard } from "./Collectible";
+import { InitSystems } from "./InitSystems";
 import createLogger from "./logsetup";
+import { ServerWorldRunOptions } from "./types";
 
 const log = createLogger("WorldRoom");
 
@@ -25,6 +30,7 @@ export class WorldState extends Schema {
 }
 
 export class WorldRoom extends Room<WorldState> {
+  private world?: Engine
   public allowReconnectionTime: number = 2;
 
   public onCreate() {
@@ -55,11 +61,18 @@ export class WorldRoom extends Room<WorldState> {
       pl.facingX = message.facingX;
       pl.facingY = message.facingY;
       pl.facingZ = message.facingZ;
-      
     });
+
+    this.world = InitSystems();
+    for (let z = 2; z < 100; z += 5) {
+      this.world.entities.add(CreateCard(new Vector3(2, 1.2, z)));
+      /// on entity, tell client, send Transform and Touchable.
+      // on
+    }
+    // interval: this.world.run({dt} as ServerWorldRunOptions)
   }
 
-  public onJoin(client: Client, options: any = {}) {
+  public onJoin(client: Client, _options: any = {}) {
     log.info("WorldRoom.onJoin", client.sessionId);
     const player = new Player();
 

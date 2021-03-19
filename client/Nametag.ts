@@ -1,16 +1,16 @@
 import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
-import { DynamicTexture, Mesh, PlaneBuilder, Scene, StandardMaterial, TransformNode } from "babylonjs";
-import { removeComponent } from "./EcsOps";
-import { IdEntity } from "./IdEntity";
-import { BjsMesh } from "./PlayerView";
-import { WorldRunOptions } from "./types";
-import { Player as NetPlayer, WorldState } from "../shared/WorldRoom";
+import { AbstractMesh, DynamicTexture, Mesh, PlaneBuilder, Scene, StandardMaterial, TransformNode } from "babylonjs";
+import { removeComponent } from "../shared/EcsOps";
+import { IdEntity } from "../shared/IdEntity";
 import createLogger from "../shared/logsetup";
+import { ClientWorldRunOptions } from "../shared/types";
+import { Player as NetPlayer } from "../shared/WorldRoom";
+import { AimAt, BjsMesh } from "./PlayerView";
 const log = createLogger("Nametag");
 
 // i want a nametag
 export class InitNametag implements Component {
-  constructor(public scene: Scene, public offsetY = 20, public netPlayer: NetPlayer) {}
+  constructor(public offsetY = 20, public netPlayer: NetPlayer) {}
 }
 
 // i have a nametag
@@ -19,29 +19,35 @@ export class Nametag implements Component {
 }
 
 export class CreateNametag extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
+  constructor(priority: number) {
+    super(priority, [BjsMesh, AimAt, InitNametag]);
+  }
+
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
+    const aa = entity.components.get(AimAt);
+
+    const aimAt = aa.getAimObj(entity, options.scene);
+    log.info("applying nametag, aimAt is", aimAt);
+    if (!aimAt) {
+      // keep waiting for this
+      return;
+    }
+
     const init = entity.components.get(InitNametag);
-    const bm = entity.components.get(BjsMesh);
-    const scl = 0.2;
-    const suffix = init.netPlayer.sessionId;
-    const plane = PlaneBuilder.CreatePlane(`nametag-${suffix}`, { width: 480 * scl, height: 64 * scl }, init.scene);
-    plane.parent = bm.aimAt;
+
+    const scl = 0.003;
+    const plane = PlaneBuilder.CreatePlane(entity.localName("nametag"), { width: 256 * scl, height: 64 * scl }, options.scene);
+
+    plane.parent = aimAt as AbstractMesh;
     plane.position.y = init.offsetY;
 
-    const tx = new DynamicTexture(
-      `nametag-${suffix}`,
-      { width: 256, height: 64 },
-      init.scene,
-      false // types bug made this nonoptional?
-    );
-    tx.hasAlpha = true;
-    log.info('created texture')
+    // {
+    //   // we're probably under a blender coord swap node now :(
+    //   plane.scaling.y *= -1;
+    //   plane.position.y *= -1;
+    // }
 
-    var mat = new StandardMaterial(`nametag-${suffix}`, init.scene);
-    mat.diffuseTexture = tx;
-    mat.disableLighting = true;
-    mat.transparencyMode = 3;
-    mat.useAlphaFromDiffuseTexture = true;
+    var { mat, tx } = this.createMaterial(entity, options.scene);
     plane.material = mat;
     plane.billboardMode = TransformNode.BILLBOARDMODE_ALL;
 
@@ -50,10 +56,10 @@ export class CreateNametag extends AbstractEntitySystem<IdEntity> {
     {
       // where does this go? In RepaintNametag somehow?
       const onNickChanged = () => {
-        log.info('onNickChanged', netPlayer.nick)
-        new RepaintNametag().repaint(tx, netPlayer.nick);
+        log.info("onNickChanged", netPlayer.nick);
+        new RepaintNametag(0).repaint(tx, netPlayer.nick);
       };
-      log.info('listtning for nick change on ', netPlayer.sessionId)
+      log.info("listening for nick change on ", netPlayer.sessionId);
       netPlayer.listen("nick", onNickChanged);
       onNickChanged();
     }
@@ -61,15 +67,37 @@ export class CreateNametag extends AbstractEntitySystem<IdEntity> {
     entity.components.add(new Nametag(plane, tx));
     removeComponent(entity, InitNametag);
   }
+
+  private createMaterial(entity:IdEntity, scene:Scene) {
+    const tx = new DynamicTexture(
+      entity.localName("nametag"),
+      { width: 256, height: 64 },
+      scene,
+      false // types bug made this nonoptional?
+    );
+    tx.hasAlpha = true;
+    log.info("created texture");
+
+    var mat = new StandardMaterial(entity.localName("nametag"), scene);
+    mat.diffuseTexture = tx;
+    mat.disableLighting = true;
+    mat.transparencyMode = 3;
+    mat.useAlphaFromDiffuseTexture = true;
+    return { mat, tx };
+  }
 }
 
 export class RepaintNametag extends AbstractEntitySystem<IdEntity> {
-  processEntity(_entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {}
+  constructor(priority: number) {
+    super(priority, [Nametag]);
+  }
+
+  processEntity(_entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {}
 
   repaint(tx: DynamicTexture, msg: string) {
     tx.getContext().fillStyle = "#00000000";
     tx.clear();
-    log.info('repaint', msg)
-    tx.drawText(msg, 0, 50, "45px sans", "#ffffffff", "#00000000", true, true);
+    log.info("repaint", msg);
+    tx.drawText(msg, 0, 50, "40px sans", "#ffffffff", "#00000000", true, true);
   }
 }

@@ -1,93 +1,123 @@
+import { System } from "@trixt0r/ecs";
 import { Engine } from "@trixt0r/ecs";
+import { Aspect } from "@trixt0r/ecs";
 import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
-import { AbstractMesh, Color3, Mesh, MeshBuilder, Scene, ShadowGenerator, StandardMaterial, TransformNode, Vector3 } from "babylonjs";
+import { AbstractMesh, AssetContainer, Mesh, Scene, SceneLoader, TransformNode, Vector3 } from "babylonjs";
+import { IdEntity } from "../shared/IdEntity";
 import createLogger from "../shared/logsetup";
-import { IdEntity } from "./IdEntity";
-import { Transform, Twirl } from "./Motion";
-import { WorldRunOptions } from "./types";
+import { Toucher } from "../shared/TouchItem";
+import { Transform } from "../shared/Transform";
+import { ClientWorldRunOptions } from "../shared/types";
 
 const log = createLogger("PlayerView");
 
+enum LoadState {
+  NONE,
+  STARTED_GET,
+  LOADED,
+}
+
 export class BjsMesh implements Component {
-  public aimAt: AbstractMesh;
-  constructor(public root: AbstractMesh, aimAt?: AbstractMesh) {
-    log.info("made bjsmesh with", root, this.root);
-    this.aimAt = aimAt || root;
-  }
+  public root?: TransformNode;
+  public loadState = LoadState.NONE;
+  public container?: AssetContainer;
+  constructor(public objName: string) {}
   dispose() {
-    this.root.dispose();
+    this.root?.dispose();
   }
 }
 
-// merge this into a Bjs lifecycle system? not sure
-export class BjsDispose extends AbstractEntitySystem<IdEntity> {
-  processEntity() {
-    //nothing
+export class BjsLoadUnload extends System {
+  // Turn BjsMesh.objName into obj instance at BjsMesh.root; cleans up that root tree when BjsMesh component is deleted.
+  private needLoad: Set<IdEntity> = new Set();
+  onAddedToEngine(engine: Engine): void {
+    Aspect.for(engine.entities)
+      .all(BjsMesh)
+      .addListener({
+        onAddedEntities: (...entities) => {
+          entities.forEach((entity) => {
+            log.info("engine +entity", entity.id);
+            this.needLoad.add(entity as IdEntity); // queue for process time
+          });
+        },
+        onRemovedEntities: (...entities) => {
+          entities.forEach((entity) => {
+            log.info("engine -entity", entity.id);
+            const bm = entity.components.get(BjsMesh);
+            if (!bm.root) return;
+            bm.root.dispose();
+          });
+        },
+      });
   }
-  onRemovedComponents?(entity: IdEntity, ...components: Component[]): void {
-    components.forEach((bm: Component) => {
-      if (!bm.root) return; //  might be some other comp!
-      (bm as BjsMesh).root.dispose();
+  process(options: ClientWorldRunOptions) {
+    this.needLoad.forEach((entity) => {
+      const bm = entity.components.get(BjsMesh);
+      //myabe loadstate starts as loaded, the 2nd time?
+      switch (bm.loadState) {
+        case LoadState.NONE:
+          const filename = "model/player/player.glb";
+          bm.loadState = LoadState.STARTED_GET;
+          log.info("start load", filename);
+          SceneLoader.LoadAssetContainerAsync(/*rootUrl=*/ "./asset_build/", filename, options.scene, /*onProgress=*/ null).then((container) => {
+            log.info("done load", filename);
+            bm.loadState = LoadState.LOADED;
+            bm.container = container;
+          });
+
+          break;
+        case LoadState.STARTED_GET:
+          break;
+        case LoadState.LOADED:
+          const newInstances = bm.container!.instantiateModelsToScene(/*nameFunction=*/ entity.localName.bind(entity));
+          if (newInstances.rootNodes.length != 1) throw new Error();
+          bm.root = newInstances.rootNodes[0];
+          bm.root.scaling.z = 1; //likely wrong
+          this.needLoad.delete(entity);
+          break;
+      }
     });
   }
-  // or killed entity too
 }
 
-// e.g. a player
-export class Toucher implements Component {
-  constructor(
-    public posOffset: Vector3, // relative to BjsMesh.root.position
-    public radius: number,
-    public currentlyTouching: Set<IdEntity>
-  ) {}
+// aim camera at this (child) object, e.g. player's torso instead of feet
+export class AimAt implements Component {
+  constructor(public objName: string) {
+    // objName is some obj in the BjsMesh hierarchy
+  }
+  getAimObj(entity: IdEntity, scene: Scene): TransformNode | null {
+    const instancedName = entity.localName(this.objName);
+    return scene.getTransformNodeByName(instancedName);
+  }
 }
 
-// e.g. a prize
-export class Touchable implements Component {
-  constructor() {}
-}
-
-export function CreatePlayer(scene: Scene, prefix: string) {
+export function CreatePlayer() {
   // X=left, Y=up, Z=fwd
   const p = new IdEntity();
 
-  const playerReferenceModel = scene.getMeshByName("player");
-  const refAim = scene.getTransformNodeByName("player_aim")!;
-  if (!playerReferenceModel || !refAim) {
-    throw new Error("no ref yet");
-  }
-  const body = (playerReferenceModel as Mesh).createInstance(`${prefix}-body`);
-  const aimAt = new TransformNode(`${prefix}-aim`);
-  aimAt.parent = body;
-
-  const refOffset = refAim.position.subtract(playerReferenceModel.position);
-  aimAt.position = body.position.add(refOffset);
-
-  const sunCaster = (window as any).gen as ShadowGenerator; // todo
-  if (sunCaster) {
-    sunCaster.addShadowCaster(body);
-  }
-  p.components.add(new BjsMesh(body, aimAt as AbstractMesh));
+  // const sunCaster = (window as any).gen as ShadowGenerator; // todo
+  // if (sunCaster) {
+  //   sunCaster.addShadowCaster(body);
+  // }
+  p.components.add(new BjsMesh("player"));
+  p.components.add(new AimAt("player_aim"));
   p.components.add(new Toucher(/*posOffset=*/ new Vector3(0, 1.2, 0), /*radius=*/ 0.3, new Set()));
 
   return p;
 }
 
-export function CreateCard(scene: Scene, pos: Vector3, cardMesh: Mesh): IdEntity {
-  const card = new IdEntity();
-  card.components.add(new BjsMesh(cardMesh.clone()));
-  card.components.add(new Transform(pos, Vector3.Zero(), new Vector3(Math.random() - 0.5, 0, Math.random() - 0.5)));
-  card.components.add(new Twirl(/*degPerSec=*/ 1));
-  card.components.add(new Touchable());
-
-  return card;
-}
-
+// Transform -> BjsMesh.root
 export class TransformMesh extends AbstractEntitySystem<IdEntity> {
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: WorldRunOptions) {
+  constructor(priority: number) {
+    super(priority, [BjsMesh, Transform]);
+  }
+
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
     const tr = entity.components.get(Transform);
     const root = entity.components.get(BjsMesh).root;
-    root.position.copyFrom(tr.pos);
-    root.lookAt(root.position.add(tr.facing));
+    if (root) {
+      root.position.copyFrom(tr.pos);
+      root.lookAt(root.position.add(tr.facing));
+    }
   }
 }
