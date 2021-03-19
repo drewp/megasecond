@@ -12,5 +12,5 @@ def get_map_size(obj_name):
         map_size = 2048
     if obj_name.startswith('leaf.'):
         return None, None
-    # return 128, 10    
+    return 128, 10    
     return map_size, 500

@@ -18,7 +18,7 @@ class MobileSticks {
   step(dt: number) {
     if (this.walk.pressed) {
       this.out.stickX = this.walk.deltaPosition.x * 3;
-      this.out.stickY = this.walk.deltaPosition.y * 3;
+      this.out.stickY = -this.walk.deltaPosition.y * 3;
     } else {
       this.out.stickX = this.out.stickY = 0;
     }
