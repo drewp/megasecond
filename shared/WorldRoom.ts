@@ -30,11 +30,13 @@ export class WorldState extends Schema {
 }
 
 export class WorldRoom extends Room<WorldState> {
-  private world?: Engine
+  public world?: Engine;
   public allowReconnectionTime: number = 2;
 
   public onCreate() {
     log.info("WorldRoom.onCreate");
+
+    (global as any).currentRoom = this;
     this.setState(new WorldState());
 
     this.maxClients = 100;
