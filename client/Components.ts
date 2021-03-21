@@ -62,12 +62,12 @@ export class PlayerDebug implements Component {
 }
 
 export class Nametag implements Component {
-  // i have a nametag
+  // draw nametag on this model
   public text: string = "?";
   public plane?: Mesh;
   public tx?: DynamicTexture;
   public mat?: StandardMaterial;
-  constructor(public offsetY: number) {
+  constructor(public offsetY: number, public netPlayer: NetPlayer) {
     makeObservable(this, { text: observable });
   }
 }

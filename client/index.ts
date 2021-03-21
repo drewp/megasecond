@@ -1,7 +1,7 @@
 import { Component, Engine } from "@trixt0r/ecs";
 import { Mesh, Scene, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
-import { AimAt, BjsModel, InitJump, InitNametag, Model, Touchable, Toucher, Transform, Twirl, UsesNav } from "../shared/Components";
+import { AimAt, BjsModel, InitJump, Model, Touchable, Toucher, Transform, Twirl, UsesNav } from "../shared/Components";
 import { IdEntity } from "../shared/IdEntity";
 import { InitSystems as InitWorld } from "../shared/InitSystems";
 import createLogger from "../shared/logsetup";
@@ -11,7 +11,6 @@ import { setupScene, StatusLine } from "./BrowserWindow";
 import { LocalCam, LocallyDriven, Nametag, PlayerDebug, ServerRepresented } from "./Components";
 import * as Env from "./Env";
 import { getOrCreateNick } from "./nick";
-import { BjsLoadUnload } from "./system/BjsLoadUnload";
 import { Actions, UserInput } from "./UserInput";
 
 const log = createLogger("WorldRoom");
@@ -100,7 +99,7 @@ class Game {
 
     p.components.add(new Transform(Vector3.Zero(), Vector3.Zero(), Vector3.Forward()));
     p.components.add(new PlayerDebug(this.scene));
-    p.components.add(new InitNametag(/*offsetY=*/ 0.2, netPlayer));
+    p.components.add(new Nametag(/*offsetY=*/ 0.2, netPlayer));
 
     if (isMe) {
       this.me = p;

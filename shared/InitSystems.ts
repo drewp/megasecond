@@ -1,7 +1,6 @@
 import { Engine } from "@trixt0r/ecs";
 import { BjsLoadUnload } from "../client/system/BjsLoadUnload";
 import { CorrectLocalSimulation } from "../client/system/CorrectLocalSimulation";
-import { CreateNametag } from "../client/system/CreateNametag";
 import { LocalCamFollow } from "../client/system/LocalCamFollow";
 import { LocalMovement } from "../client/system/LocalMovement";
 import { NametagLoadUnload } from "../client/system/NametagLoadUnload";
@@ -28,7 +27,6 @@ export function InitSystems(isClient = false): Engine {
     world.systems.add(new BjsLoadUnload(0));
     world.systems.add(new TransformMesh(0));
     world.systems.add(new LocalCamFollow(0));
-    world.systems.add(new CreateNametag(1));
     world.systems.add(new NametagLoadUnload(1));
     world.systems.add(new SimpleMove(0));
     world.systems.add(new LocalMovement(0));

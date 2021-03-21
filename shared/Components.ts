@@ -31,10 +31,6 @@ export class Twirl implements Component {
   constructor(public degPerSec = 1) {}
 }
 
-export class InitNametag implements Component {
-  // i want a nametag
-  constructor(public offsetY = 20, public netPlayer: NetPlayer) {}
-}
 
 export class AimAt implements Component {
   // aim camera at this (child) object, e.g. player's torso instead of feet

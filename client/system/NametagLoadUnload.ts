@@ -32,6 +32,16 @@ export class NametagLoadUnload extends LoadUnloadSystem {
     nt.plane.material = mat;
     nt.plane.billboardMode = TransformNode.BILLBOARDMODE_ALL;
 
+    {
+      const onNickChanged = () => {
+        log.info("onNickChanged", nt.netPlayer.nick);
+        nt.text = nt.netPlayer.nick;
+      };
+      log.info("listening for nick change on ", nt.netPlayer.sessionId);
+      nt.netPlayer.listen("nick", onNickChanged);
+      onNickChanged();
+    }
+
     log.info("autorun 1st time");
     autorun(() => {
       tx.getContext().fillStyle = "#00000000";
