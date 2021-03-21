@@ -2,9 +2,11 @@ import { Component, Engine } from "@trixt0r/ecs";
 import { Mesh, Scene, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import { AimAt, BjsModel, InitJump, Model, Touchable, Toucher, Transform, Twirl, UsesNav } from "../shared/Components";
+import { dump } from "../shared/EcsOps";
 import { IdEntity } from "../shared/IdEntity";
 import { InitSystems as InitWorld } from "../shared/InitSystems";
 import createLogger from "../shared/logsetup";
+import { TrackServerEntities } from "../shared/TrackServerEntities";
 import { ClientWorldRunOptions, playerSessionId } from "../shared/types";
 import { Player as NetPlayer, PropV3, ServerComponent, ServerEntity, WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
@@ -57,7 +59,8 @@ class Game {
     return new Promise<void>((resolve, _reject) => {
       worldRoom.onStateChange.once((state) => {
         this.trackPlayers(state, nav);
-        this.trackEntities(state);
+        const tse = new TrackServerEntities(this.world);
+        tse.trackEntities(state);
         resolve();
       });
     });
@@ -122,50 +125,6 @@ class Game {
       this.world.entities.remove(e);
     }
   }
-
-  private trackEntities(state: WorldState) {
-    // make world entities for the ones in state
-    state.entities.forEach((se: ServerEntity) => {
-      this.addServerEntity(se);
-    });
-    state.entities.onAdd = (se: ServerEntity) => this.addServerEntity(se);
-  }
-
-  private addServerEntity(se: ServerEntity) {
-    const ent = new IdEntity();
-    this.world.entities.add(ent);
-
-    function vector3FromProp(p: PropV3): Vector3 {
-      return new Vector3(p.x, p.y, p.z);
-    }
-
-    function addComp(sc: ServerComponent, compName: string) {
-      let lc: Component;
-      if (compName == "Touchable") {
-        lc = new Touchable();
-      } else if (compName == "Twirl") {
-        lc = new Twirl(sc.propFloat32.get("degPerSec"));
-      } else if (compName == "Transform") {
-        lc = new Transform(
-          vector3FromProp(
-            //
-            sc.propV3.get("pos")!
-          ),
-          vector3FromProp(sc.propV3.get("vel")!),
-          vector3FromProp(sc.propV3.get("facing")!)
-        ); //
-      } else if (compName == "Model") {
-        lc = new Model(sc.propString.get("modelPath")!);
-        // and since this is client, add renderable:
-        ent.components.add(new BjsModel());
-      } else {
-        throw new Error(`server sent unknown ${compName} component`);
-      }
-      ent.components.add(lc);
-    }
-    se.components.forEach(addComp);
-    se.components.onAdd = addComp;
-  }
 }
 
 async function go() {
@@ -173,21 +132,7 @@ async function go() {
   const world = InitWorld(/*isClient=*/ true);
 
   (window as any).ecsDump = () => {
-    world.entities.forEach((e) => {
-      log.info("entity", e.id);
-      e.components.sort((a, b) => (a.constructor.name < b.constructor.name ? -1 : 1));
-      e.components.forEach((comp) => {
-        log.info("  component", comp.constructor.name);
-        for (let prop in comp) {
-          const v = comp[prop].toString();
-          if (v.match(/\[object/)) {
-            log.info(`    ${prop}`, comp[prop]);
-          } else {
-            log.info(`    ${prop} ${v}`);
-          }
-        }
-      });
-    });
+    dump(world);
     return world;
   };
 
@@ -206,9 +151,6 @@ async function go() {
     await game.joinWorld(nav);
     // game.me is not guaranteed yet (or maybe if it's missing then the server is borked)
   }
-
-  const card = await env.loadObj("card");
-  //on new entity with Model, associate card clone
 
   const userInput = new UserInput(scene, function onAction(name: Actions) {
     if (name == Actions.Jump) {
