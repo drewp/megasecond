@@ -1,9 +1,8 @@
 import { Vector3 } from "babylonjs";
+import { BjsMesh, Touchable, Transform, Twirl } from "./Components";
 import { IdEntity } from "./IdEntity";
-import { Twirl } from "../client/Motion";
-import { BjsMesh } from "../client/PlayerView";
-import { Touchable } from "./TouchItem";
-import { Transform } from "./Transform";
+import createLogger from "./logsetup";
+const log = createLogger("system");
 
 export function CreateCard(pos: Vector3): IdEntity {
   const card = new IdEntity();

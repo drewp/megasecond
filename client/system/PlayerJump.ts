@@ -1,13 +1,10 @@
-import { AbstractEntitySystem, Component } from "@trixt0r/ecs";
-import { removeComponent } from "../shared/EcsOps";
-import { IdEntity } from "../shared/IdEntity";
-import { Transform } from "../shared/Transform";
-import { ClientWorldRunOptions } from "../shared/types";
-import { UsesNav } from "./walkAlongNavMesh";
-
-export class InitJump implements Component {
-  constructor() {}
-}
+import { AbstractEntitySystem } from "@trixt0r/ecs";
+import { InitJump, Transform, UsesNav } from "../../shared/Components";
+import { removeComponent } from "../../shared/EcsOps";
+import { IdEntity } from "../../shared/IdEntity";
+import createLogger from "../../shared/logsetup";
+import { ClientWorldRunOptions } from "../../shared/types";
+const log = createLogger("system");
 
 export class PlayerJump extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {

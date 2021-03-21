@@ -1,4 +1,6 @@
-import { ActionManager, ExecuteCodeAction, PickingInfo, PointerEventTypes, ActionEvent, Scene, VirtualJoystick } from "babylonjs";
+import { ActionEvent, ActionManager, ExecuteCodeAction, PickingInfo, PointerEventTypes, Scene, VirtualJoystick } from "babylonjs";
+import createLogger from "../shared/logsetup";
+const log = createLogger("system");
 
 export enum Actions {
   Jump,

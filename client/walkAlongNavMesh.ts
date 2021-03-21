@@ -1,29 +1,13 @@
-import { Component } from "@trixt0r/ecs";
-import { Color3, Mesh, Ray, Scene, Vector3 } from "babylonjs";
-import { ShowPoint, ShowSegment } from "./Debug";
+import { Mesh, Ray, Vector3 } from "babylonjs";
+import createLogger from "../shared/logsetup";
+import { PlayerDebug } from "./Components";
+const log = createLogger("walk");
 
 function projectToSegment(pt: Vector3, segStart: Vector3, segEnd: Vector3): Vector3 {
   const t =
     Vector3.Dot(pt.subtract(segStart), segEnd.subtract(segStart)) / //
     Vector3.Dot(segEnd.subtract(segStart), segEnd.subtract(segStart));
   return segStart.add(segEnd.subtract(segStart).scale(t));
-}
-
-export class UsesNav implements Component {
-  public currentNavFaceId = 0;
-  public grounded = false;
-  constructor(public nav: Mesh) {}
-}
-
-export class PlayerDebug implements Component {
-  debugNavHit: ShowSegment;
-  debugNavRay: ShowSegment;
-  debugCurNavFace: ShowPoint[];
-  constructor(scene: Scene) {
-    this.debugNavHit = new ShowSegment(scene, Color3.Red(), Color3.Blue());
-    this.debugNavRay = new ShowSegment(scene, Color3.Magenta(), Color3.Magenta());
-    this.debugCurNavFace = [0, 1, 2].map(() => new ShowPoint(scene, Color3.Green()));
-  }
 }
 
 export function walkAlongNavMesh(pos: Vector3, tryPos: Vector3, pd: PlayerDebug, nav: Mesh, currentNavFaceId: number) {

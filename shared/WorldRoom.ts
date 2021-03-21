@@ -1,15 +1,11 @@
 import { MapSchema, Schema, type } from "@colyseus/schema";
-import { Component } from "@trixt0r/ecs";
-import { Engine } from "@trixt0r/ecs";
+import { Component, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { Client, Room } from "colyseus";
-import { Twirl } from "../client/Motion";
-import { BjsMesh } from "../client/PlayerView";
 import { CreateCard } from "./Collectible";
+import { BjsMesh, Touchable, Transform, Twirl } from "./Components";
 import { InitSystems } from "./InitSystems";
 import createLogger from "./logsetup";
-import { Touchable } from "./TouchItem";
-import { Transform } from "./Transform";
 import { ServerWorldRunOptions } from "./types";
 
 const log = createLogger("WorldRoom");

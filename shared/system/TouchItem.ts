@@ -1,45 +1,14 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
-import { Component } from "@trixt0r/ecs";
-import { Vector3 } from "babylonjs";
-import { BjsMesh } from "../client/PlayerView";
-import { removeComponent } from "./EcsOps";
-import { IdEntity } from "./IdEntity";
-import { Transform } from "./Transform";
-import { CommonWorldRunOptions } from "./types";
-
-export class Toucher implements Component {
-  // e.g. a player
-  constructor(public posOffset: Vector3, public radius: number, public currentlyTouching: Set<IdEntity>) {}
-}
-
-export class Touchable implements Component {
-  // e.g. a prize
-  constructor() {}
-}
-
-export class Pickup extends AbstractEntitySystem<IdEntity> {
-  constructor(priority: number) {
-    super(priority, [Toucher]);
-  }
-
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: CommonWorldRunOptions) {
-    if (!this.engine) return;
-    const tu = entity.components.get(Toucher);
-    if (tu.currentlyTouching.size > 0) {
-      tu.currentlyTouching.forEach((obj) => {
-        removeComponent(obj, Transform);
-        removeComponent(obj, Touchable);
-        removeComponent(obj, BjsMesh); // another system should be doing this, e.g. when Touchable is removed
-      });
-    }
-  }
-}
+import { Touchable, Toucher, Transform } from "../Components";
+import { IdEntity } from "../IdEntity";
+import createLogger from "../logsetup";
+import { CommonWorldRunOptions } from "../types";
+const log = createLogger("system");
 
 // do collisions; write Toucher.currentlyTouching
 export class TouchItem extends AbstractEntitySystem<IdEntity> {
-
   constructor(priority: number) {
-    super(priority, undefined, undefined, /*one=*/[Toucher, Touchable]);
+    super(priority, undefined, undefined, /*one=*/ [Toucher, Touchable]);
   }
 
   // see https://github.com/Trixt0r/ecsts/blob/master/examples/rectangles/src/systems/renderer.ts#L13

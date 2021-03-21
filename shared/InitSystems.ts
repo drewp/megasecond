@@ -1,13 +1,18 @@
 import { Engine } from "@trixt0r/ecs";
-import { CorrectLocalSimulation, SendUntrustedLocalPos, ServerReceive } from "../client/ClientNet";
-import { LocalCamFollow } from "../client/FollowCam";
-import { InitJump, PlayerJump } from "../client/jump";
-import { LocalMovement, SimpleMove } from "../client/Motion";
-import { CreateNametag, RepaintNametag } from "../client/Nametag";
-import { BjsLoadUnload, TransformMesh } from "../client/PlayerView";
+import { TransformMesh } from "../client/PlayerView";
+import { BjsLoadUnload } from "../client/system/BjsLoadUnload";
+import { CorrectLocalSimulation } from "../client/system/CorrectLocalSimulation";
+import { CreateNametag } from "../client/system/CreateNametag";
+import { LocalCamFollow } from "../client/system/LocalCamFollow";
+import { LocalMovement } from "../client/system/LocalMovement";
+import { PlayerJump } from "../client/system/PlayerJump";
+import { RepaintNametag } from "../client/system/RepaintNametag";
+import { SendUntrustedLocalPos } from "../client/system/SendUntrustedLocalPos";
+import { ServerReceive } from "../client/system/ServerReceive";
+import { SimpleMove } from "../client/system/SimpleMove";
 import createLogger from "./logsetup";
-import { Pickup, TouchItem } from "./TouchItem";
-import { Transform } from "./Transform";
+import { Pickup } from "./system/Pickup";
+import { TouchItem } from "./system/TouchItem";
 
 const log = createLogger("PlayerView");
 

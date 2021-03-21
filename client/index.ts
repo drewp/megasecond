@@ -1,25 +1,27 @@
-import { Component } from "@trixt0r/ecs";
-import { Engine } from "@trixt0r/ecs";
+import { Component, Engine } from "@trixt0r/ecs";
 import { Mesh, Scene, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
+import {
+  BjsMesh,
+  InitJump,
+  InitNametag,
+  
+  Touchable,
+  Transform,
+  Twirl,
+  UsesNav,
+} from "../shared/Components";
 import { IdEntity } from "../shared/IdEntity";
 import { InitSystems as InitWorld } from "../shared/InitSystems";
 import createLogger from "../shared/logsetup";
-import { Touchable } from "../shared/TouchItem";
-import { Transform } from "../shared/Transform";
 import { ClientWorldRunOptions, playerSessionId } from "../shared/types";
 import { Player as NetPlayer, PropV3, ServerComponent, ServerEntity, WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
-import { LocallyDriven, ServerRepresented } from "./ClientNet";
+import { LocalCam, LocallyDriven, Nametag, PlayerDebug, ServerRepresented } from "./Components";
 import * as Env from "./Env";
-import { LocalCam } from "./FollowCam";
-import { InitJump } from "./jump";
-import { Twirl } from "./Motion";
-import { InitNametag, Nametag } from "./Nametag";
 import { getOrCreateNick } from "./nick";
-import { BjsMesh, CreatePlayer } from "./PlayerView";
+import { CreatePlayer } from "./PlayerView";
 import { Actions, UserInput } from "./UserInput";
-import { PlayerDebug, UsesNav } from "./walkAlongNavMesh";
 
 const log = createLogger("WorldRoom");
 
