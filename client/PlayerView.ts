@@ -56,7 +56,7 @@ export class BjsLoadUnload extends System {
       //myabe loadstate starts as loaded, the 2nd time?
       switch (bm.loadState) {
         case LoadState.NONE:
-          const filename = "model/player/player.glb";
+          const filename = bm.objName + ".glb";
           bm.loadState = LoadState.STARTED_GET;
           log.info("start load", filename);
           SceneLoader.LoadAssetContainerAsync(/*rootUrl=*/ "./asset_build/", filename, options.scene, /*onProgress=*/ null).then((container) => {
@@ -99,7 +99,7 @@ export function CreatePlayer() {
   // if (sunCaster) {
   //   sunCaster.addShadowCaster(body);
   // }
-  p.components.add(new BjsMesh("player"));
+  p.components.add(new BjsMesh("model/player/player"));
   p.components.add(new AimAt("player_aim"));
   p.components.add(new Toucher(/*posOffset=*/ new Vector3(0, 1.2, 0), /*radius=*/ 0.3, new Set()));
 

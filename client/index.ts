@@ -1,17 +1,20 @@
+import { Component } from "@trixt0r/ecs";
 import { Engine } from "@trixt0r/ecs";
 import { Mesh, Scene, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import { IdEntity } from "../shared/IdEntity";
 import { InitSystems as InitWorld } from "../shared/InitSystems";
 import createLogger from "../shared/logsetup";
+import { Touchable } from "../shared/TouchItem";
 import { Transform } from "../shared/Transform";
 import { ClientWorldRunOptions, playerSessionId } from "../shared/types";
-import { Player as NetPlayer, WorldState } from "../shared/WorldRoom";
+import { Player as NetPlayer, PropV3, ServerComponent, ServerEntity, WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
 import { LocallyDriven, ServerRepresented } from "./ClientNet";
 import * as Env from "./Env";
 import { LocalCam } from "./FollowCam";
 import { InitJump } from "./jump";
+import { Twirl } from "./Motion";
 import { InitNametag, Nametag } from "./Nametag";
 import { getOrCreateNick } from "./nick";
 import { BjsMesh, CreatePlayer } from "./PlayerView";
@@ -38,13 +41,14 @@ class Game {
   async joinWorld(nav: Mesh) {
     const worldRoom = await this.client.joinOrCreate<WorldState>("world", {});
     this.worldRoom = worldRoom;
-
+    (window as any).room = worldRoom;
     this.status.setConnection("connected...");
     worldRoom.send("setNick", this.nick);
 
     return new Promise<void>((resolve, _reject) => {
       worldRoom.onStateChange.once((state) => {
         this.trackPlayers(state, nav);
+        this.trackEntities(state);
         resolve();
       });
     });
@@ -86,7 +90,7 @@ class Game {
 
     p.components.add(new Transform(Vector3.Zero(), Vector3.Zero(), Vector3.Forward()));
     p.components.add(new PlayerDebug(this.scene));
-    p.components.add(new InitNametag(/*offsetY=*/ .2, netPlayer));
+    p.components.add(new InitNametag(/*offsetY=*/ 0.2, netPlayer));
 
     if (isMe) {
       this.me = p;
@@ -109,16 +113,58 @@ class Game {
       this.world.entities.remove(e);
     }
   }
+
+  private trackEntities(state: WorldState) {
+    // make world entities for the ones in state
+    state.entities.forEach((se: ServerEntity) => {
+      this.addServerEntity(se);
+    });
+    state.entities.onAdd = (se: ServerEntity) => this.addServerEntity(se);
+  }
+
+  private addServerEntity(se: ServerEntity) {
+    const ent = new IdEntity();
+    this.world.entities.add(ent);
+
+    function vector3FromProp(p: PropV3): Vector3 {
+      return new Vector3(p.x, p.y, p.z);
+    }
+
+    function addComp(sc: ServerComponent, compName: string) {
+      let lc: Component;
+      if (compName == "Touchable") {
+        lc = new Touchable();
+      } else if (compName == "Twirl") {
+        lc = new Twirl(sc.propFloat32.get("degPerSec"));
+      } else if (compName == "Transform") {
+        lc = new Transform(
+          vector3FromProp(
+            //
+            sc.propV3.get("pos")!
+          ),
+          vector3FromProp(sc.propV3.get("vel")!),
+          vector3FromProp(sc.propV3.get("facing")!)
+        ); //
+      } else if (compName == "BjsMesh") {
+        lc = new BjsMesh(sc.propString.get("objName")!);
+      } else {
+        throw new Error(`server sent unknown ${compName} component`);
+      }
+      ent.components.add(lc);
+    }
+    se.components.forEach(addComp);
+    se.components.onAdd = addComp;
+  }
 }
 
 async function go() {
   const nick = getOrCreateNick();
-  const world = InitWorld(/*isClient=*/true);
+  const world = InitWorld(/*isClient=*/ true);
 
   (window as any).ecsDump = () => {
     world.entities.forEach((e) => {
       log.info("entity", e.id);
-      e.components.sort((a, b) => a.constructor.name < b.constructor.name ? -1 : 1);
+      e.components.sort((a, b) => (a.constructor.name < b.constructor.name ? -1 : 1));
       e.components.forEach((comp) => {
         log.info("  component", comp.constructor.name);
         for (let prop in comp) {

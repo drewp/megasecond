@@ -1,10 +1,15 @@
 import { MapSchema, Schema, type } from "@colyseus/schema";
+import { Component } from "@trixt0r/ecs";
 import { Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { Client, Room } from "colyseus";
+import { Twirl } from "../client/Motion";
+import { BjsMesh } from "../client/PlayerView";
 import { CreateCard } from "./Collectible";
 import { InitSystems } from "./InitSystems";
 import createLogger from "./logsetup";
+import { Touchable } from "./TouchItem";
+import { Transform } from "./Transform";
 import { ServerWorldRunOptions } from "./types";
 
 const log = createLogger("WorldRoom");
@@ -23,10 +28,28 @@ export class Player extends Schema {
   @type("float64") facingY = 0;
   @type("float64") facingZ = 0;
 }
+export class PropV3 extends Schema {
+  @type("float64") x = 0;
+  @type("float64") y = 0;
+  @type("float64") z = 0;
+}
+export class ServerComponent extends Schema {
+  @type({ map: PropV3 }) propV3 = new MapSchema<PropV3>();
+  @type({ map: "string" }) propString = new MapSchema<string>();
+  @type({ map: "int8" }) propInt8 = new MapSchema<number>();
+  @type({ map: "float32" }) propFloat32 = new MapSchema<number>();
+}
+
+export class ServerEntity extends Schema {
+  @type("int64") id = 0;
+  @type({ map: ServerComponent }) components = new MapSchema<ServerComponent>();
+}
 
 export class WorldState extends Schema {
   @type({ map: Player })
   public players = new MapSchema<Player>();
+  @type({ map: ServerEntity })
+  public entities = new MapSchema<ServerEntity>();
 }
 
 export class WorldRoom extends Room<WorldState> {
@@ -66,12 +89,61 @@ export class WorldRoom extends Room<WorldState> {
     });
 
     this.world = InitSystems();
-    for (let z = 2; z < 100; z += 5) {
+    this.world.addListener({
+      onAddedEntities: (...entities) => {
+        entities.forEach((ent) => {
+          const se = new ServerEntity();
+          log.info(`new server ent ${ent.id} already has ${ent.components.length} comps`);
+          this.state.entities.set("" + ent.id, se);
+
+          function propFromVector3(v3: Vector3): PropV3 {
+            const ret = new PropV3();
+            ret.x = v3.x;
+            ret.y = v3.y;
+            ret.z = v3.z;
+            return ret;
+          }
+
+          function onCompAdd(...comps: Component[]) {
+            comps.forEach((comp: any) => {
+              if (comp.constructor === BjsMesh) {
+                const sc = new ServerComponent();
+                se.components.set(comp.constructor.name, sc);
+
+                sc.propString.set("objName", comp.objName);
+              } else if (comp.constructor == Touchable) {
+                const sc = new ServerComponent();
+                se.components.set(comp.constructor.name, sc);
+              } else if (comp.constructor == Transform) {
+                const sc = new ServerComponent();
+                se.components.set(comp.constructor.name, sc);
+                sc.propV3.set("pos", propFromVector3(comp.pos));
+                sc.propV3.set("vel", propFromVector3(comp.vel));
+                sc.propV3.set("facing", propFromVector3(comp.facing));
+              } else if (comp.constructor == Twirl) {
+                const sc = new ServerComponent();
+                se.components.set(comp.constructor.name, sc);
+                sc.propFloat32.set("degPerSec", comp.degPerSec);
+              }
+            });
+          }
+          onCompAdd(...ent.components);
+          ent.components.addListener({
+            onAdded: onCompAdd,
+          });
+        });
+      },
+    });
+
+    for (let z = 2; z < 20; z += 5) {
       this.world.entities.add(CreateCard(new Vector3(2, 1.2, z)));
-      /// on entity, tell client, send Transform and Touchable.
-      // on
     }
-    // interval: this.world.run({dt} as ServerWorldRunOptions)
+
+    log.info("created cards", this.world.entities.length);
+
+    this.setSimulationInterval((dmillis: number) => {
+      this.world?.run({ dt: dmillis / 1000 } as ServerWorldRunOptions);
+    }, 100);
   }
 
   public onJoin(client: Client, _options: any = {}) {
