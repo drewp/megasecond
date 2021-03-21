@@ -1,17 +1,18 @@
 import { Aspect, Engine, System } from "@trixt0r/ecs";
 import { SceneLoader } from "babylonjs";
-import { BjsMesh, LoadState } from "../../shared/Components";
+import { BjsModel, LoadState, Model } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
 const log = createLogger("system");
 
 export class BjsLoadUnload extends System {
-  // Turn BjsMesh.objName into obj instance at BjsMesh.root; cleans up that root tree when BjsMesh component is deleted.
+  // Turn Model.modelPath into BjsModel.root obj tree; cleans up that root tree
+  // when BjsModel component is deleted.
   private needLoad: Set<IdEntity> = new Set();
   onAddedToEngine(engine: Engine): void {
     Aspect.for(engine.entities)
-      .all(BjsMesh)
+      .all(Model, BjsModel)
       .addListener({
         onAddedEntities: (...entities) => {
           entities.forEach((entity) => {
@@ -22,7 +23,7 @@ export class BjsLoadUnload extends System {
         onRemovedEntities: (...entities) => {
           entities.forEach((entity) => {
             log.info("engine -entity", entity.id);
-            const bm = entity.components.get(BjsMesh);
+            const bm = entity.components.get(BjsModel);
             if (!bm.root) return;
             bm.root.dispose();
           });
@@ -31,15 +32,15 @@ export class BjsLoadUnload extends System {
   }
   process(options: ClientWorldRunOptions) {
     this.needLoad.forEach((entity) => {
-      const bm = entity.components.get(BjsMesh);
+      const mo = entity.components.get(Model);
+      const bm = entity.components.get(BjsModel);
       //myabe loadstate starts as loaded, the 2nd time?
       switch (bm.loadState) {
         case LoadState.NONE:
-          const filename = bm.objName + ".glb";
           bm.loadState = LoadState.STARTED_GET;
-          log.info("start load", filename);
-          SceneLoader.LoadAssetContainerAsync(/*rootUrl=*/ "./asset_build/", filename, options.scene, /*onProgress=*/ null).then((container) => {
-            log.info("done load", filename);
+          log.info("start load", mo.modelPath);
+          SceneLoader.LoadAssetContainerAsync(/*rootUrl=*/ "./asset_build/", mo.modelPath + ".glb", options.scene, /*onProgress=*/ null).then((container) => {
+            log.info("done load", mo.modelPath);
             bm.loadState = LoadState.LOADED;
             bm.container = container;
           });

@@ -1,6 +1,6 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { Quaternion, Vector3 } from "babylonjs";
-import { BjsMesh, Transform, Twirl } from "../../shared/Components";
+import { BjsModel, Transform, Twirl } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
@@ -9,7 +9,7 @@ const log = createLogger("system");
 
 export class SimpleMove extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [BjsMesh, Transform, Twirl]);
+    super(priority, [BjsModel, Transform, Twirl]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {

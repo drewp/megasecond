@@ -3,7 +3,7 @@ import { Component, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { Client, Room } from "colyseus";
 import { CreateCard } from "./Collectible";
-import { BjsMesh, Touchable, Transform, Twirl } from "./Components";
+import { Model, Touchable, Transform, Twirl } from "./Components";
 import { InitSystems } from "./InitSystems";
 import createLogger from "./logsetup";
 import { ServerWorldRunOptions } from "./types";
@@ -102,11 +102,11 @@ export class WorldRoom extends Room<WorldState> {
 
           function onCompAdd(...comps: Component[]) {
             comps.forEach((comp: any) => {
-              if (comp.constructor === BjsMesh) {
+              if (comp.constructor === Model) {
                 const sc = new ServerComponent();
                 se.components.set(comp.constructor.name, sc);
 
-                sc.propString.set("objName", comp.objName);
+                sc.propString.set("modelPath", comp.modelPath);
               } else if (comp.constructor == Touchable) {
                 const sc = new ServerComponent();
                 se.components.set(comp.constructor.name, sc);

@@ -1,6 +1,6 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { AbstractMesh, DynamicTexture, PlaneBuilder, Scene, StandardMaterial, TransformNode } from "babylonjs";
-import { AimAt, BjsMesh, InitNametag } from "../../shared/Components";
+import { AimAt, BjsModel, InitNametag } from "../../shared/Components";
 import { removeComponent } from "../../shared/EcsOps";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
@@ -12,7 +12,7 @@ const log = createLogger("system");
 
 export class CreateNametag extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [BjsMesh, AimAt, InitNametag]);
+    super(priority, [BjsModel, AimAt, InitNametag]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {

@@ -1,16 +1,7 @@
 import { Component, Engine } from "@trixt0r/ecs";
 import { Mesh, Scene, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
-import {
-  BjsMesh,
-  InitJump,
-  InitNametag,
-  
-  Touchable,
-  Transform,
-  Twirl,
-  UsesNav,
-} from "../shared/Components";
+import { AimAt, BjsModel, InitJump, InitNametag, Model, Touchable, Toucher, Transform, Twirl, UsesNav } from "../shared/Components";
 import { IdEntity } from "../shared/IdEntity";
 import { InitSystems as InitWorld } from "../shared/InitSystems";
 import createLogger from "../shared/logsetup";
@@ -20,7 +11,7 @@ import { setupScene, StatusLine } from "./BrowserWindow";
 import { LocalCam, LocallyDriven, Nametag, PlayerDebug, ServerRepresented } from "./Components";
 import * as Env from "./Env";
 import { getOrCreateNick } from "./nick";
-import { CreatePlayer } from "./PlayerView";
+import { BjsLoadUnload } from "./system/BjsLoadUnload";
 import { Actions, UserInput } from "./UserInput";
 
 const log = createLogger("WorldRoom");
@@ -30,6 +21,23 @@ log.info("hello log");
 type PlayerMap = Map<playerSessionId, NetPlayer>;
 
 type PlayerMoveMsg = { x: number; y: number; z: number; facingX: number; facingY: number; facingZ: number };
+
+// remove when server can do this work:
+function CreatePlayer() {
+  // X=left, Y=up, Z=fwd
+  const p = new IdEntity();
+
+  // const sunCaster = (window as any).gen as ShadowGenerator; // todo
+  // if (sunCaster) {
+  //   sunCaster.addShadowCaster(body);
+  // }
+  p.components.add(new Model("model/player/player"));
+  p.components.add(new BjsModel());
+  p.components.add(new AimAt("player_aim"));
+  p.components.add(new Toucher(/*posOffset=*/ new Vector3(0, 1.2, 0), /*radius=*/ 0.3, new Set()));
+
+  return p;
+}
 
 class Game {
   client: Colyseus.Client;
@@ -108,10 +116,10 @@ class Game {
   removePlayerEntity(netPlayer: NetPlayer) {
     const e = this.world.entities.find((e) => e.components.get(ServerRepresented)?.netPlayer == netPlayer);
     if (e) {
-      e.components.get(BjsMesh).dispose(); // haven't found how to listen for this yet
+      //e.components.get(BjsMesh).dispose(); // haven't found how to listen for this yet
       const nt = e.components.get(Nametag);
-      nt.plane.dispose();
-      nt.tx.dispose();
+      // nt.plane.dispose();
+      // nt.tx.dispose();
       this.world.entities.remove(e);
     }
   }
@@ -147,8 +155,10 @@ class Game {
           vector3FromProp(sc.propV3.get("vel")!),
           vector3FromProp(sc.propV3.get("facing")!)
         ); //
-      } else if (compName == "BjsMesh") {
-        lc = new BjsMesh(sc.propString.get("objName")!);
+      } else if (compName == "Model") {
+        lc = new Model(sc.propString.get("modelPath")!);
+        // and since this is client, add renderable:
+        ent.components.add(new BjsModel());
       } else {
         throw new Error(`server sent unknown ${compName} component`);
       }

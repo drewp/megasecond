@@ -39,7 +39,7 @@ export class InitNametag implements Component {
 export class AimAt implements Component {
   // aim camera at this (child) object, e.g. player's torso instead of feet
   constructor(public objName: string) {
-    // objName is some obj in the BjsMesh hierarchy
+    // objName is some obj in the BjsModel.root hierarchy
   }
   getAimObj(entity: IdEntity, scene: Scene): TransformNode | null {
     const instancedName = entity.localName(this.objName);
@@ -53,11 +53,17 @@ export enum LoadState {
   LOADED,
 }
 
-export class BjsMesh implements Component {
+export class Model implements Component {
+  // this is the model to use  (e.g. says the server to the client)
+  constructor(public modelPath: string) {}
+}
+
+export class BjsModel implements Component {
+  // load a BJS model that can be moved around
   public root?: TransformNode;
   public loadState = LoadState.NONE;
   public container?: AssetContainer;
-  constructor(public objName: string) {}
+  constructor() {}
   dispose() {
     this.root?.dispose();
   }
