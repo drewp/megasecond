@@ -34,3 +34,5 @@ export default {
         include: "client/**"
     }
 };
+
+// look at https://vitejs.dev/guide/ fo doing this even faster and getting HMR!

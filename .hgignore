@@ -2,3 +2,7 @@ node_modules
 ref
 build
 __pycache__
+.doit.db.dat
+.doit.db.dir
+doc/*webm
+client/asset
