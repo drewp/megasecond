@@ -1,9 +1,11 @@
 import { Component } from "@trixt0r/ecs";
-import { Color3, DynamicTexture, FollowCamera, Mesh, Scene, Vector3 } from "babylonjs";
+import { AbstractMesh, Color3, DynamicTexture, FollowCamera, Mesh, Scene, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import { ShowPoint, ShowSegment } from "../client/Debug";
 import createLogger from "../shared/logsetup";
 import { Player as NetPlayer, WorldState } from "../shared/WorldRoom";
+import { makeObservable, observable } from "mobx";
+import { StandardMaterial } from "babylonjs/Materials/standardMaterial";
 
 const log = createLogger("component");
 
@@ -61,5 +63,11 @@ export class PlayerDebug implements Component {
 
 export class Nametag implements Component {
   // i have a nametag
-  constructor(public plane: Mesh, public tx: DynamicTexture) {}
+  public text: string = "?";
+  public plane?: Mesh;
+  public tx?: DynamicTexture;
+  public mat?: StandardMaterial;
+  constructor(public offsetY: number) {
+    makeObservable(this, { text: observable });
+  }
 }

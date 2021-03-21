@@ -4,8 +4,8 @@ import { CorrectLocalSimulation } from "../client/system/CorrectLocalSimulation"
 import { CreateNametag } from "../client/system/CreateNametag";
 import { LocalCamFollow } from "../client/system/LocalCamFollow";
 import { LocalMovement } from "../client/system/LocalMovement";
+import { NametagLoadUnload } from "../client/system/NametagLoadUnload";
 import { PlayerJump } from "../client/system/PlayerJump";
-import { RepaintNametag } from "../client/system/RepaintNametag";
 import { SendUntrustedLocalPos } from "../client/system/SendUntrustedLocalPos";
 import { ServerReceive } from "../client/system/ServerReceive";
 import { SimpleMove } from "../client/system/SimpleMove";
@@ -29,7 +29,7 @@ export function InitSystems(isClient = false): Engine {
     world.systems.add(new TransformMesh(0));
     world.systems.add(new LocalCamFollow(0));
     world.systems.add(new CreateNametag(1));
-    world.systems.add(new RepaintNametag(1));
+    world.systems.add(new NametagLoadUnload(1));
     world.systems.add(new SimpleMove(0));
     world.systems.add(new LocalMovement(0));
     world.systems.add(new ServerReceive(0));
