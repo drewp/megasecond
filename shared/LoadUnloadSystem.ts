@@ -5,7 +5,7 @@ import { ClientWorldRunOptions } from "./types";
 
 export enum KeepProcessing {
   KEEP_PROCESSING,
-  STOP_PROCESSING
+  STOP_PROCESSING,
 }
 export class LoadUnloadSystem extends System {
   // when entities show up with these components, do some load behavior, and when they leave, do some unload.
@@ -13,20 +13,18 @@ export class LoadUnloadSystem extends System {
 
   private needLoad: Set<IdEntity> = new Set();
   onAddedToEngine(engine: Engine): void {
-    Aspect.for(engine.entities)
-      .all(...this.requiredComponents)
-      .addListener({
-        onAddedEntities: (...entities) => {
-          entities.forEach((entity) => {
-            this.needLoad.add(entity as IdEntity);
-          });
-        },
-        onRemovedEntities: (...entities) => {
-          entities.forEach((entity) => {
-            this.onRemoved(entity as IdEntity);
-          });
-        },
-      });
+    Aspect.for(engine.entities, /*all=*/ this.requiredComponents).addListener({
+      onAddedEntities: (...entities) => {
+        entities.forEach((entity) => {
+          this.needLoad.add(entity as IdEntity);
+        });
+      },
+      onRemovedEntities: (...entities) => {
+        entities.forEach((entity) => {
+          this.onRemoved(entity as IdEntity);
+        });
+      },
+    });
   }
   process(options: ClientWorldRunOptions) {
     this.needLoad.forEach((entity) => {

@@ -9,7 +9,9 @@ const log = createLogger("component");
 export class InitJump implements Component {
   constructor() {}
 }
-
+export class NetworkSession implements Component {
+  constructor(public sessionId: string) {}
+}
 export class Toucher implements Component {
   // e.g. a player
   constructor(public posOffset: Vector3, public radius: number, public currentlyTouching: Set<IdEntity>) {}
@@ -30,7 +32,6 @@ export class Transform implements Component {
 export class Twirl implements Component {
   constructor(public degPerSec = 1) {}
 }
-
 
 export class AimAt implements Component {
   // aim camera at this (child) object, e.g. player's torso instead of feet
@@ -68,5 +69,6 @@ export class BjsModel implements Component {
 export class UsesNav implements Component {
   public currentNavFaceId = 0;
   public grounded = false;
-  constructor(public nav: Mesh) {}
+  public nav?: string // 
+  constructor() {}
 }

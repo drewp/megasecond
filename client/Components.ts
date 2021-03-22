@@ -10,25 +10,16 @@ import { StandardMaterial } from "babylonjs/Materials/standardMaterial";
 const log = createLogger("component");
 
 export class LocalCam implements Component {
-  public cam: FollowCamera;
+  public cam?: FollowCamera;
   public birds_eye_view = false;
-  constructor(scene: Scene) {
-    this.cam = new FollowCamera("cam", new Vector3(-1.4, 1.5, -4), scene);
-    this.cam.inputs.clear();
-    this.cam.radius = 2;
-    this.cam.heightOffset = 1;
-    this.cam.fov = 1.2;
-    this.cam.rotationOffset = 180;
-    this.cam.cameraAcceleration = 0.5;
-    scene.switchActiveCamera(this.cam);
-  }
+  constructor() {}
 
   toggleBirdsEyeView() {
     if (!this.birds_eye_view) {
-      this.cam.heightOffset += 100;
+      this.cam!.heightOffset += 100;
       this.birds_eye_view = true;
     } else {
-      this.cam.heightOffset -= 100;
+      this.cam!.heightOffset -= 100;
       this.birds_eye_view = false;
     }
   }
@@ -41,7 +32,6 @@ export class ServerRepresented implements Component {
   public receivedFacing = Vector3.Forward();
   constructor(
     public worldRoom: Colyseus.Room<WorldState>,
-    public netPlayer: NetPlayer // with latest server state
   ) {}
 }
 
@@ -51,14 +41,10 @@ export class LocallyDriven implements Component {
 }
 
 export class PlayerDebug implements Component {
-  debugNavHit: ShowSegment;
-  debugNavRay: ShowSegment;
-  debugCurNavFace: ShowPoint[];
-  constructor(scene: Scene) {
-    this.debugNavHit = new ShowSegment(scene, Color3.Red(), Color3.Blue());
-    this.debugNavRay = new ShowSegment(scene, Color3.Magenta(), Color3.Magenta());
-    this.debugCurNavFace = [0, 1, 2].map(() => new ShowPoint(scene, Color3.Green()));
-  }
+  debugNavHit?: ShowSegment;
+  debugNavRay?: ShowSegment;
+  debugCurNavFace?: ShowPoint[];
+  constructor() {}
 }
 
 export class Nametag implements Component {

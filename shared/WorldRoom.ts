@@ -1,14 +1,17 @@
 import { MapSchema, Schema, type } from "@colyseus/schema";
-import { Component, Engine } from "@trixt0r/ecs";
+import { Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { Client, Room } from "colyseus";
 import { CreateCard } from "./Collectible";
-import { Model, Touchable, Transform, Twirl } from "./Components";
+import { ServerEntity } from "./ColyTypesForEntities";
+import { AimAt, Model, NetworkSession, Toucher, Transform } from "./Components";
+import { IdEntity } from "./IdEntity";
 import { InitSystems } from "./InitSystems";
 import createLogger from "./logsetup";
+import { TrackEcsEntities } from "./SyncEcsToColyseus";
 import { ServerWorldRunOptions } from "./types";
 
-const log = createLogger("WorldRoom");
+export const log = createLogger("WorldRoom");
 
 export class Player extends Schema {
   @type("boolean")
@@ -24,22 +27,6 @@ export class Player extends Schema {
   @type("float64") facingY = 0;
   @type("float64") facingZ = 0;
 }
-export class PropV3 extends Schema {
-  @type("float64") x = 0;
-  @type("float64") y = 0;
-  @type("float64") z = 0;
-}
-export class ServerComponent extends Schema {
-  @type({ map: PropV3 }) propV3 = new MapSchema<PropV3>();
-  @type({ map: "string" }) propString = new MapSchema<string>();
-  @type({ map: "int8" }) propInt8 = new MapSchema<number>();
-  @type({ map: "float32" }) propFloat32 = new MapSchema<number>();
-}
-
-export class ServerEntity extends Schema {
-  @type("int64") id = 0;
-  @type({ map: ServerComponent }) components = new MapSchema<ServerComponent>();
-}
 
 export class WorldState extends Schema {
   @type({ map: Player })
@@ -54,81 +41,37 @@ export class WorldRoom extends Room<WorldState> {
 
   public onCreate() {
     log.info("WorldRoom.onCreate");
+    this.maxClients = 100;
 
     (global as any).currentRoom = this;
     this.setState(new WorldState());
-
-    this.maxClients = 100;
+    this.world = InitSystems();
+    new TrackEcsEntities(this.state, this.world);
 
     // this.onMessage("*", (client: Client, type: string | number, message: any) => {
     //   this.broadcast(type, [client.sessionId, message], { except: client });
     // });
     this.onMessage("setNick", (client: Client, message: string | number) => {
-      log.info("recv nick", message);
-      const pl = this.state.players.get(client.sessionId);
-      if (!pl) {
-        throw new Error("unknown player");
-      }
-      pl.nick = message as string;
+      // log.info("recv nick", message);
+      // const pl = this.state.players.get(client.sessionId);
+      // if (!pl) {
+      //   throw new Error("unknown player");
+      // }
+      // pl.nick = message as string;
     });
     this.onMessage("playerMove", (client: Client, message: any) => {
-      const pl = this.state.players.get(client.sessionId);
-      if (!pl) {
-        throw new Error("unknown player");
-      }
-      pl.x = message.x;
-      pl.y = message.y;
-      pl.z = message.z;
-      pl.facingX = message.facingX;
-      pl.facingY = message.facingY;
-      pl.facingZ = message.facingZ;
-    });
-
-    this.world = InitSystems();
-    this.world.addListener({
-      onAddedEntities: (...entities) => {
-        entities.forEach((ent) => {
-          const se = new ServerEntity();
-          log.info(`new server ent ${ent.id} already has ${ent.components.length} comps`);
-          this.state.entities.set("" + ent.id, se);
-
-          function propFromVector3(v3: Vector3): PropV3 {
-            const ret = new PropV3();
-            ret.x = v3.x;
-            ret.y = v3.y;
-            ret.z = v3.z;
-            return ret;
-          }
-
-          function onCompAdd(...comps: Component[]) {
-            comps.forEach((comp: any) => {
-              if (comp.constructor === Model) {
-                const sc = new ServerComponent();
-                se.components.set(comp.constructor.name, sc);
-
-                sc.propString.set("modelPath", comp.modelPath);
-              } else if (comp.constructor == Touchable) {
-                const sc = new ServerComponent();
-                se.components.set(comp.constructor.name, sc);
-              } else if (comp.constructor == Transform) {
-                const sc = new ServerComponent();
-                se.components.set(comp.constructor.name, sc);
-                sc.propV3.set("pos", propFromVector3(comp.pos));
-                sc.propV3.set("vel", propFromVector3(comp.vel));
-                sc.propV3.set("facing", propFromVector3(comp.facing));
-              } else if (comp.constructor == Twirl) {
-                const sc = new ServerComponent();
-                se.components.set(comp.constructor.name, sc);
-                sc.propFloat32.set("degPerSec", comp.degPerSec);
-              }
-            });
-          }
-          onCompAdd(...ent.components);
-          ent.components.addListener({
-            onAdded: onCompAdd,
-          });
-        });
-      },
+      log.info("must write move to entities", client.sessionId, message);
+      return;
+      // const pl = this.state.players.get(client.sessionId);
+      // if (!pl) {
+      //   throw new Error("unknown player");
+      // }
+      // pl.x = message.x;
+      // pl.y = message.y;
+      // pl.z = message.z;
+      // pl.facingX = message.facingX;
+      // pl.facingY = message.facingY;
+      // pl.facingZ = message.facingZ;
     });
 
     for (let z = 2; z < 20; z += 5) {
@@ -144,13 +87,26 @@ export class WorldRoom extends Room<WorldState> {
 
   public onJoin(client: Client, _options: any = {}) {
     log.info("WorldRoom.onJoin", client.sessionId);
-    const player = new Player();
+    const player = this.createPlayer(client.sessionId);
+    this.world?.entities.add(player);
+  }
 
-    player.connected = true;
-    player.sessionId = client.sessionId;
+  createPlayer(sessionId: string) {
+    // X=left, Y=up, Z=fwd
+    const p = new IdEntity();
 
-    this.state.players.set(client.sessionId, player);
-    log.info("server players are now", JSON.stringify(this.state.players));
+    // const sunCaster = (window as any).gen as ShadowGenerator; // todo
+    // if (sunCaster) {
+    //   sunCaster.addShadowCaster(body);
+    // }
+    p.components.add(new NetworkSession(sessionId));
+
+    p.components.add(new Model("model/player/player"));
+    p.components.add(new Transform(Vector3.Zero(), Vector3.Zero(), Vector3.Forward()));
+    p.components.add(new AimAt("player_aim"));
+    // p.components.add(new Toucher(/*posOffset=*/ new Vector3(0, 1.2, 0), /*radius=*/ 0.3, new Set()));
+
+    return p;
   }
 
   public async onLeave(client: Client, consented: boolean) {

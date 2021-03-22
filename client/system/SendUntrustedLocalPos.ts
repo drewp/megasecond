@@ -23,18 +23,21 @@ export class SendUntrustedLocalPos extends AbstractEntitySystem<IdEntity> {
     const minSendPeriodMs = 100;
     if (sr.lastSentTime > now - minSendPeriodMs) return;
 
+    function r(x: number) {
+      return Math.round(x * 10000) / 10000;
+    }
     if (
       sr.lastSent !== undefined && //
-      sr.lastSent.x == pos.x &&
-      sr.lastSent.y == pos.y &&
-      sr.lastSent.z == pos.z &&
-      sr.lastSent.facingX == facing.x &&
-      sr.lastSent.facingY == facing.y &&
-      sr.lastSent.facingZ == facing.z
+      sr.lastSent.x == r(pos.x) &&
+      sr.lastSent.y == r(pos.y) &&
+      sr.lastSent.z == r(pos.z) &&
+      sr.lastSent.facingX == r(facing.x) &&
+      sr.lastSent.facingY == r(facing.y) &&
+      sr.lastSent.facingZ == r(facing.z)
     ) {
       return;
     }
-    sr.lastSent = { x: pos.x, y: pos.y, z: pos.z, facingX: facing.x, facingY: facing.y, facingZ: facing.z };
+    sr.lastSent = { x: r(pos.x), y: r(pos.y), z: r(pos.z), facingX: r(facing.x), facingY: r(facing.y), facingZ: r(facing.z) };
     sr.worldRoom.send("playerMove", sr.lastSent);
     sr.lastSentTime = now;
   }

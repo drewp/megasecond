@@ -15,6 +15,8 @@ export class LocalCamFollow extends AbstractEntitySystem<IdEntity> {
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const cam = entity.components.get(LocalCam).cam;
+    if (!cam) return;
+    
     const heading = entity.components.get(Transform).heading;
     const aa = entity.components.get(AimAt);
     const aimAt = aa.getAimObj(entity, options.scene);

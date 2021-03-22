@@ -15,16 +15,16 @@ export function walkAlongNavMesh(pos: Vector3, tryPos: Vector3, pd: PlayerDebug,
 
   const down = new Ray(knees, Vector3.Down());
   if (pd) {
-    pd.debugNavRay.set(down.origin, down.origin.add(down.direction));
+    pd.debugNavRay!.set(down.origin, down.origin.add(down.direction));
   }
 
   const info = down.intersectsMesh(nav as any);
 
   const verts = currentNavFace(nav, currentNavFaceId);
   if (pd) {
-    pd.debugCurNavFace[0].set(verts[0]);
-    pd.debugCurNavFace[1].set(verts[1]);
-    pd.debugCurNavFace[2].set(verts[2]);
+    pd.debugCurNavFace![0].set(verts[0]);
+    pd.debugCurNavFace![1].set(verts[1]);
+    pd.debugCurNavFace![2].set(verts[2]);
   }
   let grounded;
   if (!info.hit) {
@@ -41,7 +41,7 @@ export function walkAlongNavMesh(pos: Vector3, tryPos: Vector3, pd: PlayerDebug,
       grounded = false;
     }
     if (pd) {
-      pd.debugNavHit.set(knees, info.pickedPoint!);
+      pd.debugNavHit!.set(knees, info.pickedPoint!);
     }
   }
   return { grounded, currentNavFaceId, pos };

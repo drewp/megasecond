@@ -1,5 +1,5 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
-import { Quaternion, Vector2, Vector3 } from "babylonjs";
+import { Mesh, Quaternion, Vector2, Vector3 } from "babylonjs";
 import { Transform, UsesNav } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
@@ -25,7 +25,8 @@ export class LocalMovement extends AbstractEntitySystem<IdEntity> {
     this.onMouseX(mouseX, pt.facing, pt.vel);
     pt.vel = this.setXZVel(stick, pt.facing, pt.vel);
 
-    [pt.pos, pt.vel, pt.facing, un.grounded, un.currentNavFaceId] = playerStep(dt, pt.pos, pt.vel, pt.facing, un.nav, pd, un.currentNavFaceId);
+    const navMesh = options.scene.getMeshByName("navmesh") as Mesh;
+    [pt.pos, pt.vel, pt.facing, un.grounded, un.currentNavFaceId] = playerStep(dt, pt.pos, pt.vel, pt.facing, navMesh, pd, un.currentNavFaceId);
   }
 
   private onMouseX(movementX: number, facing: Vector3 /*mutated*/, vel: Vector3 /*mutated*/) {
