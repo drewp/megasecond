@@ -22,7 +22,7 @@ spec:
           ports: [{ containerPort: 10001 }]
           env:
             - name: DEBUG
-              value: colyseus:*
+              value: colyseus:matchmaking
         # this container reads from client/** and outputs to rollup_build/
         - name: rebuild-client
           image: bang5:5000/megasecond_image
