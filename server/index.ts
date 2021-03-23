@@ -55,6 +55,7 @@ const entitiesViewer = (_req: express.Request, res: express.Response) => {
 
 app.use("/asset_build", express.static(dir("asset_build")));
 app.use("/rollup_build/src/client", express.static(dir("client")));
+app.use("/rollup_build/src/shared", express.static(dir("shared")));
 app.use("/rollup_build", express.static(dir("rollup_build")));
 app.use("/lib/colyseus.js/", express.static(dir("node_modules/colyseus.js/dist")));
 app.use("/lib/@trixt0r/ecs/", express.static(dir("node_modules/@trixt0r/ecs/build")));
