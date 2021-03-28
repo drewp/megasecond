@@ -46,14 +46,3 @@ export class PlayerDebug implements Component {
   debugCurNavFace?: ShowPoint[];
   constructor() {}
 }
-
-export class Nametag implements Component {
-  // draw nametag on this model
-  public text: string = "?";
-  public plane?: Mesh;
-  public tx?: DynamicTexture;
-  public mat?: StandardMaterial;
-  constructor(public offsetY: number, public netPlayer: NetPlayer) {
-    makeObservable(this, { text: observable });
-  }
-}

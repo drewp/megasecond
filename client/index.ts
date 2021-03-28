@@ -1,7 +1,7 @@
-import { Component, Engine } from "@trixt0r/ecs";
-import { Mesh, Scene, Vector3 } from "babylonjs";
+import { Engine } from "@trixt0r/ecs";
+import { Mesh, Scene } from "babylonjs";
 import * as Colyseus from "colyseus.js";
-import { AimAt, BjsModel, InitJump, Model, Touchable, Toucher, Transform, Twirl, UsesNav } from "../shared/Components";
+import { InitJump } from "../shared/Components";
 import { dump } from "../shared/EcsOps";
 import { IdEntity } from "../shared/IdEntity";
 import { InitSystems as InitWorld } from "../shared/InitSystems";
@@ -10,18 +10,12 @@ import { TrackServerEntities } from "../shared/SyncColyseusToEcs";
 import { ClientWorldRunOptions, playerSessionId } from "../shared/types";
 import { Player as NetPlayer, WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
-import { LocalCam, LocallyDriven, Nametag, PlayerDebug, ServerRepresented } from "./Components";
+import { LocalCam } from "./Components";
 import * as Env from "./Env";
 import { getOrCreateNick } from "./nick";
 import { Actions, UserInput } from "./UserInput";
 
 const log = createLogger("WorldRoom");
-
-log.info("hello log");
-
-type PlayerMap = Map<playerSessionId, NetPlayer>;
-
-type PlayerMoveMsg = { x: number; y: number; z: number; facingX: number; facingY: number; facingZ: number };
 
 class Game {
   client: Colyseus.Client;
@@ -41,7 +35,6 @@ class Game {
 
     return new Promise<void>((resolve, _reject) => {
       worldRoom.onStateChange.once((state) => {
-        // this.trackPlayers(state, nav);
         const tse = new TrackServerEntities(this.world);
         tse.trackEntities(state, this.worldRoom!.sessionId, this.worldRoom!);
         resolve();
@@ -49,61 +42,8 @@ class Game {
     });
   }
 
-  // private trackPlayers(state: WorldState, nav: Mesh) {
-  //   this.status.setConnection(`connected (${Array.from(state.players.keys()).length} players)`);
-  //   const playerRows = Array.from(state.players.entries());
-  //   playerRows.forEach((row: [string, NetPlayer]) => {
-  //     this.addPlayerEntity(row[1], row[0] == this.worldRoom!.sessionId, nav);
-  //   });
-
-  //   this.worldRoom!.state.players.onAdd = (player: NetPlayer, sessionId: string) => {
-  //     log.info(`net onAdd ${sessionId} ${this.worldRoom!.sessionId}`);
-  //     this.addPlayerEntity(player, /*isMe=*/ sessionId == this.worldRoom!.sessionId, nav);
+  // global component of status line? system that updates num players and your nick
   //     this.status.setConnection(`connected (${Array.from(this.worldRoom!.state.players.keys()).length} players)`);
-  //   };
-
-  //   this.worldRoom!.state.players.onRemove = (player: NetPlayer, _sessionId: string) => {
-  //     console.log("player rm", player.sessionId);
-  //     this.removePlayerEntity(player);
-  //     this.status.setConnection(`connected (${Array.from(this.worldRoom!.state.players.keys()).length} players)`);
-  //   };
-
-  //   const others: PlayerMap = new Map();
-  //   state.players.forEach((pl, id) => {
-  //     if (id != this.worldRoom!.sessionId) {
-  //       others.set(id, pl);
-  //     }
-  //   });
-  // }
-
-  // addPlayerEntity(netPlayer: NetPlayer, isMe: boolean, nav: Mesh) {
-  //   log.info("addPlayer", netPlayer.sessionId);
-
-  //   const p = CreatePlayer();
-
-  //   p.components.add(new ServerRepresented(this.worldRoom!, netPlayer));
-
-  //   p.components.add(new Transform(Vector3.Zero(), Vector3.Zero(), Vector3.Forward()));
-  //   p.components.add(new PlayerDebug(this.scene));
-  //   p.components.add(new Nametag(/*offsetY=*/ 0.2, netPlayer));
-
-  //   if (isMe) {
-  //     this.me = p;
-  //     p.components.add(new LocallyDriven());
-  //     p.components.add(new UsesNav(nav));
-  //     p.components.add(new LocalCam(this.scene));
-  //     p.components.get(Transform).pos = new Vector3(1, 0, -2);
-  //     p.components.get(Transform).facing = new Vector3(0, 0, 1);
-  //   }
-  //   this.world.entities.add(p);
-  // }
-
-  // removePlayerEntity(netPlayer: NetPlayer) {
-  //   const e = this.world.entities.find((e) => e.components.get(ServerRepresented)?.netPlayer == netPlayer);
-  //   if (e) {
-  //     this.world.entities.remove(e);
-  //   }
-  // }
 }
 
 async function go() {
@@ -130,7 +70,6 @@ async function go() {
     await game.joinWorld(nav);
     // game.me is not guaranteed yet (or maybe if it's missing then the server is borked)
   }
-
   const userInput = new UserInput(scene, function onAction(name: Actions) {
     if (name == Actions.Jump) {
       game.me!.components.add(new InitJump());

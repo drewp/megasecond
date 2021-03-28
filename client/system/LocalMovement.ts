@@ -1,6 +1,6 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { Mesh, Quaternion, Vector2, Vector3 } from "babylonjs";
-import { Transform, UsesNav } from "../../shared/Components";
+import { Sim, Transform, UsesNav } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
@@ -16,17 +16,18 @@ export class LocalMovement extends AbstractEntitySystem<IdEntity> {
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const dt = options.dt;
     const pt = entity.components.get(Transform);
+    const si = entity.components.get(Sim);
     const pd = entity.components.get(PlayerDebug);
     const un = entity.components.get(UsesNav);
 
     const mouseX = options.userInput.mouseX,
       stick = new Vector2(options.userInput.stickX, options.userInput.stickY);
 
-    this.onMouseX(mouseX, pt.facing, pt.vel);
-    pt.vel = this.setXZVel(stick, pt.facing, pt.vel);
+    this.onMouseX(mouseX, pt.facing, si.vel);
+    si.vel = this.setXZVel(stick, pt.facing, si.vel);
 
     const navMesh = options.scene.getMeshByName("navmesh") as Mesh;
-    [pt.pos, pt.vel, pt.facing, un.grounded, un.currentNavFaceId] = playerStep(dt, pt.pos, pt.vel, pt.facing, navMesh, pd, un.currentNavFaceId);
+    [pt.pos, si.vel, pt.facing, un.grounded, un.currentNavFaceId] = playerStep(dt, pt.pos, si.vel, pt.facing, navMesh, pd, un.currentNavFaceId);
   }
 
   private onMouseX(movementX: number, facing: Vector3 /*mutated*/, vel: Vector3 /*mutated*/) {

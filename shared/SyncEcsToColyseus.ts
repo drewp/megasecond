@@ -1,7 +1,9 @@
+import { MapSchema } from "@colyseus/schema";
 import { Component, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
+import { autorun } from "mobx";
 import { PropV3, ServerComponent, ServerEntity } from "./ColyTypesForEntities";
-import { AimAt, Model, NetworkSession, Touchable, Toucher, Transform, Twirl } from "./Components";
+import { AimAt, componentConversions, Model, Nametag, NetworkSession, Sim, Touchable, Toucher, Transform, Twirl } from "./Components";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
 import { WorldState } from "./WorldRoom";
@@ -28,7 +30,6 @@ export class TrackEcsEntities {
 
   addServerEntity(ent: IdEntity) {
     const se = new ServerEntity();
-    log.info(`new server ent ${ent.id} already has ${ent.components.length} comps`);
     this.state.entities.set("" + ent.id, se);
 
     this.onCompAdd(se, ...ent.components);
@@ -44,41 +45,50 @@ export class TrackEcsEntities {
   }
 
   addServerComponent(comp: any, se: ServerEntity) {
-    if (comp.constructor === Model) {
-      const sc = new ServerComponent();
-      se.components.set(comp.constructor.name, sc);
+    // see componentConversions for this data in a table
 
+    if (componentConversions[comp.constructor.name] === undefined) {
+      log.info("addServerComponent ignoring comp=", comp);
+      return;
+    }
+
+    const sc = new ServerComponent();
+    se.components.set(comp.constructor.name, sc);
+    if (comp.constructor === Model) {
       sc.propString.set("modelPath", comp.modelPath);
     } else if (comp.constructor === NetworkSession) {
-      const sc = new ServerComponent();
-      se.components.set(comp.constructor.name, sc);
-
       sc.propString.set("sessionId", comp.sessionId);
+      sc.propString.set("serverEntityId", "" + comp.serverEntityId);
     } else if (comp.constructor == Toucher) {
-      const sc = new ServerComponent();
-      se.components.set(comp.constructor.name, sc);
-
       sc.propV3.set("posOffset", propFromVector3(comp.posOffset));
       sc.propFloat32.set("radius", comp.radius);
       // sc.propCurrentlyTouching. = Array.from(comp.currentlyTouching).map(ent=>(ent.id as number));
     } else if (comp.constructor == AimAt) {
-      const sc = new ServerComponent();
-      se.components.set(comp.constructor.name, sc);
-
       sc.propString.set("objName", comp.objName);
     } else if (comp.constructor == Touchable) {
-      const sc = new ServerComponent();
-      se.components.set(comp.constructor.name, sc);
     } else if (comp.constructor == Transform) {
-      const sc = new ServerComponent();
-      se.components.set(comp.constructor.name, sc);
-      sc.propV3.set("pos", propFromVector3(comp.pos));
-      sc.propV3.set("vel", propFromVector3(comp.vel));
-      sc.propV3.set("facing", propFromVector3(comp.facing));
+      this.syncFieldToColy(comp, sc, "pos", "propV3");
+      this.syncFieldToColy(comp, sc, "facing", "propV3");
+    } else if (comp.constructor == Sim) {
+      this.syncFieldToColy(comp, sc, "vel", "propV3");
     } else if (comp.constructor == Twirl) {
-      const sc = new ServerComponent();
-      se.components.set(comp.constructor.name, sc);
       sc.propFloat32.set("degPerSec", comp.degPerSec);
+    } else if (comp.constructor == Nametag) {
+      sc.propString.set("text", comp.text);
+      this.syncFieldToColy(comp, sc, "text", "propString");
+      sc.propV3.set("offset", propFromVector3(comp.offset));
+      this.syncFieldToColy(comp, sc, "offset", "propV3");
     }
+  }
+  syncFieldToColy<T extends Component>(comp: T, sc: ServerComponent, attr: keyof T, servType: keyof ServerComponent) {
+    autorun(() => {
+      let value = comp[attr];
+      if (servType == "propV3") {
+        // log.info(`sync from ${comp.constructor.name}=${(value as Vector3).toString()} to sc.${servType}[${attr}]`)
+        (value as any) = propFromVector3(value); // todo types
+      }
+      const servSchemaMap = sc[servType] as MapSchema;
+      servSchemaMap.set(attr as string, value); // todo types; shouldn't have had to force that
+    });
   }
 }

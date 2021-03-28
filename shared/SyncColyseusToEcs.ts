@@ -1,11 +1,13 @@
+import { MapSchema } from "@colyseus/schema";
 import { Component, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { Room } from "colyseus.js";
 import { LocalCam, LocallyDriven, PlayerDebug, ServerRepresented } from "../client/Components";
 import { PropV3, ServerComponent, ServerEntity } from "./ColyTypesForEntities";
-import { AimAt, BjsModel, Model, NetworkSession, Touchable, Toucher, Transform, Twirl, UsesNav } from "./Components";
+import { AimAt, BjsModel, componentConversions, Model, NetworkSession, Touchable, Toucher, Transform, Twirl, UsesNav } from "./Components";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
+import { CtorArg, UpdateGroup } from "./types";
 import { Player, WorldRoom, WorldState } from "./WorldRoom";
 const log = createLogger("sync");
 
@@ -30,8 +32,8 @@ export class TrackServerEntities {
   }
 
   private addServerEntity(se: ServerEntity) {
-    log.info(`addServerEntity id=${se.id}`);
     const ent = new IdEntity();
+    log.info(`addServerEntity id=${se.id} local=${ent.id}`);
     this.world.entities.add(ent);
 
     const addComp = (sc: ServerComponent, compName: string) => {
@@ -41,12 +43,51 @@ export class TrackServerEntities {
     se.components.onAdd = addComp;
   }
 
-  private makeLocalComponents(compName: string, sc: ServerComponent, ent: IdEntity) {
-    let lc: Component;
-    if (false) {
-    } else if (compName == "NetworkSession") {
-      lc = new NetworkSession(sc.propString.get("sessionId")!);
-      if (lc.sessionId == this.sessionId) {
+  private makeLocalComponents(compName: string, serverProxyObj: ServerComponent, ent: IdEntity) {
+    const convertor = componentConversions[compName];
+
+    if (convertor === undefined) {
+      log.info(`no client component for server-sent ${compName}`);
+      return;
+    }
+    if (ent.components.find((el: Component) => el.constructor.name == compName)) {
+      log.info(`ent ${ent.id} had ${compName} already- skipping further adds`);
+      return;
+    }
+
+    const ctorArgs = (convertor.ctorArgs || []).map((spec: CtorArg): any => {
+      const servSchemaMap = serverProxyObj[spec.servType] as MapSchema;
+      let curValue = servSchemaMap.get(spec.attr);
+      if (curValue === undefined) {
+        log.info(`for ${ent.id}, serverProxyObj ${compName}.${spec.attr} is undefined`);
+      }
+      if (spec.servType == "propV3") {
+        curValue = vector3FromProp(curValue);
+      }
+      return curValue;
+    });
+
+    const componentCtor = convertor.ctor as any; // ideally: as subtypeof(Component)
+    const newComp = new componentCtor(...ctorArgs);
+
+    log.info(`making entity ${ent.id} component ${compName}`);
+
+    ent.components.add(newComp);
+
+    (convertor.localUpdatedAttrs || []).forEach((spec: UpdateGroup) => {
+      this.syncFieldType(newComp, serverProxyObj, spec.attrs, spec.servType);
+    });
+
+    if (compName == "Model") {
+      // and since this is client, add renderable:
+      if (ent.components.get(BjsModel)) {
+        throw new Error(`ent=${ent.id} already had BjsModel`);
+      }
+      ent.components.add(new BjsModel());
+    }
+
+    if (compName == "NetworkSession") {
+      if (newComp.sessionId == this.sessionId) {
         // we're the player
         ent.components.add(new PlayerDebug());
         ent.components.add(new LocallyDriven());
@@ -54,28 +95,20 @@ export class TrackServerEntities {
         ent.components.add(new LocalCam());
         ent.components.add(new ServerRepresented(this.room_temp!));
       }
-    } else if (compName == "Model") {
-      lc = new Model(sc.propString.get("modelPath")!);
-      // and since this is client, add renderable:
-      ent.components.add(new BjsModel());
-    } else if (compName == "Toucher") {
-      lc = new Toucher(vector3FromProp(sc.propV3.get("posOffset")!), sc.propFloat32.get("radius")!, new Set());
-    } else if (compName == "AimAt") {
-      lc = new AimAt(sc.propString.get("objName")!);
-    } else if (compName == "Touchable") {
-      lc = new Touchable();
-    } else if (compName == "Twirl") {
-      lc = new Twirl(sc.propFloat32.get("degPerSec"));
-    } else if (compName == "Transform") {
-      lc = new Transform(
-        vector3FromProp(sc.propV3.get("pos")!), //
-        vector3FromProp(sc.propV3.get("vel")!),
-        vector3FromProp(sc.propV3.get("facing")!)
-      );
-    } else {
-      throw new Error(`server sent unknown ${compName} component`);
     }
-    log.info(`making entity ${ent.id} component ${compName}`);
-    ent.components.add(lc);
+  }
+
+  syncFieldType<T extends Component>(comp: T, serverProxyObj: ServerComponent, attrsOfThisType: (keyof T)[], servType: keyof ServerComponent) {
+    const servSchemaMap = serverProxyObj[servType] as MapSchema;
+    servSchemaMap.onChange = () => {
+      attrsOfThisType.forEach((attr) => {
+        let newval = servSchemaMap.get(attr as string)!; // todo types
+        if (servType == "propV3") {
+          newval = vector3FromProp(newval);
+          // log.info(`sync from sc.${servType}[${attr}]=${newval.toString()} to comp ${comp.constructor.name}`);
+        }
+        comp[attr] = newval;
+      });
+    };
   }
 }

@@ -1,20 +1,27 @@
 import { Component } from "@trixt0r/ecs";
 import { AssetContainer, Mesh, Scene, TransformNode, Vector3 } from "babylonjs";
+import { StandardMaterial } from "babylonjs/Materials/standardMaterial";
+import { DynamicTexture } from "babylonjs/Materials/Textures/dynamicTexture";
+import { makeObservable, observable } from "mobx";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
-import { Player as NetPlayer } from "./WorldRoom";
+import { Convertor } from "./types";
 
 const log = createLogger("component");
+
+const isServer = typeof window === "undefined";
 
 export class InitJump implements Component {
   constructor() {}
 }
 export class NetworkSession implements Component {
-  constructor(public sessionId: string) {}
+  public connected = true;
+  constructor(public sessionId: string, public serverEntityId: string | number) {}
 }
 export class Toucher implements Component {
   // e.g. a player
-  constructor(public posOffset: Vector3, public radius: number, public currentlyTouching: Set<IdEntity>) {}
+  public currentlyTouching = new Set<IdEntity>();
+  constructor(public posOffset: Vector3, public radius: number) {}
 }
 
 export class Touchable implements Component {
@@ -22,8 +29,19 @@ export class Touchable implements Component {
   constructor() {}
 }
 
+export class Sim implements Component {
+  constructor(public vel: Vector3) {}
+}
+
 export class Transform implements Component {
-  constructor(public pos: Vector3, public vel: Vector3, public facing: Vector3) {}
+  constructor(public pos: Vector3, public facing: Vector3) {
+    if (isServer) {
+      // need mobx to notice changes
+      makeObservable(this, { pos: observable, facing: observable });
+    } else {
+      // dont mess up Vector3 for setting
+    }
+  }
   get heading(): number {
     return (360 / (2 * Math.PI)) * Math.atan2(-this.facing.z, this.facing.x) + 270;
   }
@@ -69,6 +87,63 @@ export class BjsModel implements Component {
 export class UsesNav implements Component {
   public currentNavFaceId = 0;
   public grounded = false;
-  public nav?: string // 
+  public nav?: string; //
   constructor() {}
 }
+
+export class Nametag implements Component {
+  // draw nametag on this model
+  public text: string = "?";
+  public plane?: Mesh;
+  public tx?: DynamicTexture;
+  public mat?: StandardMaterial;
+  constructor(public offset: Vector3) {
+    if (true) {
+      makeObservable(this, { text: observable, offset: observable });
+    }
+  }
+}
+
+export const componentConversions: { [name: string]: Convertor } = {
+  NetworkSession: {
+    ctor: NetworkSession,
+    ctorArgs: [
+      { attr: "sessionId", servType: "propString" },
+      { attr: "serverEntityId", servType: "propString" },
+    ],
+  },
+  Model: {
+    ctor: Model,
+    ctorArgs: [{ attr: "modelPath", servType: "propString" }],
+  },
+  Toucher: {
+    ctor: Toucher,
+    ctorArgs: [
+      { attr: "posOffset", servType: "propV3" },
+      { attr: "radius", servType: "propFloat32" },
+    ],
+  },
+  AimAt: { ctor: AimAt, ctorArgs: [{ attr: "objName", servType: "propString" }] },
+  Touchable: { ctor: Touchable },
+  Twirl: { ctor: Twirl, ctorArgs: [{ attr: "degPerSec", servType: "propFloat32" }] },
+  Transform: {
+    ctor: Transform,
+    ctorArgs: [
+      { attr: "pos", servType: "propV3" },
+      { attr: "facing", servType: "propV3" },
+    ],
+    localUpdatedAttrs: [{ servType: "propV3", attrs: ["pos", "facing"] }],
+  },
+  Sim: {
+    ctor: Sim,
+    ctorArgs: [{ attr: "vel", servType: "propV3" }],
+  },
+  Nametag: {
+    ctor: Nametag,
+    ctorArgs: [
+      { attr: "offset", servType: "propV3" },
+      { attr: "text", servType: "propString" },
+    ],
+    localUpdatedAttrs: [{ servType: "propString", attrs: ["text", "offsetY"] }],
+  },
+};

@@ -1,5 +1,5 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
-import { InitJump, Transform, UsesNav } from "../../shared/Components";
+import { InitJump, Sim, Transform, UsesNav } from "../../shared/Components";
 import { removeComponent } from "../../shared/EcsOps";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
@@ -12,10 +12,10 @@ export class PlayerJump extends AbstractEntitySystem<IdEntity> {
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
-    const pt = entity.components.get(Transform);
+    const si = entity.components.get(Sim);
     const un = entity.components.get(UsesNav);
     if (un.grounded) {
-      pt.vel.y = 3;
+      si.vel.y = 3;
     }
 
     removeComponent(entity, InitJump);

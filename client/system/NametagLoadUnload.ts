@@ -5,7 +5,7 @@ import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
-import { Nametag } from "../Components";
+import { Nametag } from "../../shared/Components";
 const log = createLogger("system");
 
 export class NametagLoadUnload extends LoadUnloadSystem {
@@ -24,23 +24,15 @@ export class NametagLoadUnload extends LoadUnloadSystem {
     nt.plane = PlaneBuilder.CreatePlane(entity.localName("nametag"), { width: 256 * scl, height: 64 * scl }, options.scene);
 
     nt.plane.parent = aimAt as AbstractMesh;
-    nt.plane.position.y = nt.offsetY;
+    autorun(() => {
+      nt.plane!.position = nt.offset;
+    });
 
     var { mat, tx } = this.createMaterial(entity, options.scene);
     nt.tx = tx;
     nt.mat = mat;
     nt.plane.material = mat;
     nt.plane.billboardMode = TransformNode.BILLBOARDMODE_ALL;
-
-    {
-      const onNickChanged = () => {
-        log.info("onNickChanged", nt.netPlayer.nick);
-        nt.text = nt.netPlayer.nick;
-      };
-      log.info("listening for nick change on ", nt.netPlayer.sessionId);
-      nt.netPlayer.listen("nick", onNickChanged);
-      onNickChanged();
-    }
 
     log.info("autorun 1st time");
     autorun(() => {
