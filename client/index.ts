@@ -54,6 +54,37 @@ async function go() {
     dump(world);
     return world;
   };
+  const debug = document.querySelector("#debug")!;
+
+  const write = (line: string) => {
+    const div = document.createElement("div");
+    div.innerText = line;
+    debug.appendChild(div);
+  };
+  const updateDebug = () => {
+    debug.innerHTML = "";
+    world.entities.forEach((e) => {
+      write(`entity ${e.id}`);
+      e.components.sort((a, b) => (a.constructor.name < b.constructor.name ? -1 : 1));
+      e.components.forEach((comp) => {
+        write(`  component ${comp.constructor.name}`);
+        for (let prop in comp) {
+          let v;
+          try {
+            v = comp[prop].toString();
+          } catch (err) {
+            v = "" + comp[prop];
+          }
+          if (v.match(/\[object/)) {
+            write(`    ${prop} (obj)`); //, comp[prop]);
+          } else {
+            write(`    ${prop} ${v}`);
+          }
+        }
+      });
+    });
+  };
+  setInterval(updateDebug, 2000);
 
   const status = new StatusLine();
   const scene = setupScene("renderCanvas");

@@ -20,8 +20,19 @@
         height: 100vh;
       }
       canvas {
-        width: 100%;
+        width: 50%;
         height: 100%;
+      }
+      #debug {
+        width: 50%;
+        height: 100%;
+        position: absolute;
+        left: 50%;
+        top: 0;
+        white-space: pre-wrap;
+        font-family: monospace;
+        font-size: 111%;
+        overflow-y: scroll;
       }
       #status {
         position: absolute;
@@ -39,6 +50,7 @@
   </head>
   <body>
     <canvas id="renderCanvas"></canvas>
+    <div id="debug"></div>
     <div id="status">
       <img alt="Megasecond" src="asset_build/map/logo1-crop.jpg" />
       I am player <span id="me"></span>, <span id="connection"></span>

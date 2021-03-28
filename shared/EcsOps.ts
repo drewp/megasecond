@@ -19,11 +19,15 @@ export function dump(world: Engine) {
     e.components.forEach((comp) => {
       log.info("  component", comp.constructor.name);
       for (let prop in comp) {
-        const v = comp[prop].toString();
-        if (v.match(/\[object/)) {
-          log.info(`    ${prop}`, comp[prop]);
+        let v = comp[prop];
+        if (v === undefined) {
+          log.info(`    ${prop} [undefined]`);
         } else {
-          log.info(`    ${prop} ${v}`);
+          if (typeof v == "object") {
+            log.info(`    ${prop}`, comp[prop]);
+          } else {
+            log.info(`    ${prop} ${v}`);
+          }
         }
       }
     });
