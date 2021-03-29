@@ -19,7 +19,8 @@ spec:
           image: bang5:5000/megasecond_image
           volumeMounts:
             - { name: rollup-build, mountPath: /workspace/rollup_build }
-          ports: [{ containerPort: 10001 }]
+          command: ["server/run_server.sh"]
+          ports: [{ containerPort: 10001}, {containerPort: 9002 }]
           env:
             - name: DEBUG
               value: colyseus:matchmaking
@@ -28,7 +29,8 @@ spec:
           image: bang5:5000/megasecond_image
           volumeMounts:
             - { name: rollup-build, mountPath: /workspace/rollup_build }
-          command: ["pnpm", "rebuild_client_forever"]
+          command: ["server/rebuild_client_forever.sh"]
+          ports: [{ containerPort: 9001 }]
 
 ---
 apiVersion: v1
@@ -38,5 +40,7 @@ metadata:
 spec:
   ports:
     - { port: 80, targetPort: 10001, name: http }
+    - { port: 9001, targetPort: 9001, name: cblog }
+    - { port: 9002, targetPort: 9002, name: servlog }
   selector:
     app: megasecond
