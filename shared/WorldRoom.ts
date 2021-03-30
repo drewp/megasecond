@@ -4,7 +4,7 @@ import { Vector3 } from "babylonjs";
 import { Client, Room } from "colyseus";
 import { action, makeObservable } from "mobx";
 import { CreateCard } from "./Collectible";
-import { ServerEntity } from "./ColyTypesForEntities";
+import { ServerEntity } from "./SyncTypes";
 import { AimAt, Model, Nametag, NetworkSession, Sim, Toucher, Transform } from "./Components";
 import { IdEntity } from "./IdEntity";
 import { InitSystems } from "./InitSystems";
@@ -13,21 +13,6 @@ import { TrackEcsEntities } from "./SyncEcsToColyseus";
 import { ServerWorldRunOptions } from "./types";
 
 export const log = createLogger("WorldRoom");
-
-export class Player extends Schema {
-  @type("boolean")
-  connected = false;
-  @type("string")
-  nick = "unnamed";
-  @type("string")
-  sessionId = "";
-  @type("float64") x = 0;
-  @type("float64") y = 0;
-  @type("float64") z = 0;
-  @type("float64") facingX = 0;
-  @type("float64") facingY = 0;
-  @type("float64") facingZ = 0;
-}
 
 export class WorldState extends Schema {
   @type({ map: ServerEntity })
@@ -110,7 +95,7 @@ export class WorldRoom extends Room<WorldState> {
     p.components.add(new AimAt("player_aim"));
     p.components.add(new Toucher(/*posOffset=*/ new Vector3(0, 1.2, 0), /*radius=*/ 0.3));
     p.components.add(new Nametag(/*offset=*/ new Vector3(0, 0.2, 0)));
-
+    log.info(`created player e${p.id} session=${sessionId}`);
     return p;
   }
 
@@ -128,6 +113,7 @@ export class WorldRoom extends Room<WorldState> {
         await this.allowReconnection(client, this.allowReconnectionTime);
         ns.connected = false;
       } catch (e) {
+        log.info(`remove player entity ${player.id}`);
         this.world!.entities.remove(player);
       }
     }

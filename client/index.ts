@@ -3,14 +3,13 @@ import { Mesh, Scene } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import { InitJump } from "../shared/Components";
 import { dump } from "../shared/EcsOps";
-import { IdEntity } from "../shared/IdEntity";
 import { InitSystems as InitWorld } from "../shared/InitSystems";
 import createLogger from "../shared/logsetup";
 import { TrackServerEntities } from "../shared/SyncColyseusToEcs";
-import { ClientWorldRunOptions, playerSessionId } from "../shared/types";
-import { Player as NetPlayer, WorldState } from "../shared/WorldRoom";
+import { ClientWorldRunOptions } from "../shared/types";
+import { WorldState } from "../shared/WorldRoom";
 import { setupScene, StatusLine } from "./BrowserWindow";
-import { LocalCam } from "./Components";
+import { LocalCam, LocallyDriven } from "./Components";
 import * as Env from "./Env";
 import { getOrCreateNick } from "./nick";
 import { Actions, UserInput } from "./UserInput";
@@ -20,7 +19,6 @@ const log = createLogger("WorldRoom");
 class Game {
   client: Colyseus.Client;
   worldRoom?: Colyseus.Room<WorldState>;
-  me?: IdEntity;
   constructor(private status: StatusLine, private world: Engine, private scene: Scene, private nick: string) {
     this.status.setPlayer("...");
     this.status.setConnection("connecting...");
@@ -99,15 +97,16 @@ async function go() {
     nav.updateFacetData();
     status.setPlayer(nick);
     await game.joinWorld(nav);
-    // game.me is not guaranteed yet (or maybe if it's missing then the server is borked)
   }
   const userInput = new UserInput(scene, function onAction(name: Actions) {
+    const me = world.entities.find((e) => e.components.get(LocallyDriven));
+    if (!me) throw new Error("no LocallyDriven player");
     if (name == Actions.Jump) {
-      game.me!.components.add(new InitJump());
+      me.components.add(new InitJump());
     } else if (name == Actions.ToggleNavmeshView) {
       Env.toggleNavmeshView(scene);
     } else if (name == Actions.ToggleBirdsEyeView) {
-      game.me!.components.get(LocalCam).toggleBirdsEyeView();
+      me.components.get(LocalCam).toggleBirdsEyeView();
     } else if (name == Actions.ReloadEnv) {
       env.reloadLayoutInstances();
     }

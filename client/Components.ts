@@ -1,11 +1,9 @@
 import { Component } from "@trixt0r/ecs";
-import { AbstractMesh, Color3, DynamicTexture, FollowCamera, Mesh, Scene, Vector3 } from "babylonjs";
+import { FollowCamera, Vector3 } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import { ShowPoint, ShowSegment } from "../client/Debug";
 import createLogger from "../shared/logsetup";
-import { Player as NetPlayer, WorldState } from "../shared/WorldRoom";
-import { makeObservable, observable } from "mobx";
-import { StandardMaterial } from "babylonjs/Materials/standardMaterial";
+import { WorldState } from "../shared/WorldRoom";
 
 const log = createLogger("component");
 

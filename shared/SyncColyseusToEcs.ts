@@ -3,12 +3,12 @@ import { Component, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { Room } from "colyseus.js";
 import { LocalCam, LocallyDriven, PlayerDebug, ServerRepresented } from "../client/Components";
-import { PropV3, ServerComponent, ServerEntity } from "./ColyTypesForEntities";
-import { AimAt, BjsModel, componentConversions, Model, NetworkSession, Touchable, Toucher, Transform, Twirl, UsesNav } from "./Components";
+import { Convertor, PropV3, ServerComponent, ServerEntity } from "./SyncTypes";
+import { BjsModel, componentConversions, UsesNav } from "./Components";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
-import { CtorArg, UpdateGroup } from "./types";
-import { Player, WorldRoom, WorldState } from "./WorldRoom";
+import { CtorArg, UpdateGroup } from "./SyncTypes";
+import { WorldState } from "./WorldRoom";
 const log = createLogger("sync");
 
 function vector3FromProp(p: PropV3): Vector3 {
@@ -18,48 +18,75 @@ function vector3FromProp(p: PropV3): Vector3 {
 export class TrackServerEntities {
   sessionId?: string;
   room_temp?: Room<WorldState>;
-  netPlayer_temp?: Player;
+  _entityByServId: Map<string, IdEntity> = new Map();
   constructor(public world: Engine) {}
 
   trackEntities(state: WorldState, sessionId: string, room_temp: Room<WorldState>) {
     this.room_temp = room_temp;
-    // make world entities for the ones in state
     this.sessionId = sessionId;
-    state.entities.forEach((se: ServerEntity) => {
-      this.addServerEntity(se);
-    });
-    state.entities.onAdd = (se: ServerEntity) => this.addServerEntity(se);
-  }
-
-  private addServerEntity(se: ServerEntity) {
-    const ent = new IdEntity();
-    log.info(`addServerEntity id=${se.id} local=${ent.id}`);
-    this.world.entities.add(ent);
-
-    const addComp = (sc: ServerComponent, compName: string) => {
-      this.makeLocalComponents(compName, sc, ent);
+    state.entities.forEach(this.addServerEntity.bind(this));
+    state.entities.onAdd = this.addServerEntity.bind(this);
+    state.entities.onChange = (_se: ServerEntity, servId: string) => {
+      throw new Error(`unhandled- servId=${servId}`);
     };
-    se.components.forEach(addComp);
-    se.components.onAdd = addComp;
+    state.entities.onRemove = this.removeServerEntity.bind(this);
   }
 
-  private makeLocalComponents(compName: string, serverProxyObj: ServerComponent, ent: IdEntity) {
+  private addServerEntity(se: ServerEntity, servId: string) {
+    const ent = new IdEntity();
+    log.info(`e${ent.id}: server add (remote servId=${servId})`);
+    this.world.entities.add(ent);
+    this._entityByServId.set(servId, ent);
+
+    new TrackServerComponents(se, ent, this.sessionId!, this.room_temp!);
+  }
+  private removeServerEntity(_se: ServerEntity, servId: string) {
+    const ent = this._entityByServId.get(servId);
+    if (!ent) {
+      throw new Error(`lost track of ${servId}`);
+    }
+    log.info(`e${ent.id}: server remove (servId=${servId})`);
+    this.world.entities.remove(ent);
+    this._entityByServId.delete(servId);
+  }
+}
+
+class TrackServerComponents {
+  constructor(
+    private sourceEntity: ServerEntity,
+    private targetEntity: IdEntity,
+    private sessionId: string, //doesn't belong here
+    private room_temp: Room<WorldState> //doesn't belong here
+  ) {
+    this.sourceEntity.components.forEach(this.makeLocalComponents.bind(this));
+    this.sourceEntity.components.onAdd = this.makeLocalComponents.bind(this);
+    this.sourceEntity.components.onChange = (_sourceComp: ServerComponent, compName: string) => {
+      this.log(`sc change compName=${compName}`);
+    };
+    this.sourceEntity.components.onRemove = (_sourceComp: ServerComponent, compName: string) => {
+      this.log(`sc remove compName=${compName}`);
+    };
+  }
+  log(...args: any[]) {
+    log.info(`e${this.targetEntity.id}:  `, ...args);
+  }
+  private makeLocalComponents(sourceComp: ServerComponent, compName: string) {
     const convertor = componentConversions[compName];
 
     if (convertor === undefined) {
-      log.info(`no client component for server-sent ${compName}`);
+      this.log(`no client component for server-sent ${compName}`);
       return;
     }
-    if (ent.components.find((el: Component) => el.constructor.name == compName)) {
-      log.info(`ent ${ent.id} had ${compName} already- skipping further adds`);
+    if (this.targetEntity.components.find((el: Component) => el.constructor.name == compName)) {
+      this.log(`had ${compName} already- skipping further adds`);
       return;
     }
 
     const ctorArgs = (convertor.ctorArgs || []).map((spec: CtorArg): any => {
-      const servSchemaMap = serverProxyObj[spec.servType] as MapSchema;
+      const servSchemaMap = sourceComp[spec.servType] as MapSchema;
       let curValue = servSchemaMap.get(spec.attr);
       if (curValue === undefined) {
-        log.info(`for ${ent.id}, serverProxyObj ${compName}.${spec.attr} is undefined`);
+        this.log(`serverProxyObj ${compName}.${spec.attr} is undefined`);
       }
       if (spec.servType == "propV3") {
         curValue = vector3FromProp(curValue);
@@ -68,47 +95,62 @@ export class TrackServerEntities {
     });
 
     const componentCtor = convertor.ctor as any; // ideally: as subtypeof(Component)
-    const newComp = new componentCtor(...ctorArgs);
+    const newComp: Component = new componentCtor(...ctorArgs);
 
-    log.info(`making entity ${ent.id} component ${compName}`);
+    this.log(`making component ${compName}`);
+    new TrackComponentAttrs(sourceComp, newComp, convertor);
+    this.targetEntity.components.add(newComp);
 
-    ent.components.add(newComp);
-
-    (convertor.localUpdatedAttrs || []).forEach((spec: UpdateGroup) => {
-      this.syncFieldType(newComp, serverProxyObj, spec.attrs, spec.servType);
-    });
-
+    this.addLocalComponents(compName, newComp);
+  }
+  
+  private addLocalComponents(compName: string, newComp: Component) {
     if (compName == "Model") {
       // and since this is client, add renderable:
-      if (ent.components.get(BjsModel)) {
-        throw new Error(`ent=${ent.id} already had BjsModel`);
+      if (this.targetEntity.components.get(BjsModel)) {
+        throw new Error(`ent=${this.targetEntity.id} already had BjsModel`);
       }
-      ent.components.add(new BjsModel());
+      this.targetEntity.components.add(new BjsModel());
     }
 
     if (compName == "NetworkSession") {
       if (newComp.sessionId == this.sessionId) {
         // we're the player
-        ent.components.add(new PlayerDebug());
-        ent.components.add(new LocallyDriven());
-        ent.components.add(new UsesNav());
-        ent.components.add(new LocalCam());
-        ent.components.add(new ServerRepresented(this.room_temp!));
+        this.targetEntity.components.add(new PlayerDebug());
+        this.targetEntity.components.add(new LocallyDriven());
+        this.targetEntity.components.add(new UsesNav());
+        this.targetEntity.components.add(new LocalCam());
+        this.targetEntity.components.add(new ServerRepresented(this.room_temp!));
       }
     }
   }
+}
 
-  syncFieldType<T extends Component>(comp: T, serverProxyObj: ServerComponent, attrsOfThisType: (keyof T)[], servType: keyof ServerComponent) {
-    const servSchemaMap = serverProxyObj[servType] as MapSchema;
-    servSchemaMap.onChange = () => {
-      attrsOfThisType.forEach((attr) => {
-        let newval = servSchemaMap.get(attr as string)!; // todo types
-        if (servType == "propV3") {
-          newval = vector3FromProp(newval);
-          // log.info(`sync from sc.${servType}[${attr}]=${newval.toString()} to comp ${comp.constructor.name}`);
-        }
-        comp[attr] = newval;
-      });
-    };
+class TrackComponentAttrs<TC extends Component> {
+  constructor(private sourceComp: ServerComponent, private targetComp: TC, convertor: Convertor) {
+    (convertor.localUpdatedAttrs || []).forEach((spec: UpdateGroup) => {
+      this.syncFieldType(spec.attrs, spec.servType);
+    });
+  }
+
+  syncFieldType(attrsOfThisType: (keyof TC & string)[], servType: keyof ServerComponent) {
+    const servSchemaMap = this.sourceComp[servType] as MapSchema;
+    if (servSchemaMap.onChange) throw new Error(`not the first schema watcher for ${attrsOfThisType}`);
+    servSchemaMap.onChange = () => this.onSourceChange(attrsOfThisType, servSchemaMap, servType);
+    this.onSourceChange(attrsOfThisType, servSchemaMap, servType);
+  }
+  onSourceChange(attrsOfThisType: (keyof TC & string)[], servSchemaMap: MapSchema, servType: keyof ServerComponent) {
+    attrsOfThisType.forEach((attr) => {
+      this.copySourceToTargetValue(servSchemaMap, attr, servType);
+    });
+  }
+
+  copySourceToTargetValue(servSchemaMap: MapSchema, attr: keyof TC & string, servType: keyof ServerComponent) {
+    let newval = servSchemaMap.get(attr);
+    if (servType == "propV3") {
+      newval = vector3FromProp(newval);
+      // log.info(`sync from sc.${servType}[${attr}]=${newval.toString()} to comp ${comp.constructor.name}`);
+    }
+    this.targetComp[attr] = newval;
   }
 }

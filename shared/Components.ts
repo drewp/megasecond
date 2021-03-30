@@ -5,7 +5,7 @@ import { DynamicTexture } from "babylonjs/Materials/Textures/dynamicTexture";
 import { makeObservable, observable } from "mobx";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
-import { Convertor } from "./types";
+import { Convertor } from "./SyncTypes";
 
 const log = createLogger("component");
 
@@ -98,7 +98,7 @@ export class Nametag implements Component {
   public tx?: DynamicTexture;
   public mat?: StandardMaterial;
   constructor(public offset: Vector3) {
-    if (true) {
+    if (isServer) {
       makeObservable(this, { text: observable, offset: observable });
     }
   }
@@ -140,10 +140,10 @@ export const componentConversions: { [name: string]: Convertor } = {
   },
   Nametag: {
     ctor: Nametag,
-    ctorArgs: [
-      { attr: "offset", servType: "propV3" },
-      { attr: "text", servType: "propString" },
+    ctorArgs: [{ attr: "offset", servType: "propV3" }],
+    localUpdatedAttrs: [
+      { servType: "propString", attrs: ["text"] },
+      { servType: "propV3", attrs: ["offset"] },
     ],
-    localUpdatedAttrs: [{ servType: "propString", attrs: ["text", "offsetY"] }],
   },
 };
