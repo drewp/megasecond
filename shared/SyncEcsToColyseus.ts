@@ -26,8 +26,8 @@ function serverComponentKeyForComponent(sourceComp: Component): string {
 }
 
 export class TrackEcsEntities {
-  constructor(public state: WorldState, public world: Engine) {
-    this.world.addListener({
+  constructor(public source: Engine, public target: WorldState) {
+    this.source.addListener({
       onAddedEntities: (...entities) => {
         entities.forEach((ent) => {
           this.onAdd(ent as IdEntity);
@@ -35,14 +35,14 @@ export class TrackEcsEntities {
       },
       onRemovedEntities: (...entities) => {
         log.info("onRemovedEntities", entities.length);
-        entities.forEach((ent) => this.state.entities.delete(serverEntityKeyForId(ent.id)));
+        entities.forEach((ent) => this.target.entities.delete(serverEntityKeyForId(ent.id)));
       },
     });
   }
 
   onAdd(ent: IdEntity) {
     const se = new ServerEntity();
-    this.state.entities.set(serverEntityKeyForId(ent.id), se);
+    this.target.entities.set(serverEntityKeyForId(ent.id), se);
     new TrackEcsComponents(ent, se);
   }
 }

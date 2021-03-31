@@ -33,7 +33,7 @@ export class WorldRoom extends Room<WorldState> {
     (global as any).currentRoom = this;
     this.setState(new WorldState());
     this.world = InitSystems();
-    new TrackEcsEntities(this.state, this.world);
+    new TrackEcsEntities(this.world, this.state);
 
     // this.onMessage("*", (client: Client, type: string | number, message: any) => {
     //   this.broadcast(type, [client.sessionId, message], { except: client });
