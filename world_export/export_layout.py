@@ -52,6 +52,9 @@ def main():
     def localize_collections():
         for empty in all_collection_instances():
             log.debug(f'{empty.name} is an instance of collection {empty.instance_collection.name}')
+            if empty.name in ['player']:
+                log.debug('  skipping')
+                continue
             lib_path = empty.instance_collection.library.filepath
             layout.setdefault('instances', []).append({
                 'name': empty.name,
