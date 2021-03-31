@@ -44,31 +44,36 @@ class Game {
   //     this.status.setConnection(`connected (${Array.from(this.worldRoom!.state.players.keys()).length} players)`);
 }
 
+function initWorldDebug(world: Engine) {
+  const debug = document.querySelector("#debug")!;
+  const updateDebug = () => {
+    debug.innerHTML = "";
+    const write = (line: string) => {
+      const div = document.createElement("div");
+      div.innerText = line;
+      debug.appendChild(div);
+    };
+    dumpWorld(world, write);
+  };
+  setInterval(updateDebug, 2000);
+}
+
 async function go() {
   const nick = getOrCreateNick();
   const world = InitWorld(/*isClient=*/ true);
   (window as any).world = world;
-
-  const debug = document.querySelector("#debug")!;
-
-  const write = (line: string) => {
-    const div = document.createElement("div");
-    div.innerText = line;
-    debug.appendChild(div);
-  };
-  const updateDebug = () => {
-    debug.innerHTML = "";
-    dumpWorld(world, write);
-  };
-  setInterval(updateDebug, 2000);
+  initWorldDebug(world);
 
   const status = new StatusLine();
   const scene = setupScene("renderCanvas");
+
   const game = new Game(status, world, scene, nick);
 
   const env = new Env.World(scene, Env.GraphicsLevel.texture);
-  await env.load();
-  await env.reloadLayoutInstances();
+  const envDone1 = env.load();
+  await envDone1;
+  const envDone2 = env.reloadLayoutInstances();
+  await envDone2;
 
   {
     const nav = scene.getMeshByName("navmesh") as Mesh;
