@@ -1,12 +1,10 @@
+import { Component, ComponentCollection } from "@trixt0r/ecs";
 import { SceneLoader } from "babylonjs";
 import { BjsModel, LoadState, Model } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
+import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
-import { LoadUnloadSystem, KeepProcessing } from "../../shared/LoadUnloadSystem";
-import { Collection } from "@trixt0r/ecs";
-import { Component } from "@trixt0r/ecs";
-import { ComponentCollection } from "@trixt0r/ecs";
 const log = createLogger("system");
 
 export class BjsLoadUnload extends LoadUnloadSystem {

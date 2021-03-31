@@ -1,6 +1,4 @@
-import { Engine } from "@trixt0r/ecs";
-import { ComponentCollection } from "@trixt0r/ecs";
-import { Component } from "@trixt0r/ecs";
+import { Component, ComponentCollection, Engine } from "@trixt0r/ecs";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
 const log = createLogger("ecs");
@@ -41,4 +39,12 @@ export function componentNameList(comps: Component[] | ComponentCollection<Compo
 
 export function entityIdList(entities: IdEntity[]): string {
   return entities.map((e: IdEntity) => "e" + e.id).join(",");
+}
+
+export function combineComponentCollections(...sources: (ComponentCollection<Component> | Component[])[]): ComponentCollection<Component> {
+  const ret = new ComponentCollection<Component>();
+  sources.forEach((clist) => {
+    clist.forEach((c) => ret.add(c));
+  });
+  return ret;
 }
