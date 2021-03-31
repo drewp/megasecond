@@ -1,14 +1,14 @@
 import { Engine } from "@trixt0r/ecs";
 import { Mesh, Scene } from "babylonjs";
 import * as Colyseus from "colyseus.js";
+import { EventEmitter } from "golden-layout";
 import { InitJump } from "../shared/Components";
-import { dumpWorld } from "../shared/EcsOps";
 import { InitSystems as InitWorld } from "../shared/InitSystems";
 import createLogger from "../shared/logsetup";
 import { TrackServerEntities } from "../shared/SyncColyseusToEcs";
 import { ClientWorldRunOptions } from "../shared/types";
 import { WorldState } from "../shared/WorldRoom";
-import { setupScene, StatusLine } from "./BrowserWindow";
+import { initPanesLayout, setupScene, StatusLine } from "./BrowserWindow";
 import { LocalCam, LocallyDriven } from "./Components";
 import * as Env from "./Env";
 import { getOrCreateNick } from "./nick";
@@ -44,28 +44,17 @@ class Game {
   //     this.status.setConnection(`connected (${Array.from(this.worldRoom!.state.players.keys()).length} players)`);
 }
 
-function initWorldDebug(world: Engine) {
-  const debug = document.querySelector("#debug")!;
-  const updateDebug = () => {
-    debug.innerHTML = "";
-    const write = (line: string) => {
-      const div = document.createElement("div");
-      div.innerText = line;
-      debug.appendChild(div);
-    };
-    dumpWorld(world, write);
-  };
-  setInterval(updateDebug, 2000);
-}
-
 async function go() {
   const nick = getOrCreateNick();
   const world = InitWorld(/*isClient=*/ true);
   (window as any).world = world;
-  initWorldDebug(world);
+
+  const gamePaneResizeEvents = new EventEmitter();
+
+  initPanesLayout(document.body, world, gamePaneResizeEvents);
 
   const status = new StatusLine();
-  const scene = setupScene("renderCanvas");
+  const scene = setupScene("renderCanvas", gamePaneResizeEvents);
 
   const game = new Game(status, world, scene, nick);
 

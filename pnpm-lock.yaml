@@ -20,6 +20,7 @@ dependencies:
   express-jwt: 5.3.3
   frontail: 4.9.2
   fsevents: 2.3.2
+  golden-layout: 2.0.3
   html-entities: 2.3.2
   jest: 26.6.3
   logging: 3.3.0
@@ -2608,6 +2609,10 @@ packages:
       node: '>=4'
     resolution:
       integrity: sha512-WOBp/EEGUiIsJSp7wcv/y6MO+lV9UoncWqxuFfm8eBwzWNgyfBd6Gz+IeKQ9jCmyhoH99g15M3T+QaVHFjizVA==
+  /golden-layout/2.0.3:
+    dev: false
+    resolution:
+      integrity: sha512-QqELHBQhfP2wa/1B+Nljg02LTrYQhDIvVlqyxcFCJa8YhX0go+8PpiwusxmN8Q1/MNDpsplYG7IrL3ZMdcMP6A==
   /graceful-fs/4.2.4:
     dev: false
     resolution:
@@ -6249,6 +6254,7 @@ specifiers:
   express-jwt: ^5.3.1
   frontail: ^4.9.2
   fsevents: ^2.3.2
+  golden-layout: ^2.0.3
   html-entities: ^2.3.2
   jest: ^26.6.3
   logging: ^3.3.0

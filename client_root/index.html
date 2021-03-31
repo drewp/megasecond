@@ -13,28 +13,29 @@
     <script src="lib/colyseus.js/colyseus.js"></script>
     <script src="lib/mobx/mobx.umd.production.min.js"></script>
     <script src="lib/babylonjs-materials/babylonjs.materials.min.js"></script>
+
+    <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+
+    <script src="/lib/golden-layout/esm/index.js"></script>
+    <link type="text/css" rel="stylesheet" href="/lib/golden-layout/css/goldenlayout-base.css" />
+    <link type="text/css" rel="stylesheet" href="/lib/golden-layout/css/themes/goldenlayout-dark-theme.css" />
+
     <style>
       body {
         background: #000;
         color: #0f0;
         margin: 0;
         height: 100vh;
-        /* canvas and debug need the same font choice */
-        font-family: monospace;
-        font-size: 111%;
       }
-      canvas {
-        width: calc(100% - 40em);
+      #renderCanvas {
+        width: 100%;
         height: 100%;
       }
       #debug {
-        width: 40em;
-        height: 100%;
-        position: absolute;
-        right: 0;
-        top: 0;
         white-space: pre-wrap;
         overflow-y: scroll;
+        font-family: monospace;
+        font-size: 111%;
       }
       #status {
         position: absolute;
@@ -43,6 +44,7 @@
         font-size: 20px;
         background: linear-gradient(0deg, #000 30%, #1a2427 100%);
         font-family: monospace;
+        z-index: 1;
       }
       #status img {
         height: 30px;
@@ -51,8 +53,6 @@
     </style>
   </head>
   <body>
-    <canvas id="renderCanvas"></canvas>
-    <div id="debug"></div>
     <div id="status">
       <img alt="Megasecond" src="asset_build/map/logo1-crop.jpg" />
       I am player <span id="me"></span>, <span id="connection"></span>

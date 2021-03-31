@@ -31,6 +31,7 @@
     "express-jwt": "^5.3.1",
     "frontail": "^4.9.2",
     "fsevents": "^2.3.2",
+    "golden-layout": "^2.0.3",
     "html-entities": "^2.3.2",
     "jest": "^26.6.3",
     "logging": "^3.3.0",
