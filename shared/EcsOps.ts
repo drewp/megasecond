@@ -11,28 +11,6 @@ export function removeComponent(entity: IdEntity, component: Component) {
   });
 }
 
-export function dump(world: Engine) {
-  world.entities.forEach((e) => {
-    log.info("entity", e.id);
-    e.components.sort((a, b) => (a.constructor.name < b.constructor.name ? -1 : 1));
-    e.components.forEach((comp) => {
-      log.info("  component", comp.constructor.name);
-      for (let prop in comp) {
-        let v = comp[prop];
-        if (v === undefined) {
-          log.info(`    ${prop} [undefined]`);
-        } else {
-          if (typeof v == "object") {
-            log.info(`    ${prop}`, comp[prop]);
-          } else {
-            log.info(`    ${prop} ${v}`);
-          }
-        }
-      }
-    });
-  });
-}
-
 export function componentNameList(comps: Component[] | ComponentCollection<Component>): string {
   return comps.map((c: Component) => c.constructor.name).join(",");
 }
@@ -48,3 +26,27 @@ export function combineComponentCollections(...sources: (ComponentCollection<Com
   });
   return ret;
 }
+
+export function dumpWorld(world: Engine, write: (line: string) => void) {
+  world.entities.forEach((e) => {
+    write(`entity ${e.id}`);
+    e.components.sort((a, b) => (a.constructor.name < b.constructor.name ? -1 : 1));
+    e.components.forEach((comp) => {
+      write(`  component ${comp.constructor.name}`);
+      for (let prop in comp) {
+        let v;
+        try {
+          v = comp[prop].toString();
+        } catch (err) {
+          v = "" + comp[prop];
+        }
+        if (v.match(/\[object/)) {
+          write(`    ${prop} (obj)`); //, comp[prop]);
+        } else {
+          write(`    ${prop} ${v}`);
+        }
+      }
+    });
+  });
+}
+

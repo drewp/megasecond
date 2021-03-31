@@ -2,7 +2,7 @@ import { Engine } from "@trixt0r/ecs";
 import { Mesh, Scene } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import { InitJump } from "../shared/Components";
-import { dump } from "../shared/EcsOps";
+import { dumpWorld } from "../shared/EcsOps";
 import { InitSystems as InitWorld } from "../shared/InitSystems";
 import createLogger from "../shared/logsetup";
 import { TrackServerEntities } from "../shared/SyncColyseusToEcs";
@@ -47,11 +47,8 @@ class Game {
 async function go() {
   const nick = getOrCreateNick();
   const world = InitWorld(/*isClient=*/ true);
+  (window as any).world = world;
 
-  (window as any).ecsDump = () => {
-    dump(world);
-    return world;
-  };
   const debug = document.querySelector("#debug")!;
 
   const write = (line: string) => {
@@ -61,26 +58,7 @@ async function go() {
   };
   const updateDebug = () => {
     debug.innerHTML = "";
-    world.entities.forEach((e) => {
-      write(`entity ${e.id}`);
-      e.components.sort((a, b) => (a.constructor.name < b.constructor.name ? -1 : 1));
-      e.components.forEach((comp) => {
-        write(`  component ${comp.constructor.name}`);
-        for (let prop in comp) {
-          let v;
-          try {
-            v = comp[prop].toString();
-          } catch (err) {
-            v = "" + comp[prop];
-          }
-          if (v.match(/\[object/)) {
-            write(`    ${prop} (obj)`); //, comp[prop]);
-          } else {
-            write(`    ${prop} ${v}`);
-          }
-        }
-      });
-    });
+    dumpWorld(world, write);
   };
   setInterval(updateDebug, 2000);
 
