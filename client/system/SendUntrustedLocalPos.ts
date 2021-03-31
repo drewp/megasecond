@@ -1,5 +1,6 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { Transform } from "../../shared/Components";
+import { round4 } from "../../shared/debug";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
@@ -23,21 +24,18 @@ export class SendUntrustedLocalPos extends AbstractEntitySystem<IdEntity> {
     const minSendPeriodMs = 100;
     if (sr.lastSentTime > now - minSendPeriodMs) return;
 
-    function r(x: number) {
-      return Math.round(x * 10000) / 10000;
-    }
     if (
       sr.lastSent !== undefined && //
-      sr.lastSent.x == r(pos.x) &&
-      sr.lastSent.y == r(pos.y) &&
-      sr.lastSent.z == r(pos.z) &&
-      sr.lastSent.facingX == r(facing.x) &&
-      sr.lastSent.facingY == r(facing.y) &&
-      sr.lastSent.facingZ == r(facing.z)
+      sr.lastSent.x == round4(pos.x) &&
+      sr.lastSent.y == round4(pos.y) &&
+      sr.lastSent.z == round4(pos.z) &&
+      sr.lastSent.facingX == round4(facing.x) &&
+      sr.lastSent.facingY == round4(facing.y) &&
+      sr.lastSent.facingZ == round4(facing.z)
     ) {
       return;
     }
-    sr.lastSent = { x: r(pos.x), y: r(pos.y), z: r(pos.z), facingX: r(facing.x), facingY: r(facing.y), facingZ: r(facing.z) };
+    sr.lastSent = { x: round4(pos.x), y: round4(pos.y), z: round4(pos.z), facingX: round4(facing.x), facingY: round4(facing.y), facingZ: round4(facing.z) };
     sr.worldRoom.send("playerMove", sr.lastSent);
     sr.lastSentTime = now;
   }

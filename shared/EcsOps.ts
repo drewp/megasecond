@@ -1,4 +1,7 @@
 import { Component, ComponentCollection, Engine } from "@trixt0r/ecs";
+import { AbstractMesh, Vector3 } from "babylonjs";
+import { AssetContainer } from "babylonjs";
+import { round4 } from "./debug";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
 const log = createLogger("ecs");
@@ -34,19 +37,34 @@ export function dumpWorld(world: Engine, write: (line: string) => void) {
     e.components.forEach((comp) => {
       write(`  component ${comp.constructor.name}`);
       for (let prop in comp) {
-        let v;
-        try {
-          v = comp[prop].toString();
-        } catch (err) {
-          v = "" + comp[prop];
-        }
-        if (v.match(/\[object/)) {
-          write(`    ${prop} (obj)`); //, comp[prop]);
-        } else {
-          write(`    ${prop} ${v}`);
-        }
+          write(`    ${prop} ${prettyPrintText(comp[prop])}`);
       }
     });
   });
 }
 
+function prettyVector3(v: Vector3) {
+  return `<${round4(v.x)} ${round4(v.y)} ${round4(v.z)}>`
+
+}
+
+function prettyPrintText(v: any): string {
+  if (v instanceof Vector3) {
+    return prettyVector3(v)
+  }
+  if (v instanceof AbstractMesh) {
+    return `Mesh ${v.name} at pos=${prettyVector3(v.position)}`
+  }
+  if (v instanceof AssetContainer) {
+    return `AssetContainer with ${v.rootNodes.length} root nodes; ${v.getNodes().length} total`
+  }
+  try {
+    v = v.toString();
+  } catch (err) {
+    v = "" + v;
+  }
+  if (v.match(/\[object/)) {
+    return "(obj)"
+  }
+  return v
+}
