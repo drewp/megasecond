@@ -36,6 +36,7 @@ app.use("/rollup_build", express.static(dir("rollup_build")));
 app.use("/lib/colyseus.js/", express.static(dir("node_modules/colyseus.js/dist")));
 app.use("/lib/@trixt0r/ecs/", express.static(dir("node_modules/@trixt0r/ecs/build")));
 app.use("/lib/mobx/", express.static(dir("node_modules/mobx/dist")));
+app.use("/lib/babylonjs-materials/", express.static(dir("node_modules/babylonjs-materials")));
 app.get("/entities/", entitiesViewer);
 app.use("/", express.static(dir("client_root")));
 
