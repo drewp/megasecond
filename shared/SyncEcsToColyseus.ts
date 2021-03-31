@@ -21,6 +21,10 @@ function serverEntityKeyForId(id: string | number): string {
   return "s" + id;
 }
 
+function serverComponentKeyForComponent(sourceComp: Component): string {
+  return sourceComp.constructor.name;
+}
+
 export class TrackEcsEntities {
   constructor(public state: WorldState, public world: Engine) {
     this.world.addListener({
@@ -48,7 +52,7 @@ class TrackEcsComponents {
     this.onCompsAdd(...source.components);
     source.components.addListener({
       onAdded: this.onCompsAdd.bind(this),
-      onRemoved: this.onCompRemove.bind(this),
+      onRemoved: this.onCompsRemove.bind(this),
     });
   }
 
@@ -58,19 +62,21 @@ class TrackEcsComponents {
     });
   }
 
-  onCompRemove(...comps: Component[]) {
-    log.info("TODO oncompremove", comps.length);
+  onCompsRemove(...comps: Component[]) {
+    comps.forEach((c)=>{
+      this.target.components.delete(serverComponentKeyForComponent(c));
+    })
   }
 
   onCompAdd<C extends Component>(sourceComp: C) {
     // ECS has added a component to source; track it in target.
-    if (componentConversions[sourceComp.constructor.name] === undefined) {
+    if (componentConversions[serverComponentKeyForComponent(sourceComp)] === undefined) {
       log.info("ignoring server-only sourceComp=", sourceComp);
       return;
     }
 
     const targetComp = new ServerComponent();
-    this.target.components.set(sourceComp.constructor.name, targetComp);
+    this.target.components.set(serverComponentKeyForComponent(sourceComp), targetComp);
     // See componentConversions for this data in a table
     if (sourceComp instanceof Model) {
       targetComp.propString.set("modelPath", sourceComp.modelPath);

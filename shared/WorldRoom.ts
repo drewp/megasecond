@@ -41,10 +41,10 @@ export class WorldRoom extends Room<WorldState> {
     this.onMessage("setNick", this.onSetNick.bind(this));
     this.onMessage("playerMove", this.onPlayerMove.bind(this));
 
-    // for (let z = 2; z < 20; z += 5) {
-    //   this.world.entities.add(CreateCard(new Vector3(2, 1.2, z)));
-    // }
-    // log.info("created cards", this.world.entities.length);
+    for (let z = 2; z < 20; z += 5) {
+      this.world.entities.add(CreateCard(new Vector3(2, 1.2, z)));
+    }
+    log.info("created cards", this.world.entities.length);
 
     this.setSimulationInterval((dmillis: number) => {
       this.world?.run({ dt: dmillis / 1000 } as ServerWorldRunOptions);
@@ -52,7 +52,7 @@ export class WorldRoom extends Room<WorldState> {
   }
 
   playerSendingMessage(client: Client): IdEntity {
-    const player = this.world!.entities.find((ent) => ent.components.get(NetworkSession).sessionId == client.sessionId);
+    const player = this.world!.entities.find((ent) => ent.components.get(NetworkSession)?.sessionId == client.sessionId);
     if (!player) {
       throw new Error(`message came for unknown player sessionId=${client.sessionId}`);
     }

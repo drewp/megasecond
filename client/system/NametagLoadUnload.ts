@@ -9,7 +9,7 @@ import { Nametag } from "../../shared/Components";
 const log = createLogger("nametag");
 
 export class NametagLoadUnload extends LoadUnloadSystem {
-  requiredComponents = [Nametag, AimAt];
+  requiredComponentTypes = [Nametag, AimAt];
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
     const nt = entity.components.get(Nametag);
     const aa = entity.components.get(AimAt);

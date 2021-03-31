@@ -4,12 +4,15 @@ import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
 import { LoadUnloadSystem, KeepProcessing } from "../../shared/LoadUnloadSystem";
+import { Collection } from "@trixt0r/ecs";
+import { Component } from "@trixt0r/ecs";
+import { ComponentCollection } from "@trixt0r/ecs";
 const log = createLogger("system");
 
 export class BjsLoadUnload extends LoadUnloadSystem {
   // Turn Model.modelPath into BjsModel.root obj tree; cleans up that root tree
   // when BjsModel component is deleted.
-  requiredComponents = [Model, BjsModel];
+  requiredComponentTypes = [Model, BjsModel];
 
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
     const mo = entity.components.get(Model);
@@ -37,8 +40,8 @@ export class BjsLoadUnload extends LoadUnloadSystem {
     }
     return KeepProcessing.KEEP_PROCESSING;
   }
-  onRemoved(entity: IdEntity) {
-    const bm = entity.components.get(BjsModel);
+  onRemoved(_entity: IdEntity, comps: ComponentCollection<Component>) {
+    const bm = comps.get(BjsModel);
     if (!bm.root) return;
     bm.root.dispose();
   }

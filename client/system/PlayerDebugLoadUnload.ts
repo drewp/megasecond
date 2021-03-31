@@ -6,7 +6,7 @@ import { PlayerDebug } from "../Components";
 import { ShowPoint, ShowSegment } from "../Debug";
 
 export class PlayerDebugLoadUnload extends LoadUnloadSystem {
-  requiredComponents = [PlayerDebug];
+  requiredComponentTypes = [PlayerDebug];
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
     const pd = entity.components.get(PlayerDebug);
 

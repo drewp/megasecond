@@ -5,7 +5,7 @@ import { ClientWorldRunOptions } from "../../shared/types";
 import { LocalCam } from "../Components";
 
 export class LocalCamLoadUnload extends LoadUnloadSystem {
-  requiredComponents = [LocalCam];
+  requiredComponentTypes = [LocalCam];
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
     const lc = entity.components.get(LocalCam);
     lc.cam = new FollowCamera("cam", new Vector3(-1.4, 1.5, -4), options.scene);

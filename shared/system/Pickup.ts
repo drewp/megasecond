@@ -1,5 +1,5 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
-import { BjsModel, Touchable, Toucher, Transform } from "../Components";
+import { BjsModel, Model, Touchable, Toucher, Transform } from "../Components";
 import { removeComponent } from "../EcsOps";
 import { IdEntity } from "../IdEntity";
 import createLogger from "../logsetup";
@@ -19,7 +19,7 @@ export class Pickup extends AbstractEntitySystem<IdEntity> {
       tu.currentlyTouching.forEach((obj) => {
         removeComponent(obj, Transform);
         removeComponent(obj, Touchable);
-        removeComponent(obj, BjsModel); // another system should be doing this, e.g. when Touchable is removed
+        removeComponent(obj, Model); // another system should be doing this, e.g. when Touchable is removed
       });
     }
   }

@@ -9,6 +9,8 @@ import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
 import { CtorArg, UpdateGroup } from "./SyncTypes";
 import { WorldState } from "./WorldRoom";
+import { ThinEngine } from "babylonjs/Engines/thinEngine";
+import { string } from "@colyseus/schema/lib/encoding/decode";
 const log = createLogger("sync");
 
 function vector3FromProp(p: PropV3): Vector3 {
@@ -52,6 +54,7 @@ export class TrackServerEntities {
 }
 
 class TrackServerComponents {
+  _compByName = new Map<string, Component>();
   constructor(
     private sourceEntity: ServerEntity,
     private targetEntity: IdEntity,
@@ -65,6 +68,8 @@ class TrackServerComponents {
     };
     this.sourceEntity.components.onRemove = (_sourceComp: ServerComponent, compName: string) => {
       this.log(`sc remove compName=${compName}`);
+      this.targetEntity.components.remove(this._compByName.get(compName)!);
+      this._compByName.delete(compName);
     };
   }
   log(...args: any[]) {
@@ -100,10 +105,11 @@ class TrackServerComponents {
     this.log(`making component ${compName}`);
     new TrackComponentAttrs(sourceComp, newComp, convertor);
     this.targetEntity.components.add(newComp);
+    this._compByName.set(compName, newComp);
 
     this.addLocalComponents(compName, newComp);
   }
-  
+
   private addLocalComponents(compName: string, newComp: Component) {
     if (compName == "Model") {
       // and since this is client, add renderable:

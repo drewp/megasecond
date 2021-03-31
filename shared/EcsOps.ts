@@ -1,4 +1,5 @@
 import { Engine } from "@trixt0r/ecs";
+import { ComponentCollection } from "@trixt0r/ecs";
 import { Component } from "@trixt0r/ecs";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
@@ -32,4 +33,12 @@ export function dump(world: Engine) {
       }
     });
   });
+}
+
+export function componentNameList(comps: Component[] | ComponentCollection<Component>): string {
+  return comps.map((c: Component) => c.constructor.name).join(",");
+}
+
+export function entityIdList(entities: IdEntity[]): string {
+  return entities.map((e: IdEntity) => "e" + e.id).join(",");
 }

@@ -19,8 +19,10 @@ const log = createLogger("systems");
 export function InitSystems(isClient = false): Engine {
   const world = new Engine();
 
-  world.systems.add(new TouchItem(0));
-  world.systems.add(new Pickup(0));
+  if (!isClient) {
+    world.systems.add(new TouchItem(0));
+    world.systems.add(new Pickup(0));
+  }
 
   if (isClient) {
     world.systems.add(new PlayerJump(0)); // todo server
