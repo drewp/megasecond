@@ -1,3 +1,4 @@
+import { Component, ComponentCollection } from "@trixt0r/ecs";
 import { FollowCamera, Vector3 } from "babylonjs";
 import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
@@ -18,8 +19,8 @@ export class LocalCamLoadUnload extends LoadUnloadSystem {
     options.scene.switchActiveCamera(lc.cam);
     return KeepProcessing.STOP_PROCESSING;
   }
-  onRemoved(entity: IdEntity) {
-    const lc = entity.components.get("LocalCam");
+  onRemoved(entity: IdEntity, components: ComponentCollection<Component>) {
+    const lc = components.get("LocalCam");
     lc.cam.dispose();
   }
 }

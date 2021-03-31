@@ -1,11 +1,11 @@
-import { autorun } from "mobx";
+import { Component, ComponentCollection } from "@trixt0r/ecs";
 import { AbstractMesh, DynamicTexture, PlaneBuilder, Scene, StandardMaterial, TransformNode } from "babylonjs";
-import { AimAt } from "../../shared/Components";
+import { autorun } from "mobx";
+import { AimAt, Nametag } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
-import { Nametag } from "../../shared/Components";
 const log = createLogger("nametag");
 
 export class NametagLoadUnload extends LoadUnloadSystem {
@@ -42,8 +42,9 @@ export class NametagLoadUnload extends LoadUnloadSystem {
     });
     return KeepProcessing.STOP_PROCESSING;
   }
-  onRemoved(entity: IdEntity) {
-    const nt = entity.components.get(Nametag);
+
+  onRemoved(_entity: IdEntity, components: ComponentCollection<Component>) {
+    const nt = components.get(Nametag);
     nt.plane?.dispose();
     nt.tx?.dispose();
     nt.mat?.dispose();

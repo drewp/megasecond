@@ -1,3 +1,4 @@
+import { Component, ComponentCollection } from "@trixt0r/ecs";
 import { Color3 } from "babylonjs";
 import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
@@ -16,7 +17,8 @@ export class PlayerDebugLoadUnload extends LoadUnloadSystem {
 
     return KeepProcessing.STOP_PROCESSING;
   }
-  onRemoved(entity: IdEntity) {
+
+  onRemoved(entity: IdEntity, comps: ComponentCollection<Component>) {
     // todo
   }
 }
