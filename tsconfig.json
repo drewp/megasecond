@@ -9,7 +9,6 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
     "alwaysStrict": true,
-    "types": ["babylonjs"],
     "target": "ES6",
     "moduleResolution": "node",
     "declaration": false,
