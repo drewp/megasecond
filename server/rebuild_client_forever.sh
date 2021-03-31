@@ -1,4 +1,5 @@
 #!/bin/bash
+echo Logs are being captured by frontail.
 pnpm rebuild_client_forever |& \
   pnpx frontail \
     --ui-highlight \
