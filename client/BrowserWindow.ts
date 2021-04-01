@@ -1,7 +1,7 @@
 import { Engine as EcsEngine } from "@trixt0r/ecs";
 import { Color4, Engine as BabylonEngine, Scene } from "babylonjs";
-import { EventEmitter, GoldenLayout, LayoutConfig } from "golden-layout";
-import { dumpWorld } from "../shared/EcsOps";
+import { EventEmitter, GoldenLayout } from "golden-layout";
+import { dumpWorld, LineType } from "../shared/EcsOps";
 import { AddBabylonExplorer } from "./Debug";
 
 export function setupScene(canvasId: string, resizeEvents: EventEmitter): Scene {
@@ -13,7 +13,10 @@ export function setupScene(canvasId: string, resizeEvents: EventEmitter): Scene 
   const handleResize = engine.resize.bind(engine);
   window.addEventListener("resize", handleResize);
   resizeEvents.addEventListener("resize", handleResize);
-  if (location.hash.indexOf("explor") != -1) {
+
+  const url = new URL(window.location.href);
+  const qparams = url.searchParams;
+  if (qparams.get("explore")) {
     AddBabylonExplorer(scene);
   }
   canvas.addEventListener("pointerdown", engine.enterPointerlock.bind(engine));
@@ -51,6 +54,27 @@ export function initPanesLayout(parent: HTMLElement, world: EcsEngine, resizeEve
         // todo- on removeComponent (or it's out of sight), stop the updating
         break;
       }
+      case "links": {
+        const urlWith = (k: string, v: string) => {
+          const url = new URL(window.location.href);
+          const qparams = url.searchParams;
+          qparams.set(k, v);
+          return url.toString();
+        };
+        container.element.innerHTML = `
+        <div><a href="/log/server" target="_blank">Server log</a></div>
+        <div><a href="/log/rebuild" target="_blank">Client rebuild log</a></div>
+        <div><a href="/colyseus/" target="_blank">Colyseus inspector</a></div>
+        <div><a href="/entities/" target="_blank">Server entity dump</a></div>
+        <div>Reload with graphicsLevel = 
+          <a href="${urlWith("gl", "wire")}">wire</a> |
+          <a href="${urlWith("gl", "grid")}">grid</a> |
+          <a href="${urlWith("gl", "texture")}">texture</a>
+        </div>
+        <div>Reload with <a href="${urlWith("explore", "1")}">Babylonjs inspector</a>
+        `;
+        break;
+      }
     }
   };
 
@@ -62,7 +86,14 @@ export function initPanesLayout(parent: HTMLElement, world: EcsEngine, resizeEve
       type: "row",
       content: [
         { type: "component", componentType: "game" },
-        { type: "component", componentType: "ecs", width: 20 },
+        {
+          type: "column",
+          width: 20,
+          content: [
+            { type: "component", componentType: "links", height: 10 },
+            { type: "component", componentType: "ecs" },
+          ],
+        },
       ],
     },
   });
@@ -71,13 +102,14 @@ export function initPanesLayout(parent: HTMLElement, world: EcsEngine, resizeEve
 function initEcsDebugPane(debug: HTMLDivElement, world: EcsEngine) {
   const updateDebug = () => {
     debug.innerHTML = "";
-    const write = (line: string) => {
+    const write = (lineType: LineType, line: string) => {
       const div = document.createElement("div");
       div.innerText = line;
+      div.classList.add("ecs" + lineType);
       debug.appendChild(div);
     };
     dumpWorld(world, write);
   };
-  setInterval(updateDebug, 2000);
+  setTimeout(updateDebug, 5000);
+  // setInterval(updateDebug, 2000);
 }
-

@@ -4,7 +4,7 @@ import express from "express";
 import { encode } from "html-entities";
 import http from "http";
 import path from "path";
-import { dumpWorld } from "../shared/EcsOps";
+import { dumpWorld, LineType } from "../shared/EcsOps";
 import createLogger from "../shared/logsetup";
 import { WorldRoom } from "../shared/WorldRoom";
 
@@ -23,7 +23,7 @@ const entitiesViewer = (_req: express.Request, res: express.Response) => {
     return;
   }
   res.write("<pre>");
-  const write = (s: string) => res.write(encode(s + "\n"));
+  const write = (_lineType: LineType, s: string) => res.write(encode(s + "\n"));
   dumpWorld(currentRoom.world!, write);
   res.write("</pre>");
   res.send();

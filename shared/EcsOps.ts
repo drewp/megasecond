@@ -29,34 +29,38 @@ export function combineComponentCollections(...sources: (ComponentCollection<Com
   });
   return ret;
 }
-
-export function dumpWorld(world: Engine, write: (line: string) => void) {
+export enum LineType {
+  entity = 0,
+  component = 1,
+  attr=2,
+  // 'synced from server', 'recently updated', etc
+}
+export function dumpWorld(world: Engine, write: (lineType: LineType, line: string) => void) {
   world.entities.forEach((e) => {
-    write(`entity ${e.id}`);
+    write(LineType.entity, `entity ${e.id}`);
     e.components.sort((a, b) => (a.constructor.name < b.constructor.name ? -1 : 1));
     e.components.forEach((comp) => {
-      write(`  component ${comp.constructor.name}`);
+      write(LineType.component, `  component ${comp.constructor.name}`);
       for (let prop in comp) {
-          write(`    ${prop} ${prettyPrintText(comp[prop])}`);
+        write(LineType.attr,`    ${prop} ${prettyPrintText(comp[prop])}`);
       }
     });
   });
 }
 
 function prettyVector3(v: Vector3) {
-  return `<${round4(v.x)} ${round4(v.y)} ${round4(v.z)}>`
-
+  return `<${round4(v.x)} ${round4(v.y)} ${round4(v.z)}>`;
 }
 
 function prettyPrintText(v: any): string {
   if (v instanceof Vector3) {
-    return prettyVector3(v)
+    return prettyVector3(v);
   }
   if (v instanceof AbstractMesh) {
-    return `Mesh ${v.name} at pos=${prettyVector3(v.position)}`
+    return `Mesh ${v.name} at pos=${prettyVector3(v.position)}`;
   }
   if (v instanceof AssetContainer) {
-    return `AssetContainer with ${v.rootNodes.length} root nodes; ${v.getNodes().length} total`
+    return `AssetContainer with ${v.rootNodes.length} root nodes; ${v.getNodes().length} total`;
   }
   try {
     v = v.toString();
@@ -64,7 +68,7 @@ function prettyPrintText(v: any): string {
     v = "" + v;
   }
   if (v.match(/\[object/)) {
-    return "(obj)"
+    return "(obj)";
   }
-  return v
+  return v;
 }

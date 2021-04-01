@@ -34,3 +34,13 @@ should be something like:
                 many res, quality
             bake/
                 {obj}_shad.jpg
+
+# system profiler debug pane idea
+
+    name    calls/fr   ms/fr
+    ----    --------   -----
+    System1 1          0.3
+    System2 40         1.1
+
+and maybe move bjs render into a system too
+
