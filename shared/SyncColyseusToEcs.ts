@@ -3,14 +3,11 @@ import { Component, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { Room } from "colyseus.js";
 import { LocalCam, LocallyDriven, PlayerDebug, ServerRepresented } from "../client/Components";
-import { Convertor, PropV3, ServerComponent, ServerEntity } from "./SyncTypes";
 import { BjsModel, componentConversions, UsesNav } from "./Components";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
-import { CtorArg, UpdateGroup } from "./SyncTypes";
+import { Convertor, CtorArg, PropV3, ServerComponent, ServerEntity, UpdateGroup } from "./SyncTypes";
 import { WorldState } from "./WorldRoom";
-import { ThinEngine } from "babylonjs/Engines/thinEngine";
-import { string } from "@colyseus/schema/lib/encoding/decode";
 const log = createLogger("sync");
 
 function vector3FromProp(p: PropV3): Vector3 {
@@ -103,7 +100,12 @@ class TrackServerComponents {
     const newComp: Component = new componentCtor(...ctorArgs);
 
     this.log(`making component ${compName}`);
-    new TrackComponentAttrs(sourceComp, newComp, convertor);
+    // until server movement is right:
+    if (compName === "Transform" && this.targetEntity.components.get(LocallyDriven)) {
+      // no sync
+    } else {
+      new TrackComponentAttrs(sourceComp, newComp, convertor);
+    }
     this.targetEntity.components.add(newComp);
     this._compByName.set(compName, newComp);
 
