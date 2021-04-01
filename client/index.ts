@@ -1,18 +1,15 @@
 import { Engine } from "@trixt0r/ecs";
+import { Scene } from "babylonjs/scene";
 import * as Colyseus from "colyseus.js";
 import { EventEmitter } from "golden-layout";
-import { InitJump } from "../shared/Components";
-import { round4 } from "../shared/debug";
 import { InitSystems as InitWorld } from "../shared/InitSystems";
 import createLogger from "../shared/logsetup";
 import { TrackServerEntities } from "../shared/SyncColyseusToEcs";
 import { ClientWorldRunOptions } from "../shared/types";
 import { WorldState } from "../shared/WorldRoom";
 import { initPanesLayout, setupScene, StatusLine } from "./BrowserWindow";
-import { LocalCam, LocallyDriven } from "./Components";
 import * as Env from "./Env";
 import { getOrCreateNick } from "./nick";
-import { Actions, UserInput } from "./UserInput";
 
 const log = createLogger("WorldRoom");
 
@@ -43,18 +40,37 @@ class Game {
   // global component of status line? system that updates num players and your nick
   //     this.status.setConnection(`connected (${Array.from(this.worldRoom!.state.players.keys()).length} players)`);
 }
+
 function queryParamGraphicsLevel() {
   const qparams = new URL(window.location.href).searchParams;
   let graphicsLevel = Env.GraphicsLevel.texture;
   if (qparams.has("gl")) {
-    if (qparams.get('gl') == 'wire')
-      graphicsLevel = Env.GraphicsLevel.wire;
-    if (qparams.get('gl') == 'grid')
-      graphicsLevel = Env.GraphicsLevel.grid;
-    if (qparams.get('gl') == 'texture')
-      graphicsLevel = Env.GraphicsLevel.texture;
+    if (qparams.get("gl") == "wire") graphicsLevel = Env.GraphicsLevel.wire;
+    if (qparams.get("gl") == "grid") graphicsLevel = Env.GraphicsLevel.grid;
+    if (qparams.get("gl") == "texture") graphicsLevel = Env.GraphicsLevel.texture;
   }
   return graphicsLevel;
+}
+
+function runGameLoop(world: Engine, scene: Scene, slowStep: boolean) {
+  const gameStep = (dt: number) => {
+    world.run({
+      dt,
+      scene,
+    } as ClientWorldRunOptions);
+  };
+  if (slowStep) {
+    setInterval(() => gameStep(0.1), 100);
+  }
+  scene.getEngine().runRenderLoop(() => {
+    if (!slowStep) {
+      const dt = scene.getEngine().getDeltaTime() / 1000.0;
+      gameStep(dt);
+    }
+    if (scene.activeCamera) {
+      scene.render();
+    }
+  });
 }
 
 async function go() {
@@ -80,44 +96,7 @@ async function go() {
   await envDone2;
   await joinDone;
 
-  const userInput = new UserInput(scene, function onAction(name: Actions) {
-    const me = world.entities.find((e) => e.components.get(LocallyDriven));
-    if (!me) throw new Error("no LocallyDriven player");
-    if (name == Actions.Jump) {
-      me.components.add(new InitJump());
-    } else if (name == Actions.ToggleNavmeshView) {
-      Env.toggleNavmeshView(scene);
-    } else if (name == Actions.ToggleBirdsEyeView) {
-      me.components.get(LocalCam).toggleBirdsEyeView();
-    } else if (name == Actions.ReloadEnv) {
-      env.reloadLayoutInstances();
-    }
-  });
-
-  const slowStep = false;
-
-  const gameStep = (dt: number) => {
-    world.run({
-      dt,
-      scene,
-      userInput, // todo get this out of here
-    } as ClientWorldRunOptions);
-
-    userInput.step(dt);
-  };
-  if (slowStep) {
-    setInterval(() => gameStep(0.1), 100);
-  }
-  scene.getEngine().runRenderLoop(() => {
-    if (!slowStep) {
-      const dt = scene.getEngine().getDeltaTime() / 1000.0;
-      gameStep(dt);
-    }
-    if (scene.activeCamera) {
-      scene.render();
-    }
-  });
+  runGameLoop(world, scene, /*slowStep=*/ false);
 }
 
 go();
-

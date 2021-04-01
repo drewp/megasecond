@@ -1,6 +1,7 @@
 import { Engine } from "@trixt0r/ecs";
 import { BjsLoadUnload } from "../client/system/BjsLoadUnload";
 import { CorrectLocalSimulation } from "../client/system/CorrectLocalSimulation";
+import { EnvConfig } from "../client/system/EnvConfig";
 import { LocalCamFollow } from "../client/system/LocalCamFollow";
 import { LocalCamLoadUnload } from "../client/system/LocalCamLoadUnload";
 import { LocalMovement } from "../client/system/LocalMovement";
@@ -10,6 +11,7 @@ import { PlayerJump } from "../client/system/PlayerJump";
 import { SendUntrustedLocalPos } from "../client/system/SendUntrustedLocalPos";
 import { SimpleMove } from "../client/system/SimpleMove";
 import { TransformMesh } from "../client/system/TransformMesh";
+import { UserInput } from "../client/system/UserInput";
 import createLogger from "./logsetup";
 import { Pickup } from "./system/Pickup";
 import { TouchItem } from "./system/TouchItem";
@@ -35,8 +37,10 @@ export function InitSystems(isClient = false): Engine {
     world.systems.add(new NametagLoadUnload(1));
     world.systems.add(new SimpleMove(0));
     world.systems.add(new LocalMovement(0));
+    world.systems.add(new UserInput(0));
     world.systems.add(new CorrectLocalSimulation(1));
     world.systems.add(new SendUntrustedLocalPos(2));
+    world.systems.add(new EnvConfig(2));
   }
   world.systems.forEach((s) => s.addListener({ onError: (e: Error) => log.error(e) }));
 

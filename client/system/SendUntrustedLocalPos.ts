@@ -11,7 +11,7 @@ const log = createLogger("system");
 export class SendUntrustedLocalPos extends AbstractEntitySystem<IdEntity> {
   // - to replace with input commands
   constructor(priority: number) {
-    super(priority, [ServerRepresented, Transform, LocallyDriven]);
+    super(priority, [ServerRepresented, Transform]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {

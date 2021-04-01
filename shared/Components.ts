@@ -11,9 +11,6 @@ const log = createLogger("component");
 
 const isServer = typeof window === "undefined";
 
-export class InitJump implements Component {
-  constructor() {}
-}
 export class NetworkSession implements Component {
   public connected = true;
   constructor(public sessionId: string, public serverEntityId: string | number) {}

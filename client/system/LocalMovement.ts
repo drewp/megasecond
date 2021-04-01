@@ -19,9 +19,10 @@ export class LocalMovement extends AbstractEntitySystem<IdEntity> {
     const si = entity.components.get(Sim);
     const pd = entity.components.get(PlayerDebug);
     const un = entity.components.get(UsesNav);
+    const ld = entity.components.get(LocallyDriven);
 
-    const mouseX = options.userInput.mouseX,
-      stick = new Vector2(options.userInput.stickX, options.userInput.stickY);
+    const mouseX = ld.mouseX,
+      stick = new Vector2(ld.stickX, ld.stickY);
 
     this.onMouseX(mouseX, pt.facing, si.vel);
     si.vel = this.setXZVel(stick, pt.facing, si.vel);

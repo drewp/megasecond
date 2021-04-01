@@ -4,26 +4,33 @@ import { AimAt, BjsModel, Transform } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
-import { LocalCam } from "../Components";
+import { Action, LocalCam, LocallyDriven } from "../Components";
 
 const log = createLogger("system");
 
 export class LocalCamFollow extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [BjsModel, Transform, AimAt, LocalCam]);
+    super(priority, [BjsModel, Transform, AimAt, LocalCam, LocallyDriven]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const cam = entity.components.get(LocalCam).cam;
     if (!cam) return;
-    
+
     const heading = entity.components.get(Transform).heading;
     const aa = entity.components.get(AimAt);
+    const ld = entity.components.get(LocallyDriven);
+    const lc = entity.components.get(LocalCam);
+
+    ld.forAction(Action.ToggleBirdsEyeView, ()=>{
+      lc.toggleBirdsEyeView();
+    });
+
     const aimAt = aa.getAimObj(entity, options.scene);
     if (aimAt) {
       cam.lockedTarget = aimAt as AbstractMesh;
     }
-    cam.heightOffset += 0.0003 * options.userInput.mouseY;
+    cam.heightOffset += 0.0003 * ld.mouseY;
 
     // try to get behind player, don't crash walls
     let r = cam.rotationOffset;
