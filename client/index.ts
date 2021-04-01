@@ -17,7 +17,6 @@ class Game {
   client: Colyseus.Client;
   worldRoom?: Colyseus.Room<WorldState>;
   constructor(private status: StatusLine, private world: Engine, private nick: string) {
-    this.status.setPlayer("...");
     this.status.setConnection("connecting...");
     this.client = new Colyseus.Client("wss://megasecond.club/");
   }
