@@ -22,7 +22,7 @@ import { GridMaterial, SkyMaterial } from "babylonjs-materials";
 import createLogger from "../shared/logsetup";
 
 const log = createLogger("Env");
-log.info = () => {}
+log.info = () => {};
 
 export enum GraphicsLevel {
   wire,
@@ -63,7 +63,7 @@ class Collection {
   private objs: AbstractMesh[] = [];
   private primaryInstName: string | undefined;
   private insts: Map<string, Instance> = new Map();
-  constructor(public path: string, public scene: Scene) {}
+  constructor(public path: string, public scene: Scene, public graphicsLevel: GraphicsLevel) {}
 
   private async load(parent: TransformNode) {
     log.info(`    Collection(${this.path}) start load`);
@@ -94,7 +94,9 @@ class Collection {
       this.insts.set(name, new Instance(name, node, lp));
       await lp;
     }
-    this.applyLightmaps(node, name);
+    if (this.graphicsLevel == GraphicsLevel.texture) {
+      this.applyLightmaps(node, name);
+    }
     return node;
   }
 
@@ -150,14 +152,14 @@ class Instances {
   private collsByPath: Map<string, Collection> = new Map();
   //
   private collsByInstance: Map<string, Collection> = new Map();
-  constructor(public scene: Scene) {}
+  constructor(public scene: Scene, public graphicsLevel: GraphicsLevel) {}
 
   async makeInstance(path: string, instanceName: string): Promise<TransformNode> {
     log.info(`  makeInstance(${path}, ${instanceName})`);
 
     let col = this.collsByPath.get(path);
     if (!col) {
-      col = new Collection(path, this.scene);
+      col = new Collection(path, this.scene, this.graphicsLevel);
       this.collsByPath.set(path, col);
     }
 
@@ -190,7 +192,7 @@ export class World {
   instances: Instances;
   constructor(public scene: Scene, public graphicsLevel: GraphicsLevel) {
     this.graphicsLevel = graphicsLevel;
-    this.instances = new Instances(scene);
+    this.instances = new Instances(scene, this.graphicsLevel);
 
     SceneLoader.ShowLoadingScreen = false;
     scene.clearColor = new Color4(0.419, 0.517, 0.545, 1);
@@ -225,7 +227,7 @@ export class World {
     // this.setupSkybox(scene);
   }
 
-  async load() {
+  async loadNavmesh() {
     await SceneLoader.AppendAsync("./asset_build/", "model/env/navmesh.glb", this.scene);
     this.setupNavMesh();
   }
@@ -261,16 +263,17 @@ export class World {
       }
     });
 
-    if (this.graphicsLevel == GraphicsLevel.wire) {
-      this.scene.forceWireframe = true;
-      return;
-    }
-    //this.gridEverything();
-    if (this.graphicsLevel == GraphicsLevel.grid) {
-      // show grid first even if maps are coming
-    } else {
-      // to rewrite // this.loadMaps(Vector3.Zero(), 100);
-      (this.scene.getMaterialByName("gnd") as PBRMaterial).bumpTexture = this.groundBump!;
+    switch (this.graphicsLevel) {
+      case GraphicsLevel.wire:
+        this.scene.forceWireframe = true;
+        break;
+      case GraphicsLevel.grid:
+        this.gridEverything();
+        break;
+      case GraphicsLevel.texture:
+        // to rewrite // this.loadMaps(Vector3.Zero(), 100);
+        (this.scene.getMaterialByName("gnd") as PBRMaterial).bumpTexture = this.groundBump!;
+        break;
     }
   }
 
@@ -376,14 +379,18 @@ export class World {
   }
 
   private setupNavMesh() {
-    this.scene.getMeshByName("navmesh")!.isVisible = false;
+    const nav = this.scene.getMeshByName("navmesh") as Mesh;
+    nav.updateFacetData();
+
+    nav.isVisible = false;
+
     const grid = new GridMaterial("grid", this.scene);
     grid.gridRatio = 0.1;
     grid.majorUnitFrequency = 5;
     grid.mainColor = new Color3(0.3, 0.3, 0.3);
     grid.backFaceCulling = false;
     grid.wireframe = true; // maybe
-    this.scene.getMeshByName("navmesh")!.material = grid;
+    nav.material = grid;
   }
 }
 

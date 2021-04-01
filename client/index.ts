@@ -1,8 +1,8 @@
 import { Engine } from "@trixt0r/ecs";
-import { Mesh, Scene } from "babylonjs";
 import * as Colyseus from "colyseus.js";
 import { EventEmitter } from "golden-layout";
 import { InitJump } from "../shared/Components";
+import { round4 } from "../shared/debug";
 import { InitSystems as InitWorld } from "../shared/InitSystems";
 import createLogger from "../shared/logsetup";
 import { TrackServerEntities } from "../shared/SyncColyseusToEcs";
@@ -19,12 +19,12 @@ const log = createLogger("WorldRoom");
 class Game {
   client: Colyseus.Client;
   worldRoom?: Colyseus.Room<WorldState>;
-  constructor(private status: StatusLine, private world: Engine, private scene: Scene, private nick: string) {
+  constructor(private status: StatusLine, private world: Engine, private nick: string) {
     this.status.setPlayer("...");
     this.status.setConnection("connecting...");
     this.client = new Colyseus.Client("wss://megasecond.club/");
   }
-  async joinWorld(nav: Mesh) {
+  async joinWorld() {
     const worldRoom = await this.client.joinOrCreate<WorldState>("world", {});
     this.worldRoom = worldRoom;
     (window as any).room = worldRoom;
@@ -43,6 +43,19 @@ class Game {
   // global component of status line? system that updates num players and your nick
   //     this.status.setConnection(`connected (${Array.from(this.worldRoom!.state.players.keys()).length} players)`);
 }
+function queryParamGraphicsLevel() {
+  const qparams = new URL(window.location.href).searchParams;
+  let graphicsLevel = Env.GraphicsLevel.texture;
+  if (qparams.has("gl")) {
+    if (qparams.get('gl') == 'wire')
+      graphicsLevel = Env.GraphicsLevel.wire;
+    if (qparams.get('gl') == 'grid')
+      graphicsLevel = Env.GraphicsLevel.grid;
+    if (qparams.get('gl') == 'texture')
+      graphicsLevel = Env.GraphicsLevel.texture;
+  }
+  return graphicsLevel;
+}
 
 async function go() {
   const nick = getOrCreateNick();
@@ -54,22 +67,19 @@ async function go() {
   initPanesLayout(document.body, world, gamePaneResizeEvents);
 
   const status = new StatusLine();
+  status.setPlayer(nick);
   const scene = setupScene("renderCanvas", gamePaneResizeEvents);
 
-  const game = new Game(status, world, scene, nick);
+  const game = new Game(status, world, nick);
 
-  const env = new Env.World(scene, Env.GraphicsLevel.texture);
-  const envDone1 = env.load();
-  await envDone1;
+  const env = new Env.World(scene, queryParamGraphicsLevel());
+  const envDone1 = env.loadNavmesh();
   const envDone2 = env.reloadLayoutInstances();
+  const joinDone = game.joinWorld();
+  await envDone1;
   await envDone2;
+  await joinDone;
 
-  {
-    const nav = scene.getMeshByName("navmesh") as Mesh;
-    nav.updateFacetData();
-    status.setPlayer(nick);
-    await game.joinWorld(nav);
-  }
   const userInput = new UserInput(scene, function onAction(name: Actions) {
     const me = world.entities.find((e) => e.components.get(LocallyDriven));
     if (!me) throw new Error("no LocallyDriven player");
@@ -110,3 +120,4 @@ async function go() {
 }
 
 go();
+

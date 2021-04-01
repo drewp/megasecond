@@ -23,6 +23,7 @@
     "@types/express": "^4.17.11",
     "@types/jest": "^26.0.22",
     "babylonjs": "^4.2.0",
+    "babylonjs-loaders": "^4.2.0",
     "babylonjs-materials": "^4.2.0",
     "colyseus": "^0.14.12",
     "colyseus.js": "0.14.8",
