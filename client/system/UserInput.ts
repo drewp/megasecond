@@ -1,9 +1,10 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { ActionManager, ExecuteCodeAction, Scene, VirtualJoystick } from "babylonjs";
+import { PlayerPose } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
-import { LocallyDriven } from "../Components";
+import { Action, LocallyDriven } from "../Components";
 const log = createLogger("system");
 
 export class MobileSticks {
@@ -26,12 +27,14 @@ export class MobileSticks {
     }
   }
 }
+
 export class UserInput extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [LocallyDriven]);
+    super(priority, [LocallyDriven, PlayerPose]);
   }
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const ld = entity.components.get(LocallyDriven);
+    const pp = entity.components.get(PlayerPose);
     if (!ld.sceneIsInit) {
       this.connectToScene(options.scene, ld);
       ld.sceneIsInit = true;
@@ -51,6 +54,19 @@ export class UserInput extends AbstractEntitySystem<IdEntity> {
 
     ld.frameActions = Array.from(ld.accumFrameActions);
     ld.accumFrameActions = [];
+
+    if (pp.waving) {
+      // workaround for key repeat making repeated server msgs. Why am I even seeing key repeat?
+      ld.frameActions = ld.frameActions.filter((a: Action) => a != Action.Activate);
+    }
+    ld.forAction(Action.Activate, () => {
+      if (pp.waving) return;
+      pp.waving = true;
+    });
+    ld.forAction(Action.ActivateRelease, () => {
+      if (!pp.waving) return;
+      pp.waving = false;
+    });
   }
   connectToScene(scene: Scene, ld: LocallyDriven) {
     // this will sneak values into our Component outside of processEntity

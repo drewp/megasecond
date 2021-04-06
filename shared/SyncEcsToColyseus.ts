@@ -3,7 +3,7 @@ import { Component, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { autorun } from "mobx";
 import { PropV3, ServerComponent, ServerEntity } from "./SyncTypes";
-import { AimAt, componentConversions, Model, Nametag, NetworkSession, Sim, Touchable, Toucher, Transform, Twirl } from "./Components";
+import { AimAt, componentConversions, Model, Nametag, NetworkSession, PlayerPose, Sim, Touchable, Toucher, Transform, Twirl } from "./Components";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
 import { WorldState } from "./WorldRoom";
@@ -63,9 +63,9 @@ class TrackEcsComponents {
   }
 
   onCompsRemove(...comps: Component[]) {
-    comps.forEach((c)=>{
+    comps.forEach((c) => {
       this.target.components.delete(serverComponentKeyForComponent(c));
-    })
+    });
   }
 
   onCompAdd<C extends Component>(sourceComp: C) {
@@ -100,6 +100,8 @@ class TrackEcsComponents {
     } else if (sourceComp instanceof Nametag) {
       this.syncFieldToColy(sourceComp, targetComp, "text", "propString");
       this.syncFieldToColy(sourceComp, targetComp, "offset", "propV3");
+    } else if (sourceComp instanceof PlayerPose) {
+      this.syncFieldToColy(sourceComp, targetComp, "waving", "propBoolean");
     }
   }
 

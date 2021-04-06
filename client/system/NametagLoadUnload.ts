@@ -1,7 +1,7 @@
 import { Component, ComponentCollection } from "@trixt0r/ecs";
 import { AbstractMesh, DynamicTexture, PlaneBuilder, Scene, StandardMaterial, TransformNode } from "babylonjs";
 import { autorun } from "mobx";
-import { AimAt, Nametag } from "../../shared/Components";
+import { AimAt, Nametag, PlayerPose } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
 import createLogger from "../../shared/logsetup";
@@ -9,7 +9,7 @@ import { ClientWorldRunOptions } from "../../shared/types";
 const log = createLogger("nametag");
 
 export class NametagLoadUnload extends LoadUnloadSystem {
-  requiredComponentTypes = [Nametag, AimAt];
+  requiredComponentTypes = [Nametag, AimAt, PlayerPose];
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
     const nt = entity.components.get(Nametag);
     const aa = entity.components.get(AimAt);
@@ -35,10 +35,12 @@ export class NametagLoadUnload extends LoadUnloadSystem {
     nt.plane.billboardMode = TransformNode.BILLBOARDMODE_ALL;
 
     autorun(() => {
-      tx.getContext().fillStyle = "#00000000";
-      tx.clear();
+      const pp = entity.components.get(PlayerPose);
+      const fg = "#ffffffff";
+      const bg = "#000000ff";
       const msg = nt.text;
-      tx.drawText(msg, 0, 50, "40px sans", "#ffffffff", "#00000000", true, true);
+      const pose = pp.waving ? " *wave*" : "";
+      tx.drawText(msg + pose, 0, 50, "35px sans", fg, bg, /*invertY=*/ true, /*update=*/ true);
     });
     return KeepProcessing.STOP_PROCESSING;
   }
@@ -60,7 +62,7 @@ export class NametagLoadUnload extends LoadUnloadSystem {
     tx.hasAlpha = true;
 
     var mat = new StandardMaterial(entity.localName("nametag"), scene);
-    mat.diffuseTexture = tx;
+    mat.emissiveTexture = tx;
     mat.disableLighting = true;
     mat.transparencyMode = 3;
     mat.useAlphaFromDiffuseTexture = true;

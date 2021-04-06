@@ -5,12 +5,13 @@ import { Client, Room } from "colyseus";
 import { action, makeObservable } from "mobx";
 import { CreateCard } from "./Collectible";
 import { ServerEntity } from "./SyncTypes";
-import { AimAt, Model, Nametag, NetworkSession, Sim, Toucher, Transform } from "./Components";
+import { AimAt, Model, Nametag, NetworkSession, PlayerPose, Sim, Toucher, Transform } from "./Components";
 import { IdEntity } from "./IdEntity";
 import { InitSystems } from "./InitSystems";
 import createLogger from "./logsetup";
 import { TrackEcsEntities } from "./SyncEcsToColyseus";
 import { ServerWorldRunOptions } from "./types";
+import { Action } from "../client/Components";
 
 export const log = createLogger("WorldRoom");
 
@@ -24,7 +25,7 @@ export class WorldRoom extends Room<WorldState> {
   public allowReconnectionTime: number = 2;
   constructor() {
     super();
-    makeObservable(this, { onPlayerMove: action, onSetNick: action });
+    makeObservable(this, { onPlayerMove: action, onSetNick: action, onPlayerUserInput: action });
   }
   public onCreate() {
     log.info("WorldRoom.onCreate");
@@ -40,8 +41,9 @@ export class WorldRoom extends Room<WorldState> {
     // });
     this.onMessage("setNick", this.onSetNick.bind(this));
     this.onMessage("playerMove", this.onPlayerMove.bind(this));
+    this.onMessage("playerUserInput", this.onPlayerUserInput.bind(this));
 
-    for (let z = 2; z < 20; z += 5) {
+    for (let z = 2; z < 10; z += 3) {
       this.world.entities.add(CreateCard(new Vector3(2, 1.2, z)));
     }
     log.info("created cards", this.world.entities.length);
@@ -73,6 +75,20 @@ export class WorldRoom extends Room<WorldState> {
     nt.text = message as string;
   }
 
+  onPlayerUserInput(client: Client, message: any) {
+    // eventally all the movement command should come through here. Trying it on Actiavte ('wave') first.
+    const player = this.playerSendingMessage(client);
+    const pp = player.components.get(PlayerPose);
+    if ((message.action as Action) == Action.Activate) {
+      pp.waving = true;
+    }
+    if ((message.action as Action) == Action.ActivateRelease) {
+      pp.waving = false;
+    }
+
+    log.info("onPlayerUserInput: set server waving to ", pp.waving, "from msg", message);
+  }
+
   public onJoin(client: Client, _options: any = {}) {
     log.info("WorldRoom.onJoin", client.sessionId);
     const player = this.createPlayer(client.sessionId);
@@ -90,6 +106,7 @@ export class WorldRoom extends Room<WorldState> {
     p.components.add(new NetworkSession(sessionId, p.id));
 
     p.components.add(new Model("model/player/player"));
+    p.components.add(new PlayerPose());
     p.components.add(new Transform(Vector3.Zero(), Vector3.Forward()));
     p.components.add(new Sim(Vector3.Zero()));
     p.components.add(new AimAt("player_aim"));

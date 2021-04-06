@@ -81,6 +81,13 @@ export class BjsModel implements Component {
   }
 }
 
+export class PlayerPose implements Component {
+  public waving = false;
+  constructor() {
+    makeObservable(this, { waving: observable });
+  }
+}
+
 export class UsesNav implements Component {
   public currentNavFaceId = 0;
   public grounded = false;
@@ -142,5 +149,9 @@ export const componentConversions: { [name: string]: Convertor } = {
       { servType: "propString", attrs: ["text"] },
       { servType: "propV3", attrs: ["offset"] },
     ],
+  },
+  PlayerPose: {
+    ctor: PlayerPose,
+    localUpdatedAttrs: [{ servType: "propBoolean", attrs: ["waving"] }],
   },
 };

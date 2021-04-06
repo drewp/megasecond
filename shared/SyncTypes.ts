@@ -25,6 +25,7 @@ export class ServerComponent extends Schema {
   @type({ map: PropV3 }) propV3 = new MapSchema<PropV3>();
   @type({ map: "string" }) propString = new MapSchema<string>();
   @type({ map: "int8" }) propInt8 = new MapSchema<number>();
+  @type({ map: "boolean" }) propBoolean = new MapSchema<boolean>();
   @type({ map: "float32" }) propFloat32 = new MapSchema<number>();
   @type({ set: "number" }) propCurrentlyTouching = new SetSchema<number>(); // generalize
 }

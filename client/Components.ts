@@ -35,6 +35,7 @@ export class ServerRepresented implements Component {
 export enum Action {
   Jump,
   Activate,
+  ActivateRelease,
   ToggleNavmeshView,
   ToggleBirdsEyeView,
   ReloadEnv,
@@ -123,6 +124,13 @@ export class LocallyDriven implements Component {
       setFromKey();
     }
     this.shiftKey = ev.sourceEvent.shiftKey as boolean;
+    const keyAction: { [key: string]: Action } = {
+      e: Action.ActivateRelease,
+    };
+    const action = keyAction[ev.sourceEvent.key];
+    if (action !== undefined) {
+      this.accumFrameActions.push(action);
+    }
   }
 }
 
