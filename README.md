@@ -71,6 +71,16 @@ if you change the server code, Dockerfile, etc.
 Finally, route somehow to the HTTP service at
 megasecond.default.service.cluster.local:80.
 
+## Log viewers
+
+The server and client-rebuilder processes log to
+[frontail](https://github.com/mthenw/frontail). You could run these to open
+compact windows to view the logs:
+```
+google-chrome-stable --new-window --app='https://megasecond.club/log/server/'
+google-chrome-stable --new-window --app='https://megasecond.club/log/rebuild/'
+```
+
 ## Attributions
 
 "Abandoned factory" (https://skfb.ly/6TzYN) by Rixael is licensed under Creative

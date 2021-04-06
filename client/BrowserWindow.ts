@@ -110,6 +110,5 @@ function initEcsDebugPane(debug: HTMLDivElement, world: EcsEngine) {
     };
     dumpWorld(world, write);
   };
-  setTimeout(updateDebug, 5000);
-  // setInterval(updateDebug, 2000);
+  setInterval(updateDebug, 2000);
 }
