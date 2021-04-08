@@ -1,4 +1,5 @@
 import { Engine } from "@trixt0r/ecs";
+import { BattleRingAnim, BattleRingLoad } from "../client/system/BattleProps";
 import { BjsLoadUnload } from "../client/system/BjsLoadUnload";
 import { CorrectLocalSimulation } from "../client/system/CorrectLocalSimulation";
 import { EnvConfig } from "../client/system/EnvConfig";
@@ -41,6 +42,9 @@ export function InitSystems(isClient = false): Engine {
     world.systems.add(new CorrectLocalSimulation(1));
     world.systems.add(new SendUntrustedLocalPos(2));
     world.systems.add(new EnvConfig(2));
+    world.systems.add(new BattleRingLoad(2));
+    world.systems.add(new BattleRingAnim(2));
+
   }
   world.systems.forEach((s) => s.addListener({ onError: (e: Error) => log.error(e) }));
 

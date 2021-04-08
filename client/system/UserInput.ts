@@ -1,10 +1,11 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { ActionManager, ExecuteCodeAction, Scene, VirtualJoystick } from "babylonjs";
 import { PlayerPose } from "../../shared/Components";
+import { removeComponentsOfType } from "../../shared/EcsOps";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
-import { Action, LocallyDriven } from "../Components";
+import { Action, BattleRing, LocallyDriven } from "../Components";
 const log = createLogger("system");
 
 export class MobileSticks {
@@ -62,10 +63,14 @@ export class UserInput extends AbstractEntitySystem<IdEntity> {
     ld.forAction(Action.Activate, () => {
       if (pp.waving) return;
       pp.waving = true;
+      entity.components.add(new BattleRing()); // todo- move out of UserInput
     });
     ld.forAction(Action.ActivateRelease, () => {
       if (!pp.waving) return;
       pp.waving = false;
+      const br = entity.components.get(BattleRing);
+      // entity.components.remove(br);
+      // removeComponentsOfType(entity, BattleRing);
     });
   }
   connectToScene(scene: Scene, ld: LocallyDriven) {

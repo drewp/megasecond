@@ -11,7 +11,7 @@ import { InitSystems } from "./InitSystems";
 import createLogger from "./logsetup";
 import { TrackEcsEntities } from "./SyncEcsToColyseus";
 import { ServerWorldRunOptions } from "./types";
-import { Action } from "../client/Components";
+import { Action, BattleRing } from "../client/Components";
 
 export const log = createLogger("WorldRoom");
 

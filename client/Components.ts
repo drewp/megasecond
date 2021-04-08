@@ -1,5 +1,7 @@
 import { Component } from "@trixt0r/ecs";
 import { ActionEvent, FollowCamera, PickingInfo, PointerEventTypes, Vector3 } from "babylonjs";
+import { ShaderMaterial } from "babylonjs/Materials/shaderMaterial";
+import { Mesh } from "babylonjs/Meshes/mesh";
 import * as Colyseus from "colyseus.js";
 import { ShowPoint, ShowSegment } from "../client/Debug";
 import createLogger from "../shared/logsetup";
@@ -132,6 +134,14 @@ export class LocallyDriven implements Component {
       this.accumFrameActions.push(action);
     }
   }
+}
+
+export class BattleRing implements Component {
+  cyl?: Mesh
+  mat?: ShaderMaterial
+  startTime=0
+  // closest others, deformations, etc
+  constructor() {}
 }
 
 export class PlayerDebug implements Component {
