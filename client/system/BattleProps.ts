@@ -1,6 +1,6 @@
 import { AbstractEntitySystem, Component, ComponentCollection } from "@trixt0r/ecs";
 import { CylinderBuilder, Mesh, ShaderMaterial } from "babylonjs";
-import { Transform } from "../../shared/Components";
+import { S_Transform } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
 import createLogger from "../../shared/logsetup";
@@ -9,7 +9,7 @@ import { BattleRing } from "../Components";
 const log = createLogger("BattleProps");
 
 export class BattleRingLoad extends LoadUnloadSystem {
-  requiredComponentTypes = [Transform, BattleRing];
+  requiredComponentTypes = [S_Transform, BattleRing];
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
     const br = entity.components.get(BattleRing);
 
@@ -41,11 +41,11 @@ br.startTime = Date.now()/1000;
 
 export class BattleRingAnim extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [BattleRing, Transform]);
+    super(priority, [BattleRing, S_Transform]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
-    const tr = entity.components.get(Transform);
+    const tr = entity.components.get(S_Transform);
     const br = entity.components.get(BattleRing);
 if (!br) return ; // shouldn't happen!
     if (!br.cyl) {

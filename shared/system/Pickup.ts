@@ -1,5 +1,5 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
-import { BjsModel, Model, Touchable, Toucher, Transform } from "../Components";
+import { S_Model, S_Touchable, S_Toucher, S_Transform } from "../Components";
 import { removeComponentsOfType } from "../EcsOps";
 import { IdEntity } from "../IdEntity";
 import createLogger from "../logsetup";
@@ -9,17 +9,17 @@ const log = createLogger("system");
 
 export class Pickup extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [Toucher]);
+    super(priority, [S_Toucher]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: CommonWorldRunOptions) {
     if (!this.engine) return;
-    const tu = entity.components.get(Toucher);
+    const tu = entity.components.get(S_Toucher);
     if (tu.currentlyTouching.size > 0) {
       tu.currentlyTouching.forEach((obj) => {
-        removeComponentsOfType(obj, Transform);
-        removeComponentsOfType(obj, Touchable);
-        removeComponentsOfType(obj, Model); // another system should be doing this, e.g. when Touchable is removed
+        removeComponentsOfType(obj, S_Transform);
+        removeComponentsOfType(obj, S_Touchable);
+        removeComponentsOfType(obj, S_Model); // another system should be doing this, e.g. when Touchable is removed
       });
     }
   }

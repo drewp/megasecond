@@ -1,17 +1,18 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
-import { BjsModel, Transform } from "../../shared/Components";
+import { S_Transform } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import { ClientWorldRunOptions } from "../../shared/types";
+import { BjsModel } from "../Components";
 
 
 export class TransformMesh extends AbstractEntitySystem<IdEntity> {
   // Transform -> BjsModel.root
   constructor(priority: number) {
-    super(priority, [BjsModel, Transform]);
+    super(priority, [BjsModel, S_Transform]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
-    const tr = entity.components.get(Transform);
+    const tr = entity.components.get(S_Transform);
     const root = entity.components.get(BjsModel).root;
     if (root) {
       root.position.copyFrom(tr.pos);

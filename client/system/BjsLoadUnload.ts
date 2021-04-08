@@ -1,19 +1,20 @@
 import { Component, ComponentCollection } from "@trixt0r/ecs";
 import { SceneLoader } from "babylonjs";
-import { BjsModel, LoadState, Model } from "../../shared/Components";
+import { S_Model } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
+import { BjsModel, LoadState } from "../Components";
 const log = createLogger("system");
 
 export class BjsLoadUnload extends LoadUnloadSystem {
   // Turn Model.modelPath into BjsModel.root obj tree; cleans up that root tree
   // when BjsModel component is deleted.
-  requiredComponentTypes = [Model, BjsModel];
+  requiredComponentTypes = [S_Model, BjsModel];
 
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
-    const mo = entity.components.get(Model);
+    const mo = entity.components.get(S_Model);
     const bm = entity.components.get(BjsModel);
     //myabe loadstate starts as loaded, the 2nd time?
     switch (bm.loadState) {

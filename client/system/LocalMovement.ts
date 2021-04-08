@@ -1,6 +1,6 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { Mesh, Quaternion, Vector2, Vector3 } from "babylonjs";
-import { Sim, Transform, UsesNav } from "../../shared/Components";
+import { S_Sim, S_Transform, S_UsesNav } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
@@ -10,15 +10,15 @@ const log = createLogger("system");
 
 export class LocalMovement extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [Transform, PlayerDebug, LocallyDriven, UsesNav]);
+    super(priority, [S_Transform, PlayerDebug, LocallyDriven, S_UsesNav]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const dt = options.dt;
-    const pt = entity.components.get(Transform);
-    const si = entity.components.get(Sim);
+    const pt = entity.components.get(S_Transform);
+    const si = entity.components.get(S_Sim);
     const pd = entity.components.get(PlayerDebug);
-    const un = entity.components.get(UsesNav);
+    const un = entity.components.get(S_UsesNav);
     const ld = entity.components.get(LocallyDriven);
 
     const mouseX = ld.mouseX,

@@ -5,7 +5,7 @@ import { Client, Room } from "colyseus";
 import { action, makeObservable } from "mobx";
 import { CreateCard } from "./Collectible";
 import { ServerEntity } from "./SyncTypes";
-import { AimAt, Model, Nametag, NetworkSession, PlayerPose, Sim, Toucher, Transform } from "./Components";
+import { S_AimAt, S_Model, S_Nametag, S_NetworkSession, S_PlayerPose, S_Sim, S_Toucher, S_Transform } from "./Components";
 import { IdEntity } from "./IdEntity";
 import { InitSystems } from "./InitSystems";
 import createLogger from "./logsetup";
@@ -54,7 +54,7 @@ export class WorldRoom extends Room<WorldState> {
   }
 
   playerSendingMessage(client: Client): IdEntity {
-    const player = this.world!.entities.find((ent) => ent.components.get(NetworkSession)?.sessionId == client.sessionId);
+    const player = this.world!.entities.find((ent) => ent.components.get(S_NetworkSession)?.sessionId == client.sessionId);
     if (!player) {
       throw new Error(`message came for unknown player sessionId=${client.sessionId}`);
     }
@@ -64,21 +64,21 @@ export class WorldRoom extends Room<WorldState> {
   onPlayerMove(client: Client, message: any) {
     log.info("incoming move", client.sessionId, message);
     const player = this.playerSendingMessage(client);
-    const tr = player.components.get(Transform);
+    const tr = player.components.get(S_Transform);
     tr.pos = new Vector3(message.x, message.y, message.z);
     tr.facing = new Vector3(message.facingX, message.facingY, message.facingZ);
   }
 
   onSetNick(client: Client, message: string | number) {
     const player = this.playerSendingMessage(client);
-    const nt = player.components.get(Nametag);
+    const nt = player.components.get(S_Nametag);
     nt.text = message as string;
   }
 
   onPlayerUserInput(client: Client, message: any) {
     // eventally all the movement command should come through here. Trying it on Actiavte ('wave') first.
     const player = this.playerSendingMessage(client);
-    const pp = player.components.get(PlayerPose);
+    const pp = player.components.get(S_PlayerPose);
     if ((message.action as Action) == Action.Activate) {
       pp.waving = true;
     }
@@ -103,15 +103,15 @@ export class WorldRoom extends Room<WorldState> {
     // if (sunCaster) {
     //   sunCaster.addShadowCaster(body);
     // }
-    p.components.add(new NetworkSession(sessionId, p.id));
+    p.components.add(new S_NetworkSession(sessionId, p.id));
 
-    p.components.add(new Model("model/player/player"));
-    p.components.add(new PlayerPose());
-    p.components.add(new Transform(Vector3.Zero(), Vector3.Forward()));
-    p.components.add(new Sim(Vector3.Zero()));
-    p.components.add(new AimAt("player_aim"));
-    p.components.add(new Toucher(/*posOffset=*/ new Vector3(0, 1.2, 0), /*radius=*/ 0.3));
-    p.components.add(new Nametag(/*offset=*/ new Vector3(0, 0.2, 0)));
+    p.components.add(new S_Model("model/player/player"));
+    p.components.add(new S_PlayerPose());
+    p.components.add(new S_Transform(Vector3.Zero(), Vector3.Forward()));
+    p.components.add(new S_Sim(Vector3.Zero()));
+    p.components.add(new S_AimAt("player_aim"));
+    p.components.add(new S_Toucher(/*posOffset=*/ new Vector3(0, 1.2, 0), /*radius=*/ 0.3));
+    p.components.add(new S_Nametag(/*offset=*/ new Vector3(0, 0.2, 0)));
     log.info(`created player e${p.id} session=${sessionId}`);
     return p;
   }
@@ -119,7 +119,7 @@ export class WorldRoom extends Room<WorldState> {
   public async onLeave(client: Client, consented: boolean) {
     log.info("WorldRoom.onLeave", client.id, { consented });
     const player = this.playerSendingMessage(client);
-    const ns = player.components.get(NetworkSession);
+    const ns = player.components.get(S_NetworkSession);
     ns.connected = false;
     if (this.allowReconnectionTime > 0) {
       try {

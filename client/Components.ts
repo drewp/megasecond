@@ -1,5 +1,5 @@
 import { Component } from "@trixt0r/ecs";
-import { FollowCamera, Vector3 } from "babylonjs";
+import { FollowCamera, Vector3, AssetContainer, TransformNode } from "babylonjs";
 import { ShaderMaterial } from "babylonjs/Materials/shaderMaterial";
 import { Mesh } from "babylonjs/Meshes/mesh";
 import * as Colyseus from "colyseus.js";
@@ -81,4 +81,20 @@ export class PlayerDebug implements Component {
   debugNavRay?: ShowSegment;
   debugCurNavFace?: ShowPoint[];
   constructor() {}
+}
+
+export enum LoadState {
+  NONE,
+  STARTED_GET,
+  LOADED,
+}
+export class BjsModel implements Component {
+  // load a BJS model that can be moved around
+  public root?: TransformNode;
+  public loadState = LoadState.NONE;
+  public container?: AssetContainer;
+  constructor() {}
+  dispose() {
+    this.root?.dispose();
+  }
 }

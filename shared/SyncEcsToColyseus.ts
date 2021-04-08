@@ -3,7 +3,7 @@ import { Component, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { autorun } from "mobx";
 import { PropV3, ServerComponent, ServerEntity } from "./SyncTypes";
-import { AimAt, componentConversions, Model, Nametag, NetworkSession, PlayerPose, Sim, Touchable, Toucher, Transform, Twirl } from "./Components";
+import { S_AimAt, componentConversions, S_Model, S_Nametag, S_NetworkSession, S_PlayerPose, S_Sim, S_Touchable, S_Toucher, S_Transform, S_Twirl } from "./Components";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
 import { WorldState } from "./WorldRoom";
@@ -78,29 +78,29 @@ class TrackEcsComponents {
     const targetComp = new ServerComponent();
     this.target.components.set(serverComponentKeyForComponent(sourceComp), targetComp);
     // See componentConversions for this data in a table
-    if (sourceComp instanceof Model) {
+    if (sourceComp instanceof S_Model) {
       targetComp.propString.set("modelPath", sourceComp.modelPath);
-    } else if (sourceComp instanceof NetworkSession) {
+    } else if (sourceComp instanceof S_NetworkSession) {
       targetComp.propString.set("sessionId", sourceComp.sessionId);
       targetComp.propString.set("serverEntityId", "" + sourceComp.serverEntityId);
-    } else if (sourceComp instanceof Toucher) {
+    } else if (sourceComp instanceof S_Toucher) {
       targetComp.propV3.set("posOffset", propFromVector3(sourceComp.posOffset));
       targetComp.propFloat32.set("radius", sourceComp.radius);
       // sc.propCurrentlyTouching. = Array.from(comp.currentlyTouching).map(ent=>(ent.id as number));
-    } else if (sourceComp instanceof AimAt) {
+    } else if (sourceComp instanceof S_AimAt) {
       targetComp.propString.set("objName", sourceComp.objName);
-    } else if (sourceComp instanceof Touchable) {
-    } else if (sourceComp instanceof Transform) {
+    } else if (sourceComp instanceof S_Touchable) {
+    } else if (sourceComp instanceof S_Transform) {
       this.syncFieldToColy(sourceComp, targetComp, "pos", "propV3");
       this.syncFieldToColy(sourceComp, targetComp, "facing", "propV3");
-    } else if (sourceComp instanceof Sim) {
+    } else if (sourceComp instanceof S_Sim) {
       this.syncFieldToColy(sourceComp, targetComp, "vel", "propV3");
-    } else if (sourceComp instanceof Twirl) {
+    } else if (sourceComp instanceof S_Twirl) {
       targetComp.propFloat32.set("degPerSec", sourceComp.degPerSec);
-    } else if (sourceComp instanceof Nametag) {
+    } else if (sourceComp instanceof S_Nametag) {
       this.syncFieldToColy(sourceComp, targetComp, "text", "propString");
       this.syncFieldToColy(sourceComp, targetComp, "offset", "propV3");
-    } else if (sourceComp instanceof PlayerPose) {
+    } else if (sourceComp instanceof S_PlayerPose) {
       this.syncFieldToColy(sourceComp, targetComp, "waving", "propBoolean");
     }
   }

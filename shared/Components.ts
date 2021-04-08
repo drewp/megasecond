@@ -11,26 +11,26 @@ const log = createLogger("component");
 
 const isServer = typeof window === "undefined";
 
-export class NetworkSession implements Component {
+export class S_NetworkSession implements Component {
   public connected = true;
   constructor(public sessionId: string, public serverEntityId: string | number) {}
 }
-export class Toucher implements Component {
+export class S_Toucher implements Component {
   // e.g. a player
   public currentlyTouching = new Set<IdEntity>();
   constructor(public posOffset: Vector3, public radius: number) {}
 }
 
-export class Touchable implements Component {
+export class S_Touchable implements Component {
   // e.g. a prize
   constructor() {}
 }
 
-export class Sim implements Component {
+export class S_Sim implements Component {
   constructor(public vel: Vector3) {}
 }
 
-export class Transform implements Component {
+export class S_Transform implements Component {
   constructor(public pos: Vector3, public facing: Vector3) {
     if (isServer) {
       // need mobx to notice changes
@@ -44,11 +44,11 @@ export class Transform implements Component {
   }
 }
 
-export class Twirl implements Component {
+export class S_Twirl implements Component {
   constructor(public degPerSec = 1) {}
 }
 
-export class AimAt implements Component {
+export class S_AimAt implements Component {
   // aim camera at this (child) object, e.g. player's torso instead of feet
   constructor(public objName: string) {
     // objName is some obj in the BjsModel.root hierarchy
@@ -59,43 +59,27 @@ export class AimAt implements Component {
   }
 }
 
-export enum LoadState {
-  NONE,
-  STARTED_GET,
-  LOADED,
-}
 
-export class Model implements Component {
+export class S_Model implements Component {
   // this is the model to use  (e.g. says the server to the client)
   constructor(public modelPath: string) {}
 }
 
-export class BjsModel implements Component {
-  // load a BJS model that can be moved around
-  public root?: TransformNode;
-  public loadState = LoadState.NONE;
-  public container?: AssetContainer;
-  constructor() {}
-  dispose() {
-    this.root?.dispose();
-  }
-}
-
-export class PlayerPose implements Component {
+export class S_PlayerPose implements Component {
   public waving = false;
   constructor() {
     makeObservable(this, { waving: observable });
   }
 }
 
-export class UsesNav implements Component {
+export class S_UsesNav implements Component {
   public currentNavFaceId = 0;
   public grounded = false;
   public nav?: string; //
   constructor() {}
 }
 
-export class Nametag implements Component {
+export class S_Nametag implements Component {
   // draw nametag on this model
   public text: string = "?";
   public plane?: Mesh;
@@ -109,49 +93,49 @@ export class Nametag implements Component {
 }
 
 export const componentConversions: { [name: string]: Convertor } = {
-  NetworkSession: {
-    ctor: NetworkSession,
+  S_NetworkSession: {
+    ctor: S_NetworkSession,
     ctorArgs: [
       { attr: "sessionId", servType: "propString" },
       { attr: "serverEntityId", servType: "propString" },
     ],
   },
-  Model: {
-    ctor: Model,
+  S_Model: {
+    ctor: S_Model,
     ctorArgs: [{ attr: "modelPath", servType: "propString" }],
   },
   Toucher: {
-    ctor: Toucher,
+    ctor: S_Toucher,
     ctorArgs: [
       { attr: "posOffset", servType: "propV3" },
       { attr: "radius", servType: "propFloat32" },
     ],
   },
-  AimAt: { ctor: AimAt, ctorArgs: [{ attr: "objName", servType: "propString" }] },
-  Touchable: { ctor: Touchable },
-  Twirl: { ctor: Twirl, ctorArgs: [{ attr: "degPerSec", servType: "propFloat32" }] },
-  Transform: {
-    ctor: Transform,
+  S_AimAt: { ctor: S_AimAt, ctorArgs: [{ attr: "objName", servType: "propString" }] },
+  S_Touchable: { ctor: S_Touchable },
+  S_Twirl: { ctor: S_Twirl, ctorArgs: [{ attr: "degPerSec", servType: "propFloat32" }] },
+  S_Transform: {
+    ctor: S_Transform,
     ctorArgs: [
       { attr: "pos", servType: "propV3" },
       { attr: "facing", servType: "propV3" },
     ],
     localUpdatedAttrs: [{ servType: "propV3", attrs: ["pos", "facing"] }],
   },
-  Sim: {
-    ctor: Sim,
+  S_Sim: {
+    ctor: S_Sim,
     ctorArgs: [{ attr: "vel", servType: "propV3" }],
   },
-  Nametag: {
-    ctor: Nametag,
+  S_Nametag: {
+    ctor: S_Nametag,
     ctorArgs: [{ attr: "offset", servType: "propV3" }],
     localUpdatedAttrs: [
       { servType: "propString", attrs: ["text"] },
       { servType: "propV3", attrs: ["offset"] },
     ],
   },
-  PlayerPose: {
-    ctor: PlayerPose,
+  S_PlayerPose: {
+    ctor: S_PlayerPose,
     localUpdatedAttrs: [{ servType: "propBoolean", attrs: ["waving"] }],
   },
 };

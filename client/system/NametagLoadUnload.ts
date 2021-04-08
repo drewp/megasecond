@@ -1,7 +1,7 @@
 import { Component, ComponentCollection } from "@trixt0r/ecs";
 import { AbstractMesh, DynamicTexture, PlaneBuilder, Scene, StandardMaterial, TransformNode } from "babylonjs";
 import { autorun } from "mobx";
-import { AimAt, Nametag, PlayerPose } from "../../shared/Components";
+import { S_AimAt, S_Nametag, S_PlayerPose } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
 import createLogger from "../../shared/logsetup";
@@ -9,10 +9,10 @@ import { ClientWorldRunOptions } from "../../shared/types";
 const log = createLogger("nametag");
 
 export class NametagLoadUnload extends LoadUnloadSystem {
-  requiredComponentTypes = [Nametag, AimAt, PlayerPose];
+  requiredComponentTypes = [S_Nametag, S_AimAt, S_PlayerPose];
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
-    const nt = entity.components.get(Nametag);
-    const aa = entity.components.get(AimAt);
+    const nt = entity.components.get(S_Nametag);
+    const aa = entity.components.get(S_AimAt);
     const aimAt = aa.getAimObj(entity, options.scene);
     if (!aimAt) {
       // keep waiting for this
@@ -35,7 +35,7 @@ export class NametagLoadUnload extends LoadUnloadSystem {
     nt.plane.billboardMode = TransformNode.BILLBOARDMODE_ALL;
 
     autorun(() => {
-      const pp = entity.components.get(PlayerPose);
+      const pp = entity.components.get(S_PlayerPose);
       const fg = "#ffffffff";
       const bg = "#000000ff";
       const msg = nt.text;
@@ -46,7 +46,7 @@ export class NametagLoadUnload extends LoadUnloadSystem {
   }
 
   onRemoved(_entity: IdEntity, components: ComponentCollection<Component>) {
-    const nt = components.get(Nametag);
+    const nt = components.get(S_Nametag);
     nt.plane?.dispose();
     nt.tx?.dispose();
     nt.mat?.dispose();

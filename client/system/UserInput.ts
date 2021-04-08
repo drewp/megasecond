@@ -2,7 +2,7 @@ import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { ActionManager, ExecuteCodeAction, Scene, VirtualJoystick } from "babylonjs";
 import { ActionEvent, FollowCamera, PickingInfo, PointerEventTypes, Vector3 } from "babylonjs";
 
-import { PlayerPose } from "../../shared/Components";
+import { S_PlayerPose } from "../../shared/Components";
 import { removeComponentsOfType } from "../../shared/EcsOps";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
@@ -33,11 +33,11 @@ export class MobileSticks {
 
 export class UserInput extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [LocallyDriven, PlayerPose]);
+    super(priority, [LocallyDriven, S_PlayerPose]);
   }
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const ld = entity.components.get(LocallyDriven);
-    const pp = entity.components.get(PlayerPose);
+    const pp = entity.components.get(S_PlayerPose);
     if (!ld.sceneIsInit) {
       this.connectToScene(options.scene, ld);
       ld.sceneIsInit = true;

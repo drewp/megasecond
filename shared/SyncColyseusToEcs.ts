@@ -2,8 +2,8 @@ import { MapSchema } from "@colyseus/schema";
 import { Component, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { Room } from "colyseus.js";
-import { BattleRing, LocalCam, LocallyDriven, PlayerDebug, ServerRepresented } from "../client/Components";
-import { BjsModel, componentConversions, PlayerPose, UsesNav } from "./Components";
+import { BjsModel, BattleRing, LocalCam, LocallyDriven, PlayerDebug, ServerRepresented } from "../client/Components";
+import { componentConversions, S_PlayerPose, S_UsesNav } from "./Components";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
 import { Convertor, CtorArg, PropV3, ServerComponent, ServerEntity, UpdateGroup } from "./SyncTypes";
@@ -101,7 +101,7 @@ class TrackServerComponents {
 
     this.log(`making component ${compName}`);
     // until server movement is right:
-    if (compName === "Transform" && this.targetEntity.components.get(LocallyDriven)) {
+    if (compName === "S_Transform" && this.targetEntity.components.get(LocallyDriven)) {
       // no sync
     } else {
       new TrackComponentAttrs(sourceComp, newComp, convertor);
@@ -113,7 +113,7 @@ class TrackServerComponents {
   }
 
   private addLocalComponents(compName: string, newComp: Component) {
-    if (compName == "Model") {
+    if (compName == "S_Model") {
       // and since this is client, add renderable:
       if (this.targetEntity.components.get(BjsModel)) {
         throw new Error(`ent=${this.targetEntity.id} already had BjsModel`);
@@ -121,12 +121,12 @@ class TrackServerComponents {
       this.targetEntity.components.add(new BjsModel());
     }
 
-    if (compName == "NetworkSession") {
+    if (compName == "S_NetworkSession") {
       if (newComp.sessionId == this.sessionId) {
         // we're the player
         this.targetEntity.components.add(new PlayerDebug());
         this.targetEntity.components.add(new LocallyDriven());
-        this.targetEntity.components.add(new UsesNav());
+        this.targetEntity.components.add(new S_UsesNav());
         this.targetEntity.components.add(new LocalCam());
         this.targetEntity.components.add(new ServerRepresented(this.room_temp!));
       }
