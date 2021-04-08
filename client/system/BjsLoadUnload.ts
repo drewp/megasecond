@@ -14,7 +14,7 @@ export class BjsLoadUnload extends LoadUnloadSystem {
   requiredComponentTypes = [S_Model, BjsModel];
 
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
-    const mo = entity.components.get(S_Model);
+    const mo = entity.getComponentReadonly(S_Model);
     const bm = entity.components.get(BjsModel);
     //myabe loadstate starts as loaded, the 2nd time?
     switch (bm.loadState) {

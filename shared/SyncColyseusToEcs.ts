@@ -2,8 +2,8 @@ import { MapSchema } from "@colyseus/schema";
 import { Component, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { Room } from "colyseus.js";
-import { BjsModel, BattleRing, LocalCam, LocallyDriven, PlayerDebug, ServerRepresented } from "../client/Components";
-import { componentConversions, S_PlayerPose, S_UsesNav } from "./Components";
+import { BjsModel, BattleRing, LocalCam, LocallyDriven, PlayerDebug, ServerRepresented, C_Nametag, C_UsesNav, C_Transform, C_Sim, C_PlayerPose } from "../client/Components";
+import { componentConversions, S_PlayerPose, S_Transform, S_UsesNav } from "./Components";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
 import { Convertor, CtorArg, PropV3, ServerComponent, ServerEntity, UpdateGroup } from "./SyncTypes";
@@ -120,13 +120,30 @@ class TrackServerComponents {
       }
       this.targetEntity.components.add(new BjsModel());
     }
-
+    if (compName == "S_Nametag") { // todo- missing removes on all these
+      this.targetEntity.components.add(new C_Nametag());
+    }
+    if (compName == "S_UsesNav") { // todo- missing removes on all these
+      this.targetEntity.components.add(new C_UsesNav());
+    }
+    if (compName == "S_Transform") { // todo- missing removes on all these
+      const ct = new C_Transform()
+      ct.pos = (newComp as S_Transform).pos; // workaround for card initial positions
+      this.targetEntity.components.add(ct);
+    }
+    if (compName == "S_Sim") { // todo- missing removes on all these
+      this.targetEntity.components.add(new C_Sim());
+    } 
+    if (compName == "S_PlayerPose") { // todo- missing removes on all these
+      this.targetEntity.components.add(new C_PlayerPose());
+    }
     if (compName == "S_NetworkSession") {
       if (newComp.sessionId == this.sessionId) {
         // we're the player
         this.targetEntity.components.add(new PlayerDebug());
         this.targetEntity.components.add(new LocallyDriven());
         this.targetEntity.components.add(new S_UsesNav());
+        this.targetEntity.components.add(new C_UsesNav());
         this.targetEntity.components.add(new LocalCam());
         this.targetEntity.components.add(new ServerRepresented(this.room_temp!));
       }

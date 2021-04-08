@@ -1,34 +1,33 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { Mesh, Quaternion, Vector2, Vector3 } from "babylonjs";
-import { S_Sim, S_Transform, S_UsesNav } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
-import { LocallyDriven, PlayerDebug } from "../Components";
+import { C_Sim, C_Transform, C_UsesNav, LocallyDriven, PlayerDebug } from "../Components";
 import { playerStep } from "../Motion";
 const log = createLogger("system");
 
 export class LocalMovement extends AbstractEntitySystem<IdEntity> {
+  // set C_Transform, C_Sim, etc, based on latest server data (remote players) or
+  // latest server data plus userinput (local player).
   constructor(priority: number) {
-    super(priority, [S_Transform, PlayerDebug, LocallyDriven, S_UsesNav]);
+    super(priority, [C_Transform, C_Sim, PlayerDebug, LocallyDriven, C_UsesNav]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
-    const dt = options.dt;
-    const pt = entity.components.get(S_Transform);
-    const si = entity.components.get(S_Sim);
+    const ct = entity.components.get(C_Transform);
+    const si = entity.components.get(C_Sim);
     const pd = entity.components.get(PlayerDebug);
-    const un = entity.components.get(S_UsesNav);
+    const un = entity.components.get(C_UsesNav);
     const ld = entity.components.get(LocallyDriven);
 
     const mouseX = ld.mouseX,
       stick = new Vector2(ld.stickX, ld.stickY);
 
-    this.onMouseX(mouseX, pt.facing, si.vel);
-    si.vel = this.setXZVel(stick, pt.facing, si.vel);
-
+    this.onMouseX(mouseX, ct.facing, si.vel);
+    si.vel = this.setXZVel(stick, ct.facing, si.vel);
     const navMesh = options.scene.getMeshByName("navmesh") as Mesh;
-    [pt.pos, si.vel, pt.facing, un.grounded, un.currentNavFaceId] = playerStep(dt, pt.pos, si.vel, pt.facing, navMesh, pd, un.currentNavFaceId);
+    [ct.pos, si.vel, ct.facing, un.grounded, un.currentNavFaceId] = playerStep(options.dt, ct.pos, si.vel, ct.facing, navMesh, pd, un.currentNavFaceId);
   }
 
   private onMouseX(movementX: number, facing: Vector3 /*mutated*/, vel: Vector3 /*mutated*/) {

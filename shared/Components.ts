@@ -82,9 +82,6 @@ export class S_UsesNav implements Component {
 export class S_Nametag implements Component {
   // draw nametag on this model
   public text: string = "?";
-  public plane?: Mesh;
-  public tx?: DynamicTexture;
-  public mat?: StandardMaterial;
   constructor(public offset: Vector3) {
     if (isServer) {
       makeObservable(this, { text: observable, offset: observable });

@@ -38,7 +38,8 @@ export enum LineType {
 export function dumpWorld(world: Engine, write: (lineType: LineType, line: string) => void) {
   world.entities.forEach((e) => {
     write(LineType.entity, `entity ${e.id}`);
-    e.components.sort((a, b) => (a.constructor.name < b.constructor.name ? -1 : 1));
+    const key = (name: string) => name.replace(/^\w_/, "") + name;
+    e.components.sort((a, b) => (key(a.constructor.name) < key(b.constructor.name) ? -1 : 1));
     e.components.forEach((comp) => {
       write(LineType.component, `  component ${comp.constructor.name}`);
       for (let prop in comp) {

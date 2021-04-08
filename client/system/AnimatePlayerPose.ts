@@ -13,7 +13,7 @@ export class AnimatePlayerPose extends AbstractEntitySystem<IdEntity> {
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
-    const pp = entity.components.get(S_PlayerPose);
+    const pp = entity.getComponentReadonly(S_PlayerPose);
     const bm = entity.components.get(BjsModel);
 
     if (pp.waving) {

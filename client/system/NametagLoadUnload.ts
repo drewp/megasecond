@@ -1,55 +1,54 @@
 import { Component, ComponentCollection } from "@trixt0r/ecs";
 import { AbstractMesh, DynamicTexture, PlaneBuilder, Scene, StandardMaterial, TransformNode } from "babylonjs";
 import { autorun } from "mobx";
-import { S_AimAt, S_Nametag, S_PlayerPose } from "../../shared/Components";
+import { S_AimAt, S_Nametag } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
+import { C_Nametag } from "../Components";
 const log = createLogger("nametag");
 
 export class NametagLoadUnload extends LoadUnloadSystem {
-  requiredComponentTypes = [S_Nametag, S_AimAt, S_PlayerPose];
+  requiredComponentTypes = [S_Nametag, C_Nametag, S_AimAt];
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
-    const nt = entity.components.get(S_Nametag);
-    const aa = entity.components.get(S_AimAt);
+    const nt = entity.getComponentReadonly(S_Nametag);
+    const ct = entity.components.get(C_Nametag);
+    const aa = entity.getComponentReadonly(S_AimAt);
     const aimAt = aa.getAimObj(entity, options.scene);
     if (!aimAt) {
       // keep waiting for this
       return KeepProcessing.KEEP_PROCESSING;
     }
-    log.info("applying nametag, aimAt is", aimAt);
 
     const scl = 0.003;
-    nt.plane = PlaneBuilder.CreatePlane(entity.localName("nametag"), { width: 256 * scl, height: 64 * scl }, options.scene);
+    ct.plane = PlaneBuilder.CreatePlane(entity.localName("nametag"), { width: 256 * scl, height: 64 * scl }, options.scene);
 
-    nt.plane.parent = aimAt as AbstractMesh;
+    ct.plane.parent = aimAt as AbstractMesh;
     autorun(() => {
-      nt.plane!.position = nt.offset;
+      ct.plane!.position = nt.offset;
     });
 
     var { mat, tx } = this.createMaterial(entity, options.scene);
-    nt.tx = tx;
-    nt.mat = mat;
-    nt.plane.material = mat;
-    nt.plane.billboardMode = TransformNode.BILLBOARDMODE_ALL;
+    ct.tx = tx;
+    ct.mat = mat;
+    ct.plane.material = mat;
+    ct.plane.billboardMode = TransformNode.BILLBOARDMODE_ALL;
 
     autorun(() => {
-      const pp = entity.components.get(S_PlayerPose);
       const fg = "#ffffffff";
       const bg = "#000000ff";
       const msg = nt.text;
-      const pose = pp.waving ? " *wave*" : "";
-      tx.drawText(msg + pose, 0, 50, "35px sans", fg, bg, /*invertY=*/ true, /*update=*/ true);
+      tx.drawText(msg, 0, 50, "35px sans", fg, bg, /*invertY=*/ true, /*update=*/ true);
     });
     return KeepProcessing.STOP_PROCESSING;
   }
 
   onRemoved(_entity: IdEntity, components: ComponentCollection<Component>) {
-    const nt = components.get(S_Nametag);
-    nt.plane?.dispose();
-    nt.tx?.dispose();
-    nt.mat?.dispose();
+    const ct = components.get(C_Nametag);
+    ct.plane?.dispose();
+    ct.tx?.dispose();
+    ct.mat?.dispose();
   }
 
   private createMaterial(entity: IdEntity, scene: Scene) {

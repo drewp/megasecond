@@ -4,21 +4,21 @@ import { S_AimAt, S_Transform } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
-import { Action, BjsModel, LocalCam, LocallyDriven } from "../Components";
+import { Action, BjsModel, C_Transform, LocalCam, LocallyDriven } from "../Components";
 
 const log = createLogger("system");
 
 export class LocalCamFollow extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [BjsModel, S_Transform, S_AimAt, LocalCam, LocallyDriven]);
+    super(priority, [C_Transform, S_AimAt, LocalCam, LocallyDriven]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const cam = entity.components.get(LocalCam).cam;
     if (!cam) return;
 
-    const heading = entity.components.get(S_Transform).heading;
-    const aa = entity.components.get(S_AimAt);
+    const heading = entity.getComponentReadonly(C_Transform).heading;
+    const aa = entity.getComponentReadonly(S_AimAt);
     const ld = entity.components.get(LocallyDriven);
     const lc = entity.components.get(LocalCam);
 

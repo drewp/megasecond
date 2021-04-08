@@ -1,15 +1,34 @@
 import { AbstractEntitySystem, Component, ComponentCollection } from "@trixt0r/ecs";
 import { CylinderBuilder, Mesh, ShaderMaterial } from "babylonjs";
-import { S_Transform } from "../../shared/Components";
+import { S_PlayerPose, S_Transform } from "../../shared/Components";
+import { removeComponentsOfType } from "../../shared/EcsOps";
 import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
-import { BattleRing } from "../Components";
+import { BattleRing, C_PlayerPose, C_Transform } from "../Components";
 const log = createLogger("BattleProps");
 
+export class BattleRingPresence extends AbstractEntitySystem<IdEntity> {
+  constructor(priority: number) {
+    super(priority, [S_PlayerPose]);
+  }
+
+  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
+    const pp = entity.getComponentReadonly(C_PlayerPose);
+    const br = entity.components.get(BattleRing);
+    if (pp.waving && !br) {
+      entity.components.add(new BattleRing());
+    }
+
+    if (!pp.waving && br) {
+      removeComponentsOfType(entity, BattleRing);
+    }
+  }
+}
+
 export class BattleRingLoad extends LoadUnloadSystem {
-  requiredComponentTypes = [S_Transform, BattleRing];
+  requiredComponentTypes = [BattleRing];
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
     const br = entity.components.get(BattleRing);
 
@@ -40,11 +59,11 @@ export class BattleRingLoad extends LoadUnloadSystem {
 
 export class BattleRingAnim extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [BattleRing, S_Transform]);
+    super(priority, [BattleRing, C_Transform]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
-    const tr = entity.components.get(S_Transform);
+    const tr = entity.getComponentReadonly(C_Transform);
     const br = entity.components.get(BattleRing);
     if (!br.cyl) {
       return;

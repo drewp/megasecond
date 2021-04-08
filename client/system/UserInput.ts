@@ -1,11 +1,11 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { ActionEvent, ActionManager, ExecuteCodeAction, PickingInfo, PointerEventTypes, Scene, VirtualJoystick } from "babylonjs";
+import { action, makeObservable } from "mobx";
 import { S_PlayerPose } from "../../shared/Components";
-import { removeComponentsOfType } from "../../shared/EcsOps";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
-import { Action, BattleRing, LocallyDriven } from "../Components";
+import { Action, C_PlayerPose, LocallyDriven } from "../Components";
 
 const log = createLogger("system");
 
@@ -31,12 +31,14 @@ export class MobileSticks {
 }
 
 export class UserInput extends AbstractEntitySystem<IdEntity> {
+  // collect inputs into LocallyDriven and PlayerPose (and maybe some debug components)
   constructor(priority: number) {
-    super(priority, [LocallyDriven, S_PlayerPose]);
+    super(priority, [LocallyDriven, C_PlayerPose]);
+    makeObservable(this, { processEntity: action }); // todo- move to a system subclass and apply everywhere?
   }
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const ld = entity.components.get(LocallyDriven);
-    const pp = entity.components.get(S_PlayerPose);
+    const pp = entity.components.get(C_PlayerPose);
     if (!ld.sceneIsInit) {
       this.connectToScene(options.scene, ld);
       ld.sceneIsInit = true;
@@ -64,12 +66,10 @@ export class UserInput extends AbstractEntitySystem<IdEntity> {
     ld.forAction(Action.Activate, () => {
       if (pp.waving) return;
       pp.waving = true;
-      entity.components.add(new BattleRing()); // todo- move out of UserInput
     });
     ld.forAction(Action.ActivateRelease, () => {
       if (!pp.waving) return;
       pp.waving = false;
-      removeComponentsOfType(entity, BattleRing);
     });
   }
 

@@ -1,8 +1,8 @@
 import { Component } from "@trixt0r/ecs";
-import { FollowCamera, Vector3, AssetContainer, TransformNode } from "babylonjs";
-import { ShaderMaterial } from "babylonjs/Materials/shaderMaterial";
+import { AssetContainer, DynamicTexture, FollowCamera, ShaderMaterial, StandardMaterial, TransformNode, Vector3 } from "babylonjs";
 import { Mesh } from "babylonjs/Meshes/mesh";
 import * as Colyseus from "colyseus.js";
+import { makeObservable, observable } from "mobx";
 import { ShowPoint, ShowSegment } from "../client/Debug";
 import createLogger from "../shared/logsetup";
 import { WorldState } from "../shared/WorldRoom";
@@ -29,8 +29,6 @@ export class LocalCam implements Component {
 export class ServerRepresented implements Component {
   public lastSentTime = 0; // ms
   public lastSent: any;
-  public receivedPos = Vector3.Zero();
-  public receivedFacing = Vector3.Forward();
   constructor(public worldRoom: Colyseus.Room<WorldState>) {}
 }
 
@@ -96,5 +94,46 @@ export class BjsModel implements Component {
   constructor() {}
   dispose() {
     this.root?.dispose();
+  }
+}
+export class C_Nametag implements Component {
+  public plane?: Mesh;
+  public tx?: DynamicTexture;
+  public mat?: StandardMaterial;
+  constructor() {}
+}
+
+export class C_UsesNav implements Component {
+  public currentNavFaceId = 0;
+  public grounded = false;
+  public nav?: string; //
+  constructor() {}
+}
+
+export class C_Transform implements Component {
+  // this is the prediction of S_Transform
+  public pos = Vector3.Zero();
+  public facing = Vector3.Forward();
+  constructor() {
+    if (false) {
+    } else {
+      // dont mess up Vector3 for setting
+    }
+  }
+  get heading(): number {
+    return (360 / (2 * Math.PI)) * Math.atan2(-this.facing.z, this.facing.x) + 270;
+  }
+}
+
+export class C_Sim implements Component {
+  public vel = Vector3.Zero();
+  constructor() {}
+}
+
+
+export class C_PlayerPose implements Component {
+  public waving = false;
+  constructor() {
+    makeObservable(this, { waving: observable });
   }
 }

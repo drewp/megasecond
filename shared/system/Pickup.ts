@@ -14,7 +14,7 @@ export class Pickup extends AbstractEntitySystem<IdEntity> {
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: CommonWorldRunOptions) {
     if (!this.engine) return;
-    const tu = entity.components.get(S_Toucher);
+    const tu = entity.getComponentReadonly(S_Toucher);
     if (tu.currentlyTouching.size > 0) {
       tu.currentlyTouching.forEach((obj) => {
         removeComponentsOfType(obj, S_Transform);
