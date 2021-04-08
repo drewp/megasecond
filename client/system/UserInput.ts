@@ -1,5 +1,7 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { ActionManager, ExecuteCodeAction, Scene, VirtualJoystick } from "babylonjs";
+import { ActionEvent, FollowCamera, PickingInfo, PointerEventTypes, Vector3 } from "babylonjs";
+
 import { PlayerPose } from "../../shared/Components";
 import { removeComponentsOfType } from "../../shared/EcsOps";
 import { IdEntity } from "../../shared/IdEntity";
@@ -73,11 +75,77 @@ export class UserInput extends AbstractEntitySystem<IdEntity> {
       // removeComponentsOfType(entity, BattleRing);
     });
   }
+
   connectToScene(scene: Scene, ld: LocallyDriven) {
     // this will sneak values into our Component outside of processEntity
     scene.actionManager = new ActionManager(scene);
-    scene.actionManager.registerAction(new ExecuteCodeAction({ trigger: ActionManager.OnKeyDownTrigger }, ld.onKeyDown.bind(ld)));
-    scene.actionManager.registerAction(new ExecuteCodeAction({ trigger: ActionManager.OnKeyUpTrigger }, ld.onKeyUp.bind(ld)));
-    scene.onPointerMove = ld.onMove.bind(ld);
+    scene.actionManager.registerAction(new ExecuteCodeAction({ trigger: ActionManager.OnKeyDownTrigger }, this.onKeyDown.bind(this, ld)));
+    scene.actionManager.registerAction(new ExecuteCodeAction({ trigger: ActionManager.OnKeyUpTrigger }, this.onKeyUp.bind(this, ld)));
+    scene.onPointerMove = this.onMove.bind(this, ld);
+  }
+
+  // not called during processEntity
+  onMove(ld: LocallyDriven, ev: PointerEvent, pickInfo: PickingInfo, type: PointerEventTypes) {
+    if (!document.pointerLockElement) {
+      return;
+    }
+    ld.mouseAccumX += ev.movementX;
+    ld.mouseAccumY += ev.movementY;
+  }
+
+  // not called during processEntity
+  onKeyDown(ld: LocallyDriven, ev: ActionEvent) {
+    const stickKeyPressFunc: { [keyName: string]: () => void } = {
+      arrowup: () => (ld.stickKeyY = -1),
+      w: () => (ld.stickKeyY = -1),
+      arrowdown: () => (ld.stickKeyY = 1),
+      s: () => (ld.stickKeyY = 1),
+      arrowleft: () => (ld.stickKeyX = -1),
+      a: () => (ld.stickKeyX = -1),
+      arrowright: () => (ld.stickKeyX = 1),
+      d: () => (ld.stickKeyX = 1),
+    };
+    const setFromKey = stickKeyPressFunc[(ev.sourceEvent.key as string).toLowerCase()];
+    if (setFromKey) {
+      setFromKey();
+    }
+    ld.shiftKey = ev.sourceEvent.shiftKey as boolean;
+    const keyAction: { [key: string]: Action } = {
+      " ": Action.Jump,
+      e: Action.Activate,
+      n: Action.ToggleNavmeshView,
+      b: Action.ToggleBirdsEyeView,
+      r: Action.ReloadEnv,
+    };
+    const action = keyAction[ev.sourceEvent.key];
+    if (action !== undefined) {
+      ld.accumFrameActions.push(action);
+    }
+  }
+
+  // not called during processEntity
+  onKeyUp(ld: LocallyDriven, ev: ActionEvent) {
+    const stickKeyReleaseFunc: { [keyName: string]: () => void } = {
+      arrowup: () => (ld.stickKeyY = 0),
+      w: () => (ld.stickKeyY = 0),
+      arrowdown: () => (ld.stickKeyY = 0),
+      s: () => (ld.stickKeyY = 0),
+      arrowleft: () => (ld.stickKeyX = 0),
+      a: () => (ld.stickKeyX = 0),
+      arrowright: () => (ld.stickKeyX = 0),
+      d: () => (ld.stickKeyX = 0),
+    };
+    const setFromKey = stickKeyReleaseFunc[(ev.sourceEvent.key as string).toLowerCase()];
+    if (setFromKey) {
+      setFromKey();
+    }
+    ld.shiftKey = ev.sourceEvent.shiftKey as boolean;
+    const keyAction: { [key: string]: Action } = {
+      e: Action.ActivateRelease,
+    };
+    const action = keyAction[ev.sourceEvent.key];
+    if (action !== undefined) {
+      ld.accumFrameActions.push(action);
+    }
   }
 }

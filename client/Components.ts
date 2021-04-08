@@ -1,5 +1,5 @@
 import { Component } from "@trixt0r/ecs";
-import { ActionEvent, FollowCamera, PickingInfo, PointerEventTypes, Vector3 } from "babylonjs";
+import { FollowCamera, Vector3 } from "babylonjs";
 import { ShaderMaterial } from "babylonjs/Materials/shaderMaterial";
 import { Mesh } from "babylonjs/Meshes/mesh";
 import * as Colyseus from "colyseus.js";
@@ -54,8 +54,6 @@ export class LocallyDriven implements Component {
   public mouseX = 0;
   public mouseY = 0;
   public mobileInput: MobileSticks | undefined;
-  private stickKeyPressFunc: { [keyName: string]: () => void };
-  private stickKeyReleaseFunc: { [keyName: string]: () => void };
   public sceneIsInit = false;
   public accumFrameActions: Action[] = [];
   public frameActions: Action[] = [];
@@ -63,83 +61,17 @@ export class LocallyDriven implements Component {
     this.frameActions.filter((a) => a == action).forEach(cb);
   }
   constructor() {
-    this.stickKeyPressFunc = {
-      arrowup: () => (this.stickKeyY = -1),
-      w: () => (this.stickKeyY = -1),
-      arrowdown: () => (this.stickKeyY = 1),
-      s: () => (this.stickKeyY = 1),
-      arrowleft: () => (this.stickKeyX = -1),
-      a: () => (this.stickKeyX = -1),
-      arrowright: () => (this.stickKeyX = 1),
-      d: () => (this.stickKeyX = 1),
-    };
-    this.stickKeyReleaseFunc = {
-      arrowup: () => (this.stickKeyY = 0),
-      w: () => (this.stickKeyY = 0),
-      arrowdown: () => (this.stickKeyY = 0),
-      s: () => (this.stickKeyY = 0),
-      arrowleft: () => (this.stickKeyX = 0),
-      a: () => (this.stickKeyX = 0),
-      arrowright: () => (this.stickKeyX = 0),
-      d: () => (this.stickKeyX = 0),
-    };
-
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (isMobile) {
       this.mobileInput = new MobileSticks(this);
     }
   }
-
-  onAction(a: Action) {
-    this.accumFrameActions.push(a);
-  }
-
-  onMove(ev: PointerEvent, pickInfo: PickingInfo, type: PointerEventTypes) {
-    if (!document.pointerLockElement) {
-      return;
-    }
-    this.mouseAccumX += ev.movementX;
-    this.mouseAccumY += ev.movementY;
-  }
-
-  onKeyDown(ev: ActionEvent) {
-    const setFromKey = this.stickKeyPressFunc[(ev.sourceEvent.key as string).toLowerCase()];
-    if (setFromKey) {
-      setFromKey();
-    }
-    this.shiftKey = ev.sourceEvent.shiftKey as boolean;
-    const keyAction: { [key: string]: Action } = {
-      " ": Action.Jump,
-      e: Action.Activate,
-      n: Action.ToggleNavmeshView,
-      b: Action.ToggleBirdsEyeView,
-      r: Action.ReloadEnv,
-    };
-    const action = keyAction[ev.sourceEvent.key];
-    if (action !== undefined) {
-      this.accumFrameActions.push(action);
-    }
-  }
-  onKeyUp(ev: ActionEvent) {
-    const setFromKey = this.stickKeyReleaseFunc[(ev.sourceEvent.key as string).toLowerCase()];
-    if (setFromKey) {
-      setFromKey();
-    }
-    this.shiftKey = ev.sourceEvent.shiftKey as boolean;
-    const keyAction: { [key: string]: Action } = {
-      e: Action.ActivateRelease,
-    };
-    const action = keyAction[ev.sourceEvent.key];
-    if (action !== undefined) {
-      this.accumFrameActions.push(action);
-    }
-  }
 }
 
 export class BattleRing implements Component {
-  cyl?: Mesh
-  mat?: ShaderMaterial
-  startTime=0
+  cyl?: Mesh;
+  mat?: ShaderMaterial;
+  startTime = 0;
   // closest others, deformations, etc
   constructor() {}
 }
