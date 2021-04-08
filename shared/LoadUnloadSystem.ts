@@ -25,20 +25,29 @@ export class LoadUnloadSystem extends System {
         });
       },
       onRemovedComponents: this.onRemovedComponents.bind(this),
-      onRemovedEntities: (...entities: IdEntity[]) => {
-        log.info("onRemovedEntities", entityIdList(entities));
-        entities.forEach((entity) => {
-          log.info(`  e${entity.id} removed, comps ${componentNameList(entity.components)} remain for onRemoved`);
-          this.onRemoved(entity, entity.components);
-        });
+      onRemovedEntities: (..._entities: IdEntity[]) => {
+        // it's too late now: the components to be cleaned up; they're gone.
       },
     });
   }
 
-  private onRemovedComponents(entity: IdEntity, ...components: Component[]) {
-    log.info(`e${entity.id} onRemovedComponents ${componentNameList(components)}`);
+  containsARequiredComponent(components: Component[]) {
+    for (let c of components) {
+      for (let c2 of this.requiredComponentTypes) {
+        if (c.constructor.name == c2.name) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 
-    if (!this.aspect.matches(entity)) {
+  private onRemovedComponents(entity: IdEntity, ...components: Component[]) {
+    // Need to catch these component removes before the wohle entitiy falls out
+    // of the aspect, since we need to pass the just-removed component objs to
+    // onRemoved.
+
+    if (!this.containsARequiredComponent(components)) {
       return;
     }
 

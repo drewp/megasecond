@@ -32,7 +32,7 @@ export function combineComponentCollections(...sources: (ComponentCollection<Com
 export enum LineType {
   entity = 0,
   component = 1,
-  attr=2,
+  attr = 2,
   // 'synced from server', 'recently updated', etc
 }
 export function dumpWorld(world: Engine, write: (lineType: LineType, line: string) => void) {
@@ -42,7 +42,7 @@ export function dumpWorld(world: Engine, write: (lineType: LineType, line: strin
     e.components.forEach((comp) => {
       write(LineType.component, `  component ${comp.constructor.name}`);
       for (let prop in comp) {
-        write(LineType.attr,`    ${prop} ${prettyPrintText(comp[prop])}`);
+        write(LineType.attr, `    ${prop} ${prettyPrintText(comp[prop])}`);
       }
     });
   });

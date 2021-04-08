@@ -1,13 +1,12 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
-import { ActionManager, ExecuteCodeAction, Scene, VirtualJoystick } from "babylonjs";
-import { ActionEvent, FollowCamera, PickingInfo, PointerEventTypes, Vector3 } from "babylonjs";
-
+import { ActionEvent, ActionManager, ExecuteCodeAction, PickingInfo, PointerEventTypes, Scene, VirtualJoystick } from "babylonjs";
 import { S_PlayerPose } from "../../shared/Components";
 import { removeComponentsOfType } from "../../shared/EcsOps";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
 import { Action, BattleRing, LocallyDriven } from "../Components";
+
 const log = createLogger("system");
 
 export class MobileSticks {
@@ -70,9 +69,7 @@ export class UserInput extends AbstractEntitySystem<IdEntity> {
     ld.forAction(Action.ActivateRelease, () => {
       if (!pp.waving) return;
       pp.waving = false;
-      const br = entity.components.get(BattleRing);
-      // entity.components.remove(br);
-      // removeComponentsOfType(entity, BattleRing);
+      removeComponentsOfType(entity, BattleRing);
     });
   }
 

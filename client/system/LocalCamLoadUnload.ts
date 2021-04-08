@@ -2,8 +2,11 @@ import { Component, ComponentCollection } from "@trixt0r/ecs";
 import { FollowCamera, Vector3 } from "babylonjs";
 import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
+import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
 import { LocalCam } from "../Components";
+
+const log = createLogger("system");
 
 export class LocalCamLoadUnload extends LoadUnloadSystem {
   requiredComponentTypes = [LocalCam];

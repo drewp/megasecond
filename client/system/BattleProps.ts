@@ -21,13 +21,12 @@ export class BattleRingLoad extends LoadUnloadSystem {
 
     // should be shared between rings
     br.mat = new ShaderMaterial(entity.localName("ring"), options.scene, "./shader/ring", {
-
       attributes: ["position", "normal", "uv"],
       uniforms: ["world", "worldView", "worldViewProjection", "view", "projection", "time"],
       needAlphaBlending: true,
       needAlphaTesting: true,
     });
-br.startTime = Date.now()/1000;
+    br.startTime = Date.now() / 1000;
     br.cyl.material = br.mat;
     br.mat.backFaceCulling = false;
     return KeepProcessing.STOP_PROCESSING;
@@ -47,12 +46,10 @@ export class BattleRingAnim extends AbstractEntitySystem<IdEntity> {
   processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
     const tr = entity.components.get(S_Transform);
     const br = entity.components.get(BattleRing);
-if (!br) return ; // shouldn't happen!
     if (!br.cyl) {
       return;
     }
     br.mat?.setFloat("time", Date.now() / 1000 - br.startTime);
     br.cyl.position = tr.pos;
-
   }
 }
