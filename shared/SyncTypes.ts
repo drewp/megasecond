@@ -1,4 +1,5 @@
 import { MapSchema, Schema, SetSchema, type } from "@colyseus/schema";
+import { ComponentClass } from "@trixt0r/ecs";
 import { Component } from "@trixt0r/ecs";
 
 export interface CtorArg {
@@ -10,7 +11,7 @@ export interface UpdateGroup {
   servType: keyof ServerComponent;
 }
 export interface Convertor {
-  ctor: Component;
+  ctor: ComponentClass<Component>;
   ctorArgs?: CtorArg[];
   localUpdatedAttrs?: UpdateGroup[];
 }

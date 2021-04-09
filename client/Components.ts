@@ -1,5 +1,5 @@
 import { Component } from "@trixt0r/ecs";
-import { AssetContainer, DynamicTexture, FollowCamera, ShaderMaterial, StandardMaterial, TransformNode, Vector3 } from "babylonjs";
+import { AssetContainer, DynamicTexture, FollowCamera, ShaderMaterial, StandardMaterial, TransformNode, Vector2, Vector3 } from "babylonjs";
 import { Mesh } from "babylonjs/Meshes/mesh";
 import * as Colyseus from "colyseus.js";
 import { makeObservable, observable } from "mobx";
@@ -42,10 +42,8 @@ export enum Action {
 }
 
 export class LocallyDriven implements Component {
-  public stickKeyX = 0; // exact state of up/down l/r keys
-  public stickKeyY = 0;
-  public stickX = 0; // analog input to game
-  public stickY = 0;
+  public stickKey = Vector2.Zero(); // exact state of up/down l/r keys
+  public stick = Vector2.Zero(); // analog input to game
   public shiftKey = false;
   public mouseAccumX = 0;
   public mouseAccumY = 0;
@@ -129,7 +127,6 @@ export class C_Sim implements Component {
   public vel = Vector3.Zero();
   constructor() {}
 }
-
 
 export class C_PlayerPose implements Component {
   public waving = false;

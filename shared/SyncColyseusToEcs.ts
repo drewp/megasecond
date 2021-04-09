@@ -1,9 +1,8 @@
 import { MapSchema } from "@colyseus/schema";
-import { Component, Engine } from "@trixt0r/ecs";
+import { Component, ComponentClass, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
-import { Room } from "colyseus.js";
-import { BjsModel, BattleRing, LocalCam, LocallyDriven, PlayerDebug, ServerRepresented, C_Nametag, C_UsesNav, C_Transform, C_Sim, C_PlayerPose } from "../client/Components";
-import { componentConversions, S_PlayerPose, S_Transform, S_UsesNav } from "./Components";
+import { LocallyDriven } from "../client/Components";
+import { componentConversions, S_Transform } from "./Components";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
 import { Convertor, CtorArg, PropV3, ServerComponent, ServerEntity, UpdateGroup } from "./SyncTypes";
@@ -15,14 +14,10 @@ function vector3FromProp(p: PropV3): Vector3 {
 }
 
 export class TrackServerEntities {
-  sessionId?: string;
-  room_temp?: Room<WorldState>;
   _entityByServId: Map<string, IdEntity> = new Map();
   constructor(public world: Engine) {}
 
-  trackEntities(state: WorldState, sessionId: string, room_temp: Room<WorldState>) {
-    this.room_temp = room_temp;
-    this.sessionId = sessionId;
+  trackEntities(state: WorldState) {
     state.entities.forEach(this.addServerEntity.bind(this));
     state.entities.onAdd = this.addServerEntity.bind(this);
     state.entities.onChange = (_se: ServerEntity, servId: string) => {
@@ -37,7 +32,7 @@ export class TrackServerEntities {
     this.world.entities.add(ent);
     this._entityByServId.set(servId, ent);
 
-    new TrackServerComponents(se, ent, this.sessionId!, this.room_temp!);
+    new TrackServerComponents(se, ent);
   }
   private removeServerEntity(_se: ServerEntity, servId: string) {
     const ent = this._entityByServId.get(servId);
@@ -51,44 +46,48 @@ export class TrackServerEntities {
 }
 
 class TrackServerComponents {
-  _compByName = new Map<string, Component>();
-  constructor(
-    private sourceEntity: ServerEntity,
-    private targetEntity: IdEntity,
-    private sessionId: string, //doesn't belong here
-    private room_temp: Room<WorldState> //doesn't belong here
-  ) {
+  _autoComps = new Map<string, Component[]>();
+  _trackingServerComps = new Set<string>();
+  constructor(private sourceEntity: ServerEntity, private targetEntity: IdEntity) {
+    // we need this one because entity can show up with a bunch of components already...
     this.sourceEntity.components.forEach(this.makeLocalComponents.bind(this));
+    // ...and then this one sometimes makes repeated calls of some components.
     this.sourceEntity.components.onAdd = this.makeLocalComponents.bind(this);
+
     this.sourceEntity.components.onChange = (_sourceComp: ServerComponent, compName: string) => {
       this.log(`sc change compName=${compName}`);
     };
-    this.sourceEntity.components.onRemove = (_sourceComp: ServerComponent, compName: string) => {
-      this.log(`sc remove compName=${compName}`);
-      this.targetEntity.components.remove(this._compByName.get(compName)!);
-      this._compByName.delete(compName);
-    };
+    this.sourceEntity.components.onRemove = this.onRemove.bind(this);
   }
+
   log(...args: any[]) {
     log.info(`e${this.targetEntity.id}:  `, ...args);
   }
-  private makeLocalComponents(sourceComp: ServerComponent, compName: string) {
-    const convertor = componentConversions[compName];
 
-    if (convertor === undefined) {
-      this.log(`no client component for server-sent ${compName}`);
+  private makeLocalComponents(sourceComp: ServerComponent, compName: string) {
+    if (this._trackingServerComps.has(compName)) {
+      // unexpected repeated add, but I know the server only has one comp per type on an entity.
       return;
     }
-    if (this.targetEntity.components.find((el: Component) => el.constructor.name == compName)) {
-      this.log(`had ${compName} already- skipping further adds`);
-      return;
+    this._trackingServerComps.add(compName);
+    this.log("build local comps for server comp", compName);
+    if (!this._autoComps.has(compName)) {
+      this._autoComps.set(compName, []);
     }
+    (componentConversions[compName] || []).forEach((convertor) => {
+      const made = this.makeLocalComponent(sourceComp, convertor);
+      this._autoComps.get(compName)!.push(made);
+    });
+  }
+
+  private makeLocalComponent(sourceComp: ServerComponent, convertor: Convertor): Component {
+    const classToMake: ComponentClass<Component> = convertor.ctor;
 
     const ctorArgs = (convertor.ctorArgs || []).map((spec: CtorArg): any => {
       const servSchemaMap = sourceComp[spec.servType] as MapSchema;
       let curValue = servSchemaMap.get(spec.attr);
       if (curValue === undefined) {
-        this.log(`serverProxyObj ${compName}.${spec.attr} is undefined`);
+        this.log(`serverProxyObj ${spec.attr} is undefined`);
       }
       if (spec.servType == "propV3") {
         curValue = vector3FromProp(curValue);
@@ -96,58 +95,26 @@ class TrackServerComponents {
       return curValue;
     });
 
-    const componentCtor = convertor.ctor as any; // ideally: as subtypeof(Component)
-    const newComp: Component = new componentCtor(...ctorArgs);
+    const newComp: Component = new classToMake(...ctorArgs);
 
-    this.log(`making component ${compName}`);
+    this.log(`TrackServerComponents.makeLocalComponents making component ${classToMake.name}`);
     // until server movement is right:
-    if (compName === "S_Transform" && this.targetEntity.components.get(LocallyDriven)) {
+    if (classToMake === S_Transform && this.targetEntity.components.get(LocallyDriven)) {
       // no sync
     } else {
       new TrackComponentAttrs(sourceComp, newComp, convertor);
     }
     this.targetEntity.components.add(newComp);
-    this._compByName.set(compName, newComp);
-
-    this.addLocalComponents(compName, newComp);
+    return newComp;
   }
 
-  private addLocalComponents(compName: string, newComp: Component) {
-    if (compName == "S_Model") {
-      // and since this is client, add renderable:
-      if (this.targetEntity.components.get(BjsModel)) {
-        throw new Error(`ent=${this.targetEntity.id} already had BjsModel`);
-      }
-      this.targetEntity.components.add(new BjsModel());
-    }
-    if (compName == "S_Nametag") { // todo- missing removes on all these
-      this.targetEntity.components.add(new C_Nametag());
-    }
-    if (compName == "S_UsesNav") { // todo- missing removes on all these
-      this.targetEntity.components.add(new C_UsesNav());
-    }
-    if (compName == "S_Transform") { // todo- missing removes on all these
-      const ct = new C_Transform()
-      ct.pos = (newComp as S_Transform).pos; // workaround for card initial positions
-      this.targetEntity.components.add(ct);
-    }
-    if (compName == "S_Sim") { // todo- missing removes on all these
-      this.targetEntity.components.add(new C_Sim());
-    } 
-    if (compName == "S_PlayerPose") { // todo- missing removes on all these
-      this.targetEntity.components.add(new C_PlayerPose());
-    }
-    if (compName == "S_NetworkSession") {
-      if (newComp.sessionId == this.sessionId) {
-        // we're the player
-        this.targetEntity.components.add(new PlayerDebug());
-        this.targetEntity.components.add(new LocallyDriven());
-        this.targetEntity.components.add(new S_UsesNav());
-        this.targetEntity.components.add(new C_UsesNav());
-        this.targetEntity.components.add(new LocalCam());
-        this.targetEntity.components.add(new ServerRepresented(this.room_temp!));
-      }
-    }
+  onRemove(_sourceComp: ServerComponent, compName: string) {
+    (this._autoComps.get(compName) || []).forEach((c: Component) => {
+      this.log(`sc remove compName=${c.constructor.name}`);
+      this.targetEntity.components.remove(c);
+    });
+    this._autoComps.delete(compName);
+    this._trackingServerComps.delete(compName);
   }
 }
 
@@ -164,6 +131,7 @@ class TrackComponentAttrs<TC extends Component> {
     servSchemaMap.onChange = () => this.onSourceChange(attrsOfThisType, servSchemaMap, servType);
     this.onSourceChange(attrsOfThisType, servSchemaMap, servType);
   }
+
   onSourceChange(attrsOfThisType: (keyof TC & string)[], servSchemaMap: MapSchema, servType: keyof ServerComponent) {
     attrsOfThisType.forEach((attr) => {
       this.copySourceToTargetValue(servSchemaMap, attr, servType);

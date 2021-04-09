@@ -21,11 +21,8 @@ export class LocalMovement extends AbstractEntitySystem<IdEntity> {
     const un = entity.components.get(C_UsesNav);
     const ld = entity.components.get(LocallyDriven);
 
-    const mouseX = ld.mouseX,
-      stick = new Vector2(ld.stickX, ld.stickY);
-
-    this.onMouseX(mouseX, ct.facing, si.vel);
-    si.vel = this.setXZVel(stick, ct.facing, si.vel);
+    this.onMouseX(ld.mouseX, ct.facing, si.vel);
+    si.vel = this.setXZVel(ld.stick, ct.facing, si.vel);
     const navMesh = options.scene.getMeshByName("navmesh") as Mesh;
     [ct.pos, si.vel, ct.facing, un.grounded, un.currentNavFaceId] = playerStep(options.dt, ct.pos, si.vel, ct.facing, navMesh, pd, un.currentNavFaceId);
   }
@@ -35,7 +32,6 @@ export class LocalMovement extends AbstractEntitySystem<IdEntity> {
     const rot = Quaternion.RotationAxis(Vector3.Up(), movementX * 0.0002);
     facing.rotateByQuaternionAroundPointToRef(rot, Vector3.Zero(), nf);
     facing.copyFrom(nf);
-
     vel.rotateByQuaternionAroundPointToRef(rot, Vector3.Zero(), nf);
     vel.copyFrom(nf);
   }

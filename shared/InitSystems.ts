@@ -9,6 +9,7 @@ import { LocalMovement } from "../client/system/LocalMovement";
 import { NametagLoadUnload } from "../client/system/NametagLoadUnload";
 import { PlayerDebugLoadUnload } from "../client/system/PlayerDebugLoadUnload";
 import { PlayerJump } from "../client/system/PlayerJump";
+import { PlayerSetup } from "../client/system/PlayerSetup";
 import { SendUntrustedLocalPos } from "../client/system/SendUntrustedLocalPos";
 import { SimpleMove } from "../client/system/SimpleMove";
 import { TransformMesh } from "../client/system/TransformMesh";
@@ -31,6 +32,7 @@ export function InitSystems(isClient = false): Engine {
     world.systems.add(new PlayerJump(0)); // todo server
 
     world.systems.add(new BjsLoadUnload(0));
+    world.systems.add(new PlayerSetup(0));
     world.systems.add(new TransformMesh(0));
     world.systems.add(new LocalCamLoadUnload(0));
     world.systems.add(new PlayerDebugLoadUnload(0));

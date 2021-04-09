@@ -3,6 +3,7 @@ import { AssetContainer, Mesh, Scene, TransformNode, Vector3 } from "babylonjs";
 import { StandardMaterial } from "babylonjs/Materials/standardMaterial";
 import { DynamicTexture } from "babylonjs/Materials/Textures/dynamicTexture";
 import { makeObservable, observable } from "mobx";
+import { BjsModel, C_Nametag, C_PlayerPose, C_Sim, C_Transform, C_UsesNav } from "../client/Components";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
 import { Convertor } from "./SyncTypes";
@@ -45,7 +46,10 @@ export class S_Transform implements Component {
 }
 
 export class S_Twirl implements Component {
-  constructor(public degPerSec = 1) {}
+  public start: number;
+  constructor(public degPerSec = 1) {
+    this.start = Date.now() / 1000;
+  }
 }
 
 export class S_AimAt implements Component {
@@ -58,7 +62,6 @@ export class S_AimAt implements Component {
     return scene.getTransformNodeByName(instancedName);
   }
 }
-
 
 export class S_Model implements Component {
   // this is the model to use  (e.g. says the server to the client)
@@ -89,50 +92,78 @@ export class S_Nametag implements Component {
   }
 }
 
-export const componentConversions: { [name: string]: Convertor } = {
-  S_NetworkSession: {
-    ctor: S_NetworkSession,
-    ctorArgs: [
-      { attr: "sessionId", servType: "propString" },
-      { attr: "serverEntityId", servType: "propString" },
-    ],
-  },
-  S_Model: {
-    ctor: S_Model,
-    ctorArgs: [{ attr: "modelPath", servType: "propString" }],
-  },
-  Toucher: {
-    ctor: S_Toucher,
-    ctorArgs: [
-      { attr: "posOffset", servType: "propV3" },
-      { attr: "radius", servType: "propFloat32" },
-    ],
-  },
-  S_AimAt: { ctor: S_AimAt, ctorArgs: [{ attr: "objName", servType: "propString" }] },
-  S_Touchable: { ctor: S_Touchable },
-  S_Twirl: { ctor: S_Twirl, ctorArgs: [{ attr: "degPerSec", servType: "propFloat32" }] },
-  S_Transform: {
-    ctor: S_Transform,
-    ctorArgs: [
-      { attr: "pos", servType: "propV3" },
-      { attr: "facing", servType: "propV3" },
-    ],
-    localUpdatedAttrs: [{ servType: "propV3", attrs: ["pos", "facing"] }],
-  },
-  S_Sim: {
-    ctor: S_Sim,
-    ctorArgs: [{ attr: "vel", servType: "propV3" }],
-  },
-  S_Nametag: {
-    ctor: S_Nametag,
-    ctorArgs: [{ attr: "offset", servType: "propV3" }],
-    localUpdatedAttrs: [
-      { servType: "propString", attrs: ["text"] },
-      { servType: "propV3", attrs: ["offset"] },
-    ],
-  },
-  S_PlayerPose: {
-    ctor: S_PlayerPose,
-    localUpdatedAttrs: [{ servType: "propBoolean", attrs: ["waving"] }],
-  },
+// what cli components to make for an incoming serv comp
+export const componentConversions: { [name: string]: Convertor[] } = {
+  S_NetworkSession: [
+    {
+      ctor: S_NetworkSession,
+      ctorArgs: [
+        { attr: "sessionId", servType: "propString" },
+        { attr: "serverEntityId", servType: "propString" },
+      ],
+    },
+  ],
+  S_Model: [
+    {
+      ctor: S_Model,
+      ctorArgs: [{ attr: "modelPath", servType: "propString" }],
+    },
+    { ctor: BjsModel },
+  ],
+  Toucher: [
+    {
+      ctor: S_Toucher,
+      ctorArgs: [
+        { attr: "posOffset", servType: "propV3" },
+        { attr: "radius", servType: "propFloat32" },
+      ],
+    },
+  ],
+  S_AimAt: [{ ctor: S_AimAt, ctorArgs: [{ attr: "objName", servType: "propString" }] }],
+  S_Touchable: [{ ctor: S_Touchable }],
+  S_Twirl: [{ ctor: S_Twirl, ctorArgs: [{ attr: "degPerSec", servType: "propFloat32" }] }],
+  S_Transform: [
+    {
+      ctor: S_Transform,
+      ctorArgs: [
+        { attr: "pos", servType: "propV3" },
+        { attr: "facing", servType: "propV3" },
+      ],
+      localUpdatedAttrs: [{ servType: "propV3", attrs: ["pos", "facing"] }],
+    },
+    {
+      ctor: C_Transform,
+      ctorArgs: [
+        { attr: "pos", servType: "propV3" }, // workaround for cards
+      ],
+    },
+  ],
+  S_Sim: [
+    {
+      ctor: S_Sim,
+      ctorArgs: [{ attr: "vel", servType: "propV3" }],
+    },
+    { ctor: C_Sim },
+  ],
+  S_Nametag: [
+    {
+      ctor: S_Nametag,
+      ctorArgs: [{ attr: "offset", servType: "propV3" }],
+      localUpdatedAttrs: [
+        { servType: "propString", attrs: ["text"] },
+        { servType: "propV3", attrs: ["offset"] },
+      ],
+    },
+    {
+      ctor: C_Nametag,
+    },
+  ],
+  S_PlayerPose: [
+    {
+      ctor: S_PlayerPose,
+      localUpdatedAttrs: [{ servType: "propBoolean", attrs: ["waving"] }],
+    },
+    { ctor: C_PlayerPose },
+  ],
+  S_UsesNav: [{ ctor: S_UsesNav }, { ctor: C_UsesNav }],
 };

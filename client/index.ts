@@ -30,7 +30,7 @@ class Game {
     return new Promise<void>((resolve, _reject) => {
       worldRoom.onStateChange.once((state) => {
         const tse = new TrackServerEntities(this.world);
-        tse.trackEntities(state, this.worldRoom!.sessionId, this.worldRoom!);
+        tse.trackEntities(state);
         resolve();
       });
     });
@@ -51,11 +51,12 @@ function queryParamGraphicsLevel() {
   return graphicsLevel;
 }
 
-function runGameLoop(world: Engine, scene: Scene, slowStep: boolean) {
+function runGameLoop(world: Engine, scene: Scene, room: Colyseus.Room<WorldState>, slowStep: boolean) {
   const gameStep = (dt: number) => {
     world.run({
       dt,
       scene,
+      room,
     } as ClientWorldRunOptions);
   };
   if (slowStep) {
@@ -95,7 +96,7 @@ async function go() {
   await envDone2;
   await joinDone;
 
-  runGameLoop(world, scene, /*slowStep=*/ false);
+  runGameLoop(world, scene, game.worldRoom!, /*slowStep=*/ false);
 }
 
 go();

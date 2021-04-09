@@ -5,7 +5,7 @@ import { Client, Room } from "colyseus";
 import { action, makeObservable } from "mobx";
 import { CreateCard } from "./Collectible";
 import { ServerEntity } from "./SyncTypes";
-import { S_AimAt, S_Model, S_Nametag, S_NetworkSession, S_PlayerPose, S_Sim, S_Toucher, S_Transform } from "./Components";
+import { S_AimAt, S_Model, S_Nametag, S_NetworkSession, S_PlayerPose, S_Sim, S_Toucher, S_Transform, S_UsesNav } from "./Components";
 import { IdEntity } from "./IdEntity";
 import { InitSystems } from "./InitSystems";
 import createLogger from "./logsetup";
@@ -105,13 +105,14 @@ export class WorldRoom extends Room<WorldState> {
     // }
     p.components.add(new S_NetworkSession(sessionId, p.id));
 
-    p.components.add(new S_Model("model/player/player"));
-    p.components.add(new S_PlayerPose());
-    p.components.add(new S_Transform(Vector3.Zero(), Vector3.Forward()));
-    p.components.add(new S_Sim(Vector3.Zero()));
     p.components.add(new S_AimAt("player_aim"));
-    p.components.add(new S_Toucher(/*posOffset=*/ new Vector3(0, 1.2, 0), /*radius=*/ 0.3));
+    p.components.add(new S_Model("model/player/player"));
     p.components.add(new S_Nametag(/*offset=*/ new Vector3(0, 0.2, 0)));
+    p.components.add(new S_PlayerPose());
+    p.components.add(new S_Sim(Vector3.Zero()));
+    p.components.add(new S_Toucher(/*posOffset=*/ new Vector3(0, 1.2, 0), /*radius=*/ 0.3));
+    p.components.add(new S_Transform(Vector3.Zero(), Vector3.Forward()));
+    p.components.add(new S_UsesNav());
     log.info(`created player e${p.id} session=${sessionId}`);
     return p;
   }

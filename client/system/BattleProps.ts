@@ -11,7 +11,7 @@ const log = createLogger("BattleProps");
 
 export class BattleRingPresence extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [S_PlayerPose]);
+    super(priority, [C_PlayerPose]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {

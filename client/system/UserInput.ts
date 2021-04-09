@@ -1,7 +1,6 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
-import { ActionEvent, ActionManager, ExecuteCodeAction, PickingInfo, PointerEventTypes, Scene, VirtualJoystick } from "babylonjs";
+import { ActionEvent, ActionManager, ExecuteCodeAction, PickingInfo, PointerEventTypes, Scene, Vector2, VirtualJoystick } from "babylonjs";
 import { action, makeObservable } from "mobx";
-import { S_PlayerPose } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
@@ -18,10 +17,9 @@ export class MobileSticks {
   }
   step(dt: number) {
     if (this.walk.pressed) {
-      this.out.stickX = this.walk.deltaPosition.x * 3;
-      this.out.stickY = -this.walk.deltaPosition.y * 3;
+      this.out.stick = new Vector2(this.walk.deltaPosition.x * 3, -this.walk.deltaPosition.y * 3);
     } else {
-      this.out.stickX = this.out.stickY = 0;
+      this.out.stick = Vector2.Zero();
     }
     if (this.look.pressed) {
       this.out.mouseAccumX = this.look.deltaPosition.x * 4;
@@ -49,8 +47,15 @@ export class UserInput extends AbstractEntitySystem<IdEntity> {
       ld.mobileInput.step(dt);
     }
     const runMult = ld.shiftKey ? 8 : 1;
-    ld.stickX += (ld.stickKeyX * runMult - ld.stickX) * 6 * dt;
-    ld.stickY += (ld.stickKeyY * runMult - ld.stickY) * 6 * dt;
+    ld.stick.addInPlace(
+      ld.stickKey
+        .scale(runMult)
+        .subtract(ld.stick)
+        .scale(6 * dt)
+    );
+    if (ld.stick.length() < 0.0000001) {
+      ld.stick.set(0, 0);
+    }
 
     ld.mouseX = dt == 0 ? 0 : ld.mouseAccumX / dt;
     ld.mouseY = dt == 0 ? 0 : ld.mouseAccumY / dt;
@@ -93,14 +98,14 @@ export class UserInput extends AbstractEntitySystem<IdEntity> {
   // not called during processEntity
   onKeyDown(ld: LocallyDriven, ev: ActionEvent) {
     const stickKeyPressFunc: { [keyName: string]: () => void } = {
-      arrowup: () => (ld.stickKeyY = -1),
-      w: () => (ld.stickKeyY = -1),
-      arrowdown: () => (ld.stickKeyY = 1),
-      s: () => (ld.stickKeyY = 1),
-      arrowleft: () => (ld.stickKeyX = -1),
-      a: () => (ld.stickKeyX = -1),
-      arrowright: () => (ld.stickKeyX = 1),
-      d: () => (ld.stickKeyX = 1),
+      arrowup: () => (ld.stickKey.y = -1),
+      w: () => (ld.stickKey.y = -1),
+      arrowdown: () => (ld.stickKey.y = 1),
+      s: () => (ld.stickKey.y = 1),
+      arrowleft: () => (ld.stickKey.x = -1),
+      a: () => (ld.stickKey.x = -1),
+      arrowright: () => (ld.stickKey.x = 1),
+      d: () => (ld.stickKey.x = 1),
     };
     const setFromKey = stickKeyPressFunc[(ev.sourceEvent.key as string).toLowerCase()];
     if (setFromKey) {
@@ -123,14 +128,14 @@ export class UserInput extends AbstractEntitySystem<IdEntity> {
   // not called during processEntity
   onKeyUp(ld: LocallyDriven, ev: ActionEvent) {
     const stickKeyReleaseFunc: { [keyName: string]: () => void } = {
-      arrowup: () => (ld.stickKeyY = 0),
-      w: () => (ld.stickKeyY = 0),
-      arrowdown: () => (ld.stickKeyY = 0),
-      s: () => (ld.stickKeyY = 0),
-      arrowleft: () => (ld.stickKeyX = 0),
-      a: () => (ld.stickKeyX = 0),
-      arrowright: () => (ld.stickKeyX = 0),
-      d: () => (ld.stickKeyX = 0),
+      arrowup: () => (ld.stickKey.y = 0),
+      w: () => (ld.stickKey.y = 0),
+      arrowdown: () => (ld.stickKey.y = 0),
+      s: () => (ld.stickKey.y = 0),
+      arrowleft: () => (ld.stickKey.x = 0),
+      a: () => (ld.stickKey.x = 0),
+      arrowright: () => (ld.stickKey.x = 0),
+      d: () => (ld.stickKey.x = 0),
     };
     const setFromKey = stickKeyReleaseFunc[(ev.sourceEvent.key as string).toLowerCase()];
     if (setFromKey) {
