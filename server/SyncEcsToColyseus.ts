@@ -2,11 +2,11 @@ import { MapSchema } from "@colyseus/schema";
 import { Component, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { autorun } from "mobx";
-import { PropV3, ServerComponent, ServerEntity } from "./SyncTypes";
-import { S_AimAt, componentConversions, S_Model, S_Nametag, S_NetworkSession, S_PlayerPose, S_Sim, S_Touchable, S_Toucher, S_Transform, S_Twirl } from "./Components";
-import { IdEntity } from "./IdEntity";
-import createLogger from "./logsetup";
-import { WorldState } from "./WorldRoom";
+import { PropV3, ServerComponent, ServerEntity } from "../shared/SyncTypes";
+import { S_AimAt, componentConversions, S_Model, S_Nametag, S_NetworkSession, S_PlayerPose, S_Sim, S_Touchable, S_Toucher, S_Transform, S_Twirl } from "../shared/Components";
+import { IdEntity } from "../shared/IdEntity";
+import createLogger from "../shared/logsetup";
+import { WorldState } from "../shared/SyncTypes";
 const log = createLogger("sync");
 
 function propFromVector3(v3: Vector3): PropV3 {

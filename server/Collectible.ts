@@ -1,7 +1,7 @@
 import { Vector3 } from "babylonjs";
-import { S_Model, S_Touchable, S_Transform, S_Twirl } from "./Components";
-import { IdEntity } from "./IdEntity";
-import createLogger from "./logsetup";
+import { S_Model, S_Touchable, S_Transform, S_Twirl } from "../shared/Components";
+import { IdEntity } from "../shared/IdEntity";
+import createLogger from "../shared/logsetup";
 const log = createLogger("system");
 
 export function CreateCard(pos: Vector3): IdEntity {

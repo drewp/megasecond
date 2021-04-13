@@ -1,8 +1,8 @@
 import "jest";
 import { Engine } from "@trixt0r/ecs";
-import { WorldState } from "./WorldRoom";
+import { WorldState } from "../shared/SyncTypes";
 import { TrackEcsEntities } from "./SyncEcsToColyseus";
-import { IdEntity } from "./IdEntity";
+import { IdEntity } from "../shared/IdEntity";
 
 describe("sync", () => {
   describe("TrackEcsEntities", () => {

@@ -35,3 +35,8 @@ export class ServerEntity extends Schema {
   @type("int64") id = 0;
   @type({ map: ServerComponent }) components = new MapSchema<ServerComponent>();
 }
+
+export class WorldState extends Schema {
+  @type({ map: ServerEntity })
+  public entities = new MapSchema<ServerEntity>();
+}

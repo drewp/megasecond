@@ -6,7 +6,7 @@ import http from "http";
 import path from "path";
 import { dumpWorld, LineType } from "../shared/EcsOps";
 import createLogger from "../shared/logsetup";
-import { WorldRoom } from "../shared/WorldRoom";
+import { WorldRoom } from "./WorldRoom";
 
 const log = createLogger("server");
 

@@ -1,7 +1,7 @@
 import { Scene } from "babylonjs";
 import { Room } from "colyseus.js";
 import { World3d } from "../client/Env";
-import { WorldState } from "./WorldRoom";
+import { WorldState } from "./SyncTypes";
 
 export type CommonWorldRunOptions = {
   dt: number;

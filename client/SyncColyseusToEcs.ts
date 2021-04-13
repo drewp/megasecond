@@ -2,11 +2,11 @@ import { MapSchema } from "@colyseus/schema";
 import { Component, ComponentClass, Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { LocallyDriven } from "../client/Components";
-import { componentConversions, S_Transform } from "./Components";
-import { IdEntity } from "./IdEntity";
-import createLogger from "./logsetup";
-import { Convertor, CtorArg, PropV3, ServerComponent, ServerEntity, UpdateGroup } from "./SyncTypes";
-import { WorldState } from "./WorldRoom";
+import { componentConversions, S_Transform } from "../shared/Components";
+import { IdEntity } from "../shared/IdEntity";
+import createLogger from "../shared/logsetup";
+import { Convertor, CtorArg, PropV3, ServerComponent, ServerEntity, UpdateGroup } from "../shared/SyncTypes";
+import { WorldState } from "../shared/SyncTypes";
 const log = createLogger("sync");
 
 function vector3FromProp(p: PropV3): Vector3 {

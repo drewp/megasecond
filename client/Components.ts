@@ -5,7 +5,7 @@ import * as Colyseus from "colyseus.js";
 import { makeObservable, observable } from "mobx";
 import { ShowPoint, ShowSegment } from "../client/Debug";
 import createLogger from "../shared/logsetup";
-import { WorldState } from "../shared/WorldRoom";
+import { WorldState } from "../shared/SyncTypes";
 import { MobileSticks } from "./system/UserInput";
 import { Instance } from "./Env";
 

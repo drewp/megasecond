@@ -1,24 +1,18 @@
-import { MapSchema, Schema, type } from "@colyseus/schema";
 import { Engine } from "@trixt0r/ecs";
 import { Vector3 } from "babylonjs";
 import { Client, Room } from "colyseus";
 import { action, makeObservable } from "mobx";
+import { Action } from "../client/Components";
+import { S_AimAt, S_Model, S_Nametag, S_NetworkSession, S_PlayerPose, S_Sim, S_Toucher, S_Transform, S_UsesNav } from "../shared/Components";
+import { IdEntity } from "../shared/IdEntity";
+import { InitSystems } from "../shared/InitSystems";
+import createLogger from "../shared/logsetup";
+import { WorldState } from "../shared/SyncTypes";
+import { ServerWorldRunOptions } from "../shared/types";
 import { CreateCard } from "./Collectible";
-import { ServerEntity } from "./SyncTypes";
-import { S_AimAt, S_Model, S_Nametag, S_NetworkSession, S_PlayerPose, S_Sim, S_Toucher, S_Transform, S_UsesNav } from "./Components";
-import { IdEntity } from "./IdEntity";
-import { InitSystems } from "./InitSystems";
-import createLogger from "./logsetup";
 import { TrackEcsEntities } from "./SyncEcsToColyseus";
-import { ServerWorldRunOptions } from "./types";
-import { Action, BattleRing } from "../client/Components";
 
 export const log = createLogger("WorldRoom");
-
-export class WorldState extends Schema {
-  @type({ map: ServerEntity })
-  public entities = new MapSchema<ServerEntity>();
-}
 
 export class WorldRoom extends Room<WorldState> {
   public world?: Engine;
@@ -43,8 +37,8 @@ export class WorldRoom extends Room<WorldState> {
     this.onMessage("playerMove", this.onPlayerMove.bind(this));
     this.onMessage("playerUserInput", this.onPlayerUserInput.bind(this));
 
-    for (let z = 2; z < 10; z += 3) {
-      this.world.entities.add(CreateCard(new Vector3(2, 1.2, z)));
+    for (let z = 0; z < 50; z++) {
+      this.world.entities.add(CreateCard(new Vector3(Math.random() * 30, 1 + Math.random() * 0.2, Math.random() * 30)));
     }
     log.info("created cards", this.world.entities.length);
 
