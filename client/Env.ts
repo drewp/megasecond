@@ -67,7 +67,9 @@ export class Instance {
       // light seems to work, though its hierarchy doesn't make it into bjs inspector
     });
 
-
+    if (this.owner.graphicsLevel == GraphicsLevel.texture) {
+      this.applyLightmaps();
+    }
   }
   dispose() {
     this.root.dispose();
@@ -81,6 +83,39 @@ export class Instance {
   getChildTransformNode(objName: string) {
     return this.scene.getTransformNodeByName(this.makeName(objName));
   }
+
+  applyLightmaps() {
+    // this really is a per-instance thing, even if the code doesn't work that
+    // way yet.
+
+    // a src/Materials/effect.ts gets to munge the glsl code, so that could be a
+    // way to jam in a separate-lightmap-tx-per-instance feature.
+    
+    for (let m of this.root.getDescendants() as InstancedMesh[]) {
+      const mat = m.material as PBRMaterial | null;
+      if (!mat) continue;
+
+      const path = this.owner.path;
+      const instances = this.owner.owner;
+      const instanceName = this.name;//path.split('/')[2].replace(".glb", "");
+      const sourceName = (m.sourceMesh ? m.sourceMesh.name : m.name).replace(new RegExp('^'+instanceName+'_'), '');
+      if (path == "model/env/gnd.glb" && sourceName != "gnd.023") continue;
+
+      mat.emissiveTexture = instances.bakedTx(`map/bake/${instanceName}/${sourceName}_dif.jpg`);
+      mat.emissiveTexture.coordinatesIndex = 1; // lightmap
+      mat.emissiveColor = Color3.White();
+
+      mat.lightmapTexture = instances.bakedTx(`map/bake/${instanceName}/${sourceName}_shad.jpg`);
+      if (instanceName == "sign.001") (window as any).lm = mat.lightmapTexture;
+      mat.lightmapTexture.coordinatesIndex = 1; // lightmap
+      mat.lightmapTexture.gammaSpace = true;
+
+      // https://github.com/BabylonJS/Babylon.js/blob/master/src/Shaders/ShadersInclude/pbrBlockFinalColorComposition.fx
+      // false: add lightmapcolor; true: multiply lightmapcolor
+      mat.useLightmapAsShadowmap = true;
+    }
+  }
+
 }
 
 class Collection {
@@ -89,11 +124,11 @@ class Collection {
   collectionLoaded: Promise<void>
   private insts: Map<string, Instance> = new Map(); // by instance name
   private instsWaitingForAssets = new Set<Instance>();
-  constructor(private owner: Instances,public path: string, public scene: Scene, public graphicsLevel: GraphicsLevel) {
+  constructor(public owner: Instances,public path: string, public scene: Scene, public graphicsLevel: GraphicsLevel) {
     this.collectionLoaded = new Promise((res,_rej)=>{
       SceneLoader.LoadAssetContainerAsync("./asset_build/", path, scene).then((ctr) => {
-        this.onContainerLoaded(ctr);
         res();
+        this.onContainerLoaded(ctr);
       });
     })
   }
@@ -103,9 +138,7 @@ class Collection {
     for (let inst of this.instsWaitingForAssets) {
       inst.onContainerLoaded(this.container);
 
-      if (this.graphicsLevel == GraphicsLevel.texture) {
-        this.applyLightmaps(inst.root);
-      }
+      
     }
   }
 
@@ -119,32 +152,6 @@ class Collection {
   _instanceDisposed(inst: Instance) {
     this.instsWaitingForAssets.delete(inst); // rare chance it's in here
     this.insts.delete(inst.name);
-  }
-
-  private applyLightmaps(node: TransformNode) {
-    // a src/Materials/effect.ts gets to munge the glsl code, so that could be a
-    // way to jam in a separate-lightmap-tx-per-instance feature
-    // for (let m of node.getDescendants() as InstancedMesh[]) {
-    //   const mat = m.material as PBRMaterial | null;
-    //   if (!mat) continue;
-
-    //   const instanceName = this.path.split('/')[2].replace(".glb", "");
-    //   const sourceName = (m.sourceMesh ? m.sourceMesh.name : m.name).replace(new RegExp('^'+instanceName+'_'), '');
-    //   if (this.path == "model/env/gnd.glb" && sourceName != "gnd.023") continue;
-
-    //   mat.emissiveTexture = this.owner.bakedTx(`map/bake/${instanceName}/${sourceName}_dif.jpg`);
-    //   mat.emissiveTexture.coordinatesIndex = 1; // lightmap
-    //   mat.emissiveColor = Color3.White();
-
-    //   mat.lightmapTexture = this.owner.bakedTx(`map/bake/${instanceName}/${sourceName}_shad.jpg`);
-    //   if (instanceName == "sign.001") (window as any).lm = mat.lightmapTexture;
-    //   mat.lightmapTexture.coordinatesIndex = 1; // lightmap
-    //   mat.lightmapTexture.gammaSpace = true;
-
-    //   // https://github.com/BabylonJS/Babylon.js/blob/master/src/Shaders/ShadersInclude/pbrBlockFinalColorComposition.fx
-    //   // false: add lightmapcolor; true: multiply lightmapcolor
-    //   mat.useLightmapAsShadowmap = true;
-    // }
   }
 
   getInstance(name: string): Instance | undefined {
@@ -230,12 +237,6 @@ export class World3d {
     this.groundBump.level = 0.43;
     this.groundBump.uScale = this.groundBump.vScale = 400;
 
-    // not sure why imported sun light doesn't work
-    // const sun2 = new SpotLight("sun2", new Vector3(0, 100, 0), new Vector3(0, -1, 0), 2, 0, scene);
-    // sun2.shadowEnabled = false;
-    // sun2.intensity = 80000;
-    // setupSunShadows(scene, "sun2");
-
     function setupSunShadows(scene: Scene, name = "light_sun_light") {
       const light = scene.getLightByName(name) as DirectionalLight;
       light.autoCalcShadowZBounds = true;
@@ -267,7 +268,6 @@ export class World3d {
     const noLongerPresent = new Set<string>(this.instances.allInstanceNames());
     const allLoads: Promise<void>[] = []
     for (let instDesc of layout.instances) {
-      // if (instDesc.name !="sun") continue;
       let inst = this.instances.getInstance(instDesc.name);
       if (!inst) {
         inst = this.instances.makeInstance(instDesc.model, instDesc.name);
@@ -306,19 +306,6 @@ export class World3d {
         (this.scene.getMaterialByName("gnd") as PBRMaterial).bumpTexture = this.groundBump!;
         break;
     }
-  }
-
-  async loadObj(name: string): Promise<Mesh> {
-    const fn = `model/prop/${name}.glb`;
-    await SceneLoader.AppendAsync("./asset_build/", fn, this.scene);
-    const ret = this.scene.getMeshByName(name);
-    if (!ret) {
-      throw new Error(`file ${fn} did not provide object ${name}`);
-    }
-    const junkRoot = ret.parent;
-    ret.parent = null;
-    junkRoot?.dispose();
-    return ret as Mesh;
   }
 
   gridEverything() {
