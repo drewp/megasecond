@@ -49,6 +49,7 @@ export function initPanesLayout(parent: HTMLElement, world: EcsEngine, resizeEve
       case "ecs": {
         const debug = document.createElement("div");
         debug.setAttribute("id", "debug");
+        debug.classList.add('scrolly');
         container.element.appendChild(debug);
         initEcsDebugPane(debug, world);
         // todo- on removeComponent (or it's out of sight), stop the updating
@@ -62,16 +63,18 @@ export function initPanesLayout(parent: HTMLElement, world: EcsEngine, resizeEve
           return url.toString();
         };
         container.element.innerHTML = `
-        <div><a href="/log/server" target="_blank">Server log</a></div>
-        <div><a href="/log/rebuild" target="_blank">Client rebuild log</a></div>
-        <div><a href="/colyseus/" target="_blank">Colyseus inspector</a></div>
-        <div><a href="/entities/" target="_blank">Server entity dump</a></div>
-        <div>Reload with graphicsLevel = 
-          <a href="${urlWith("gl", "wire")}">wire</a> |
-          <a href="${urlWith("gl", "grid")}">grid</a> |
-          <a href="${urlWith("gl", "texture")}">texture</a>
+        <div class="scrolly">
+          <div><a href="/log/server" target="_blank">Server log</a></div>
+          <div><a href="/log/rebuild" target="_blank">Client rebuild log</a></div>
+          <div><a href="/colyseus/" target="_blank">Colyseus inspector</a></div>
+          <div><a href="/entities/" target="_blank">Server entity dump</a></div>
+          <div>Reload with graphicsLevel = 
+            <a href="${urlWith("gl", "wire")}">wire</a> |
+            <a href="${urlWith("gl", "grid")}">grid</a> |
+            <a href="${urlWith("gl", "texture")}">texture</a>
+          </div>
+          <div>Reload with <a href="${urlWith("explore", "1")}">Babylonjs inspector</a>
         </div>
-        <div>Reload with <a href="${urlWith("explore", "1")}">Babylonjs inspector</a>
         `;
         break;
       }
