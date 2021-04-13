@@ -51,12 +51,13 @@ function queryParamGraphicsLevel() {
   return graphicsLevel;
 }
 
-function runGameLoop(world: Engine, scene: Scene, room: Colyseus.Room<WorldState>, slowStep: boolean) {
+function runGameLoop(world: Engine, scene: Scene, room: Colyseus.Room<WorldState>, world3d: Env.World3d, slowStep: boolean) {
   const gameStep = (dt: number) => {
     world.run({
       dt,
       scene,
       room,
+      world3d
     } as ClientWorldRunOptions);
   };
   if (slowStep) {
@@ -88,15 +89,15 @@ async function go() {
 
   const game = new Game(status, world, nick);
 
-  const env = new Env.World(scene, queryParamGraphicsLevel());
-  const envDone1 = env.loadNavmesh();
-  const envDone2 = env.reloadLayoutInstances();
+  const world3d = new Env.World3d(scene, queryParamGraphicsLevel());
+  const envDone1 = world3d.loadNavmesh();
+  const envDone2 = world3d.reloadLayoutInstances();
   const joinDone = game.joinWorld();
   await envDone1;
   await envDone2;
   await joinDone;
 
-  runGameLoop(world, scene, game.worldRoom!, /*slowStep=*/ false);
+  runGameLoop(world, scene, game.worldRoom!, world3d, /*slowStep=*/ false);
 }
 
 go();

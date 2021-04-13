@@ -1,6 +1,6 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
 import { AbstractMesh } from "babylonjs";
-import { S_AimAt, S_Transform } from "../../shared/Components";
+import { S_AimAt } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
@@ -10,7 +10,7 @@ const log = createLogger("system");
 
 export class LocalCamFollow extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
-    super(priority, [C_Transform, S_AimAt, LocalCam, LocallyDriven]);
+    super(priority, [C_Transform, S_AimAt, LocalCam, LocallyDriven, BjsModel]);
   }
 
   processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
@@ -21,12 +21,13 @@ export class LocalCamFollow extends AbstractEntitySystem<IdEntity> {
     const aa = entity.getComponentReadonly(S_AimAt);
     const ld = entity.components.get(LocallyDriven);
     const lc = entity.components.get(LocalCam);
+    const bm = entity.components.get(BjsModel);
 
-    ld.forAction(Action.ToggleBirdsEyeView, ()=>{
+    ld.forAction(Action.ToggleBirdsEyeView, () => {
       lc.toggleBirdsEyeView();
     });
 
-    const aimAt = aa.getAimObj(entity, options.scene);
+    const aimAt = bm.instance!.getChildTransformNode(aa.objName);
     if (aimAt) {
       cam.lockedTarget = aimAt as AbstractMesh;
     }

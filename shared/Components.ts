@@ -57,10 +57,6 @@ export class S_AimAt implements Component {
   constructor(public objName: string) {
     // objName is some obj in the BjsModel.root hierarchy
   }
-  getAimObj(entity: IdEntity, scene: Scene): TransformNode | null {
-    const instancedName = entity.localName(this.objName);
-    return scene.getTransformNodeByName(instancedName);
-  }
 }
 
 export class S_Model implements Component {

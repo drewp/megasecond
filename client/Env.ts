@@ -19,6 +19,7 @@ import {
   Vector3,
 } from "babylonjs";
 import { GridMaterial, SkyMaterial } from "babylonjs-materials";
+import { AssetContainer } from "babylonjs/assetContainer";
 import createLogger from "../shared/logsetup";
 
 const log = createLogger("Env");
@@ -39,146 +40,174 @@ interface LayoutJson {
   instances: LayoutInstance[];
 }
 
-function bakedTx(name: string, scene: Scene): Texture {
-  const tx = new Texture(`./asset_build/` + name, scene);
-  tx.vScale = -1;
-  tx.coordinatesIndex = 0;
-  return tx;
-}
 
-class Instance {
-  constructor(public name: string, public node: TransformNode, public loaded: Promise<void>) {}
-  static makeInstanceOf(name: string, node: TransformNode, other: Instance): Instance {
-    const me = new Instance(name, node, other.loaded);
-    other.loaded.then(() => {
-      // race- either other or me could be dead by now
-      other.node.instantiateHierarchy(me.node);
+export class Instance {
+  // like an BABYLON.AssetContainer but with a TransformNode at the root, and async loading (child objects may not be there yet)
+  public root: TransformNode;
+  constructor(private owner: Collection, public name: string, public loaded: Promise<void>, public scene: Scene) {
+    this.root = new TransformNode(name, scene);
+  }
+  toString() {
+    return `Instance ${this.name} of ${this.owner.path}`;
+  }
+  private makeName(s: string) {
+    return this.name + "_" + s;
+  }
+  onContainerLoaded(ctr: AssetContainer) {
+    const newInstances = ctr.instantiateModelsToScene(this.makeName.bind(this));
+    newInstances.rootNodes.forEach((m) => {
+      if (m.name == this.makeName("__root__")) {
+        m.name = m.id = this.makeName("blender_coords");
+        m.parent = this.root;
+      }
     });
-    return me;
+    // see assetContainer.ts addAllToScene for these other object types
+    ctr.lights.forEach((o) => {
+      this.scene.addLight(o);
+      // light seems to work, though its hierarchy doesn't make it into bjs inspector
+    });
+
+
+  }
+  dispose() {
+    this.root.dispose();
+    this.owner._instanceDisposed(this);
+  }
+
+  setTransform(mat: Matrix) {
+    this.root.setPreTransformMatrix(mat);
+  }
+
+  getChildTransformNode(objName: string) {
+    return this.scene.getTransformNodeByName(this.makeName(objName));
   }
 }
 
 class Collection {
-  // 1 blender scene, 1 blender collection, multiple objects, all instanced multiple times in bjs
-  private objs: AbstractMesh[] = [];
-  private primaryInstName: string | undefined;
-  private insts: Map<string, Instance> = new Map();
-  constructor(public path: string, public scene: Scene, public graphicsLevel: GraphicsLevel) {}
+  // 1 blender scene, 1 blender collection, multiple objects. Can be instanced multiple times in bjs scene.
+  container?: AssetContainer;
+  collectionLoaded: Promise<void>
+  private insts: Map<string, Instance> = new Map(); // by instance name
+  private instsWaitingForAssets = new Set<Instance>();
+  constructor(private owner: Instances,public path: string, public scene: Scene, public graphicsLevel: GraphicsLevel) {
+    this.collectionLoaded = new Promise((res,_rej)=>{
+      SceneLoader.LoadAssetContainerAsync("./asset_build/", path, scene).then((ctr) => {
+        this.onContainerLoaded(ctr);
+        res();
+      });
+    })
+  }
 
-  private async load(parent: TransformNode) {
-    log.info(`    Collection(${this.path}) start load`);
-    // if (this.path != "model/env/sign.glb" && this.path != "model/env/gnd.glb" && this.path != "model/env/sun.glb") return;
-    const loaded = await SceneLoader.ImportMeshAsync("", "./asset_build/", this.path, this.scene);
-    loaded.meshes.forEach((m) => {
-      this.objs.push(m);
-      if (m.name == "__root__") {
-        m.name = m.id = "blender_coords";
-        m.parent = parent;
+  private onContainerLoaded(ctr: AssetContainer) {
+    this.container = ctr;
+    for (let inst of this.instsWaitingForAssets) {
+      inst.onContainerLoaded(this.container);
+
+      if (this.graphicsLevel == GraphicsLevel.texture) {
+        this.applyLightmaps(inst.root);
       }
-    });
-    log.info(`    Collection(${this.path}) done load`);
+    }
   }
 
-  async makeInstance(name: string): Promise<TransformNode> {
+  makeInstance(name: string): Instance {
     log.info(`    Collection(${this.path}).makeInstance(${name})`);
-    const node = new TransformNode("inst_" + name, this.scene);
-
-    if (this.insts.size > 0) {
-      const existingInst = this.insts.values().next().value as Instance;
-      log.info(`      have objs from ${existingInst.name} and their load is`, existingInst.loaded);
-      this.insts.set(name, Instance.makeInstanceOf(name, node, existingInst));
-      await existingInst.loaded;
-    } else {
-      this.primaryInstName = name;
-      const lp = this.load(node);
-      this.insts.set(name, new Instance(name, node, lp));
-      await lp;
-    }
-    if (this.graphicsLevel == GraphicsLevel.texture) {
-      this.applyLightmaps(node, name);
-    }
-    return node;
+    const inst = new Instance(this, name, this.collectionLoaded, this.scene);
+    this.instsWaitingForAssets.add(inst);
+    return inst;
   }
 
-  private applyLightmaps(node: TransformNode, instanceName: string) {
+  _instanceDisposed(inst: Instance) {
+    this.instsWaitingForAssets.delete(inst); // rare chance it's in here
+    this.insts.delete(inst.name);
+  }
+
+  private applyLightmaps(node: TransformNode) {
     // a src/Materials/effect.ts gets to munge the glsl code, so that could be a
     // way to jam in a separate-lightmap-tx-per-instance feature
+    // for (let m of node.getDescendants() as InstancedMesh[]) {
+    //   const mat = m.material as PBRMaterial | null;
+    //   if (!mat) continue;
 
-    for (let m of node.getDescendants() as InstancedMesh[]) {
-      const mat = m.material as PBRMaterial | null;
-      if (!mat) continue;
-      const sourceName = m.sourceMesh ? m.sourceMesh.name : m.name;
-      if (instanceName == "gnd" && sourceName != "gnd.023") continue;
-      // if (instanceName != "sign.001" && instanceName != "gnd") continue;
+    //   const instanceName = this.path.split('/')[2].replace(".glb", "");
+    //   const sourceName = (m.sourceMesh ? m.sourceMesh.name : m.name).replace(new RegExp('^'+instanceName+'_'), '');
+    //   if (this.path == "model/env/gnd.glb" && sourceName != "gnd.023") continue;
 
-      mat.emissiveTexture = bakedTx(`map/bake/${instanceName}/${sourceName}_dif.jpg`, this.scene);
-      mat.emissiveTexture.coordinatesIndex = 1; // lightmap
-      mat.emissiveColor = Color3.White();
+    //   mat.emissiveTexture = this.owner.bakedTx(`map/bake/${instanceName}/${sourceName}_dif.jpg`);
+    //   mat.emissiveTexture.coordinatesIndex = 1; // lightmap
+    //   mat.emissiveColor = Color3.White();
 
-      mat.lightmapTexture = bakedTx(`map/bake/${instanceName}/${sourceName}_shad.jpg`, this.scene);
-      if (instanceName == "sign.001") (window as any).lm = mat.lightmapTexture;
-      mat.lightmapTexture.coordinatesIndex = 1; // lightmap
-      mat.lightmapTexture.gammaSpace = true;
+    //   mat.lightmapTexture = this.owner.bakedTx(`map/bake/${instanceName}/${sourceName}_shad.jpg`);
+    //   if (instanceName == "sign.001") (window as any).lm = mat.lightmapTexture;
+    //   mat.lightmapTexture.coordinatesIndex = 1; // lightmap
+    //   mat.lightmapTexture.gammaSpace = true;
 
-      // https://github.com/BabylonJS/Babylon.js/blob/master/src/Shaders/ShadersInclude/pbrBlockFinalColorComposition.fx
-      // false: add lightmapcolor; true: multiply lightmapcolor
-      mat.useLightmapAsShadowmap = true;
-    }
+    //   // https://github.com/BabylonJS/Babylon.js/blob/master/src/Shaders/ShadersInclude/pbrBlockFinalColorComposition.fx
+    //   // false: add lightmapcolor; true: multiply lightmapcolor
+    //   mat.useLightmapAsShadowmap = true;
+    // }
   }
 
-  getInstance(name: string): TransformNode | undefined {
-    const inst = this.insts.get(name);
-
-    if (!inst) return undefined;
-    return inst.node;
+  getInstance(name: string): Instance | undefined {
+    return this.insts.get(name);
   }
 
-  disposeInstance(name: string) {
-    if (name == this.primaryInstName) throw new Error("todo");
-    const inst = this.insts.get(name);
-    if (!inst) return;
-    inst.node.getDescendants().forEach((obj) => obj.dispose());
-    inst.node.dispose();
-    this.insts.delete(name);
-  }
+  // disposeInstance(name: string) {
+  //   if (name == this.primaryInstName) throw new Error("todo");
+  //   const inst = this.insts.get(name);
+  //   if (!inst) return;
+  //   inst.node.getDescendants().forEach((obj) => obj.dispose());
+  //   inst.node.dispose();
+  //   this.insts.delete(name);
+  // }
 
-  disposeCollection() {
-    this.objs.forEach((obj) => obj.dispose());
-  }
+  // disposeCollection() {
+  //   this.objs.forEach((obj) => obj.dispose());
+  // }
 }
 
 class Instances {
-  // owns all the Collections in the scene
+  // owns all the Collections and Instances and Textures in the scene
   private collsByPath: Map<string, Collection> = new Map();
-  //
   private collsByInstance: Map<string, Collection> = new Map();
+  private textures: Map<string, Texture>=new Map()
   constructor(public scene: Scene, public graphicsLevel: GraphicsLevel) {}
 
-  async makeInstance(path: string, instanceName: string): Promise<TransformNode> {
+  // returns transformable instance immediately, even if load goes async
+  makeInstance(path: string, instanceName: string): Instance {
     log.info(`  makeInstance(${path}, ${instanceName})`);
 
     let col = this.collsByPath.get(path);
     if (!col) {
-      col = new Collection(path, this.scene, this.graphicsLevel);
+      col = new Collection(this,path, this.scene, this.graphicsLevel);
       this.collsByPath.set(path, col);
     }
 
     this.collsByInstance.set(instanceName, col);
-    const node = await col.makeInstance(instanceName);
-    return node;
+    return col.makeInstance(instanceName);
   }
 
-  getInstance(instanceName: string): TransformNode | undefined {
+  bakedTx(path: string): Texture {
+    let tx = this.textures.get(path);
+    if (!tx)  {
+    tx = new Texture(`./asset_build/` + path, this.scene);
+    tx.vScale = -1;
+    tx.coordinatesIndex = 0;
+    this.textures.set(path, tx)
+    } 
+    return tx;
+  }
+  getInstance(instanceName: string): Instance | undefined {
     return this.collsByInstance.get(instanceName)?.getInstance(instanceName);
   }
 
   allInstanceNames(): string[] {
+    // needs a tag for 'env only'
     return Array.from(this.collsByInstance.keys());
   }
 
   removeInstance(instanceName: string) {
-    this.collsByInstance.get(instanceName)?.disposeInstance(instanceName);
-    this.collsByInstance.delete(instanceName);
+    this.getInstance(instanceName)?.dispose();
+    // this might make a Collection clean up, which we don't get notice in this class
   }
 
   reloadFile(path: string) {
@@ -186,7 +215,7 @@ class Instances {
   }
 }
 
-export class World {
+export class World3d {
   buildData: any;
   groundBump: Texture;
   instances: Instances;
@@ -236,32 +265,34 @@ export class World {
     // read updates from layout.json but not necessarily from model glb files
     const layout = (await (await fetch("./asset_build/layout.json")).json()) as LayoutJson;
     const noLongerPresent = new Set<string>(this.instances.allInstanceNames());
-    for (let inst of layout.instances) {
-      let node = this.instances.getInstance(inst.name);
-      if (!node) {
-        node = await this.instances.makeInstance(inst.model, inst.name);
+    const allLoads: Promise<void>[] = []
+    for (let instDesc of layout.instances) {
+      // if (instDesc.name !="sun") continue;
+      let inst = this.instances.getInstance(instDesc.name);
+      if (!inst) {
+        inst = this.instances.makeInstance(instDesc.model, instDesc.name);
       }
-      noLongerPresent.delete(inst.name);
-
-      const mat = Matrix.FromArray(inst.transform_baby);
-      node.setPivotMatrix(mat, false);
+      allLoads.push(inst.loaded)
+      noLongerPresent.delete(instDesc.name);
+      inst.setTransform(Matrix.FromArray(instDesc.transform_baby));
     }
     for (let name of noLongerPresent) {
       log.info(`cleaning up collection ${name}`);
       this.instances.removeInstance(name);
     }
+    await Promise.all(allLoads);
     this.postEnvLoad();
   }
 
   private postEnvLoad() {
-    this.scene.meshes.forEach((m) => {
-      if (m.name == "rock_arch_obj" || m.name == "stair_base" || m.name == "signpost") {
-        const sunCaster = (window as any).gen as ShadowGenerator; // todo
-        if (sunCaster) {
-          sunCaster.addShadowCaster(m);
-        }
-      }
-    });
+    // this.scene.meshes.forEach((m) => {
+    //   if (m.name == "rock_arch_obj" || m.name == "stair_base" || m.name == "signpost") {
+    //     const sunCaster = (window as any).gen as ShadowGenerator; // todo
+    //     if (sunCaster) {
+    //       sunCaster.addShadowCaster(m);
+    //     }
+    //   }
+    // });
 
     switch (this.graphicsLevel) {
       case GraphicsLevel.wire:
@@ -289,6 +320,7 @@ export class World {
     junkRoot?.dispose();
     return ret as Mesh;
   }
+
   gridEverything() {
     const grid = new GridMaterial("grid", this.scene);
     grid.gridRatio = 0.1;
@@ -364,7 +396,7 @@ export class World {
     }
     const mat = new PBRMaterial("pbr_" + objName, this.scene); //obj.material as PBRMaterial;
     mat.unlit = true;
-    mat.albedoTexture = bakedTx(`bake/${objName}_dif.jpg`, this.scene);
+    mat.albedoTexture = this.instances.bakedTx(`bake/${objName}_dif.jpg`);
     mat.albedoTexture.coordinatesIndex = 1; // lightmap
     // mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
     // mat.useLightmapAsShadowmap = true;
@@ -403,48 +435,4 @@ export function toggleNavmeshView(scene: Scene) {
       m.isVisible = !n.isVisible;
     }
   }
-}
-
-function checkerboardMaterial(scene: Scene) {
-  Effect.ShadersStore["aVertexShader"] = `
-        precision highp float;
-
-        attribute vec3 position;
-        attribute vec2 uv;
-
-        uniform mat4 world;
-        uniform mat4 worldViewProjection;
-
-        varying vec2 v_uv;
-
-        void main(void) {
-            vec4 output1 = world * vec4(position, 1.0);
-            vec4 output0 = worldViewProjection * output1;
-            gl_Position = output0;
-            v_uv = position.xz;
-        }
-        `;
-
-  Effect.ShadersStore["aFragmentShader"] = `
-        precision highp float;
-
-        uniform mat4 world;
-        uniform mat4 worldViewProjection;
-
-        varying vec2 v_uv;
-
-        void main(void) {
-            float sz= 3.;
-            float v  = (mod(v_uv.x, sz) > sz/2. ^^ mod(v_uv.y, sz) > sz/2.) ? .3 : .5;
-            gl_FragColor = vec4(v, v, v, 1.0);
-        }
-    `;
-
-  var shaderMaterial = new ShaderMaterial("a", scene, "a", {
-    attributes: ["position", "uv"],
-    uniforms: ["world", "worldViewProjection"],
-  });
-
-  shaderMaterial.backFaceCulling = false;
-  return shaderMaterial;
 }

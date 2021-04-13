@@ -9,7 +9,7 @@ export function CreateCard(pos: Vector3): IdEntity {
   card.components.add(new S_Transform(pos, new Vector3(Math.random() - 0.5, 0, Math.random() - 0.5)));
   card.components.add(new S_Touchable());
   // of interest to client only:
-  card.components.add(new S_Model("model/prop/card"));
+  card.components.add(new S_Model("model/prop/card.glb"));
   card.components.add(new S_Twirl(/*degPerSec=*/ 1));
 
   return card;

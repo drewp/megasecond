@@ -106,7 +106,7 @@ export class WorldRoom extends Room<WorldState> {
     p.components.add(new S_NetworkSession(sessionId, p.id));
 
     p.components.add(new S_AimAt("player_aim"));
-    p.components.add(new S_Model("model/player/player"));
+    p.components.add(new S_Model("model/player/player.glb"));
     p.components.add(new S_Nametag(/*offset=*/ new Vector3(0, 0.2, 0)));
     p.components.add(new S_PlayerPose());
     p.components.add(new S_Sim(Vector3.Zero()));

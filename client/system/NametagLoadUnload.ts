@@ -1,21 +1,23 @@
 import { Component, ComponentCollection } from "@trixt0r/ecs";
-import { AbstractMesh, DynamicTexture, PlaneBuilder, Scene, StandardMaterial, TransformNode } from "babylonjs";
+import { AbstractMesh, DynamicTexture, PlaneBuilder, Scene, StandardMaterial, TransformNode, Vector3 } from "babylonjs";
 import { autorun } from "mobx";
 import { S_AimAt, S_Nametag } from "../../shared/Components";
 import { IdEntity } from "../../shared/IdEntity";
 import { KeepProcessing, LoadUnloadSystem } from "../../shared/LoadUnloadSystem";
 import createLogger from "../../shared/logsetup";
 import { ClientWorldRunOptions } from "../../shared/types";
-import { C_Nametag } from "../Components";
+import { BjsModel, C_Nametag } from "../Components";
 const log = createLogger("nametag");
 
 export class NametagLoadUnload extends LoadUnloadSystem {
-  requiredComponentTypes = [S_Nametag, C_Nametag, S_AimAt];
+  requiredComponentTypes = [S_Nametag, C_Nametag, S_AimAt, BjsModel];
   processAdded(entity: IdEntity, options: ClientWorldRunOptions): KeepProcessing {
     const nt = entity.getComponentReadonly(S_Nametag);
     const ct = entity.components.get(C_Nametag);
     const aa = entity.getComponentReadonly(S_AimAt);
-    const aimAt = aa.getAimObj(entity, options.scene);
+    const bm = entity.components.get(BjsModel);
+
+    const aimAt = bm.instance!.getChildTransformNode(aa.objName);
     if (!aimAt) {
       // keep waiting for this
       return KeepProcessing.KEEP_PROCESSING;
@@ -25,8 +27,9 @@ export class NametagLoadUnload extends LoadUnloadSystem {
     ct.plane = PlaneBuilder.CreatePlane(entity.localName("nametag"), { width: 256 * scl, height: 64 * scl }, options.scene);
 
     ct.plane.parent = aimAt as AbstractMesh;
+    ct.plane.scaling = new Vector3(1, -1, 1);
     autorun(() => {
-      ct.plane!.position = nt.offset;
+      ct.plane!.position = nt.offset.negate();
     });
 
     var { mat, tx } = this.createMaterial(entity, options.scene);
@@ -46,6 +49,10 @@ export class NametagLoadUnload extends LoadUnloadSystem {
 
   onRemoved(_entity: IdEntity, components: ComponentCollection<Component>) {
     const ct = components.get(C_Nametag);
+    if (!ct) {
+      log.error("ct undefined- bug");
+      return;
+    }
     ct.plane?.dispose();
     ct.tx?.dispose();
     ct.mat?.dispose();

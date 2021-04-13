@@ -7,6 +7,7 @@ import { ShowPoint, ShowSegment } from "../client/Debug";
 import createLogger from "../shared/logsetup";
 import { WorldState } from "../shared/WorldRoom";
 import { MobileSticks } from "./system/UserInput";
+import { Instance } from "./Env";
 
 const log = createLogger("component");
 
@@ -88,7 +89,7 @@ export class BjsModel implements Component {
   // load a BJS model that can be moved around
   public root?: TransformNode;
   public loadState = LoadState.NONE;
-  public container?: AssetContainer;
+  public instance?: Instance;
   constructor() {}
   dispose() {
     this.root?.dispose();
