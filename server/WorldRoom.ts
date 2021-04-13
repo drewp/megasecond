@@ -37,8 +37,16 @@ export class WorldRoom extends Room<WorldState> {
     this.onMessage("playerMove", this.onPlayerMove.bind(this));
     this.onMessage("playerUserInput", this.onPlayerUserInput.bind(this));
 
-    for (let z = 0; z < 50; z++) {
-      this.world.entities.add(CreateCard(new Vector3(Math.random() * 30, 1 + Math.random() * 0.2, Math.random() * 30)));
+    for (let z = 0; z < 6; z++) {
+      this.world.entities.add(
+        CreateCard(
+          new Vector3(
+            Math.random() * 30, //
+            1 + Math.random() * 0.2,
+            Math.random() * 30
+          )
+        )
+      );
     }
     log.info("created cards", this.world.entities.length);
 

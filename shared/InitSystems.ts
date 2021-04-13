@@ -20,6 +20,15 @@ import { TouchItem } from "./system/TouchItem";
 
 const log = createLogger("systems");
 
+class GameEngine extends Engine {
+  // todo: still need a place to share numPlayers and a simple way to know who
+  // local player is (if LocallyDriven stops being enough). This subclass was an
+  // idea for storing some well-known entities for those purposes.
+  constructor() {
+    super();
+  }
+}
+
 export function InitSystems(isClient = false): Engine {
   const world = new Engine();
 
