@@ -1,27 +1,24 @@
-apiVersion: skaffold/v2beta10
+apiVersion: skaffold/v3
 kind: Config
 metadata:
   name: megasecond
 build:
+  artifacts:
+  - image: bang5:5000/megasecond_image
+    sync:
+      infer:
+      - server/**
+      - client/**
+      - shared/**
+      - client_root/**
+      - build/**
   tagPolicy:
     dateTime:
-      format: "2006-01-02_15-04-05"
-      timezone: "Local"
-  artifacts:
-    - image: bang5:5000/megasecond_image
-      sync:
-        infer:
-          # Watched by ts-node-dev
-          - "server/**"
-          # Watched by rollup (except index.html which won't trigger a rebuild)
-          - "client/**"
-          # Watched by both
-          - "shared/**" 
-          - "client_root/**"
-          - "build/**"
+      format: 2006-01-02_15-04-05
+      timezone: Local
+manifests:
+  rawYaml:
+  - deploy.yaml
+  - ingress.yaml
 deploy:
-  kubectl:
-    manifests:
-      - deploy.yaml
-      - ingress.yaml
-      
+  kubectl: {}
