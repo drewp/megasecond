@@ -23,3 +23,5 @@ deploy:
   kubectl:
     manifests:
       - deploy.yaml
+      - ingress.yaml
+      

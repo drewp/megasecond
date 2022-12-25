@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: megasecond
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    ingress.pomerium.io/allow_public_unauthenticated_access: "true"
+    ingress.pomerium.io/pass_identity_headers: "true"
+    ingress.pomerium.io/preserve_host_header: "true"
+    ingress.pomerium.io/allow_websockets: "true"
+spec:
+  ingressClassName: pomerium
+  rules:
+    - host: "megasecond.club"
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend: { service: { name: megasecond, port: { number: 80 } } }
+          - pathType: Prefix
+            path: /log/rebuild/
+            backend: { service: { name: megasecond, port: { number: 9001 } } }
+          - pathType: Prefix
+            path: /log/server/
+            backend: { service: { name: megasecond, port: { number: 9002 } } }
+  tls:
+    - hosts: [megasecond.club]
+      secretName: megasecond.club-tls
