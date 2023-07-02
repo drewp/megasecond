@@ -291,7 +291,6 @@ export class World3d {
         this.gridEverything();
         break;
       case GraphicsLevel.texture:
-        // to rewrite // this.loadMaps(Vector3.Zero(), 100);
         (this.scene.getMaterialByName("gnd") as PBRMaterial).bumpTexture = this.groundBump!;
         break;
     }
@@ -311,45 +310,6 @@ export class World3d {
     }
   }
 
-  loadMaps(center: Vector3, maxDist: number) {
-    let objsInRange = 0,
-      objsTooFar = 0;
-
-    for (let m of Object.keys(this.buildData.objs)) {
-      if (m == "navmesh" || m == "__root__" || m == "player") {
-        continue;
-      }
-      const obj = this.scene.getMeshByName(m);
-      if (!obj) {
-        log.info(`data said ${m} but no mesh found in scene`);
-        continue;
-      }
-      const d = this.distToObject(obj, center);
-      if (d > maxDist) {
-        objsTooFar += 1;
-        continue;
-      }
-      objsInRange += 1;
-
-      try {
-        this.assignTx(m);
-      } catch (err) {
-        log.info("no tx for mesh", m, err);
-        continue;
-      }
-      if (m.startsWith("gnd.")) {
-        (obj.material as PBRMaterial).bumpTexture = this.groundBump!;
-      }
-    }
-    log.info(`loaded textures for ${objsInRange}, skipped ${objsTooFar} objs`);
-  }
-
-  private distToObject(m: AbstractMesh, center: Vector3) {
-    const bb = this.buildData.objs[m.name].worldBbox;
-    const objCenter = Vector3.FromArray(bb.center);
-    return Math.max(0, objCenter.subtract(center).length() - bb.radius);
-  }
-
   private setupSkybox(scene: Scene) {
     var skyboxMaterial = new SkyMaterial("skyMaterial", scene);
     skyboxMaterial.backFaceCulling = false;
@@ -359,31 +319,6 @@ export class World3d {
     skyboxMaterial.inclination = 0;
     skyboxMaterial.luminance = 1;
     skyboxMaterial.turbidity = 40;
-  }
-
-  assignTx(objName: string) {
-    const obj = this.scene.getMeshByName(objName);
-    if (!obj) {
-      return;
-    }
-    if (!obj.material) {
-      // couldn't take the grid material earlier
-      return;
-    }
-    const mat = new PBRMaterial("pbr_" + objName, this.scene); //obj.material as PBRMaterial;
-    mat.unlit = true;
-    mat.albedoTexture = this.instances.bakedTx(`bake/${objName}_dif.jpg`);
-    mat.albedoTexture.coordinatesIndex = 1; // lightmap
-    // mat.lightmapTexture = bakedTx(`bake_${objName}_shad.jpg`);
-    // mat.useLightmapAsShadowmap = true;
-    Texture.WhenAllReady([mat.albedoTexture], () => {
-      // log.info("objname", objName);
-      try {
-        obj.material = mat;
-      } catch (e) {
-        log.error(e); // another instance of a repeated object?
-      }
-    });
   }
 }
 

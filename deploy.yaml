@@ -11,6 +11,8 @@ spec:
     metadata:
       labels:
         app: megasecond
+      annotations:
+        prometheus.io/scrape: "false"
     spec:
       volumes:
         - { name: rollup-build, emptyDir: {} }

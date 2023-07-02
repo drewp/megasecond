@@ -64,8 +64,8 @@ export function initPanesLayout(parent: HTMLElement, world: EcsEngine, resizeEve
         };
         container.element.innerHTML = `
         <div class="scrolly">
-          <div><a href="/log/server" target="_blank">Server log</a></div>
-          <div><a href="/log/rebuild" target="_blank">Client rebuild log</a></div>
+          <div><a href="/log/server/" target="_blank">Server log</a></div>
+          <div><a href="/log/rebuild/" target="_blank">Client rebuild log</a></div>
           <div><a href="/colyseus/" target="_blank">Colyseus inspector</a></div>
           <div><a href="/entities/" target="_blank">Server entity dump</a></div>
           <div>Reload with graphicsLevel = 

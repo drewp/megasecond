@@ -50,6 +50,12 @@ export class WorldRoom extends Room<WorldState> {
     }
     log.info("created cards", this.world.entities.length);
 
+    const bot = this.createPlayer("bot1");
+    bot.components.get(S_Transform).pos = new Vector3(6, 0, -12);
+    bot.components.get(S_Nametag).text = "bot1";
+    bot.components.get(S_PlayerPose).waving = true;
+    this.world.entities.add(bot);
+
     this.setSimulationInterval((dmillis: number) => {
       this.world?.run({ dt: dmillis / 1000 } as ServerWorldRunOptions);
     }, 100);
