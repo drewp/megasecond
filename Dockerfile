@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:23.04
 
 WORKDIR /workspace
 
@@ -6,17 +6,32 @@ ENV TZ=America/Los_Angeles
 ENV LANG=en_US.UTF-8
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN echo again 2021-03-30 && apt-get update
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+ENV KEYRING=/usr/share/keyrings/nodesource.gpg
+ENV VERSION=node_18.x
+ENV DISTRO=lunar
+RUN \
+    apt-get update && \
+    apt-get install -y --no-install-recommends curl gpg ca-certificates && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | gpg --dearmor > "$KEYRING" && \
+    echo "deb [signed-by=$KEYRING] https://deb.nodesource.com/$VERSION $DISTRO main" | tee /etc/apt/sources.list.d/nodesource.list && \
+    echo "deb-src [signed-by=$KEYRING] https://deb.nodesource.com/$VERSION $DISTRO main" | tee -a /etc/apt/sources.list.d/nodesource.list
+RUN \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      bind9-dnsutils \
+      build-essential \
+      libpython3.11-dev \
+      nodejs \
+      pipenv \
+      python3.11 \
+      tzdata \
+      vim \
+      vim-tiny \
+      wget \
+      xz-utils \
+      zsh
 
-RUN apt-get install -y wget xz-utils vim less && \
-    wget --output-document=node.tar.xz https://nodejs.org/dist/v14.16.0/node-v14.16.0-linux-x64.tar.xz && \
-    tar xf node.tar.xz && \
-    ln -s node*x64 nodejs
-
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/workspace/nodejs/bin
-RUN node /workspace/nodejs/bin/npm install -g pnpm
-
+RUN npm install --global pnpm@8.6.3
 
 COPY package.json pnpm-lock.yaml  ./
 RUN pnpm install
