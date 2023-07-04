@@ -7,5 +7,8 @@
         "python.analysis.extraPaths": [
             "/home/drewp/blender-git/blender/release/scripts/modules/"
         ],
-        "python.formatting.yapfPath": "/home/drewp/.venvs/reposync/bin/yapf"
+        "python.formatting.yapfPath": "/home/drewp/.venvs/reposync/bin/yapf",
+        "yaml.schemas": {
+            "kubernetes://schema/apps/v1%40deployment": "file:///home/drewp/own/proj_shared/megasecond/deploy.yaml"
+        }
 }

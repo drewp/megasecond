@@ -3,8 +3,6 @@
   "version": "1.0.0",
   "description": "game",
   "scripts": {
-    "run_server": "ts-node-dev --respawn --exit-child --debug -- server/index.ts",
-    "rebuild_client_forever": "rollup -cw",
     "test": "jest"
   },
   "author": "drewp@bigasterisk.com",
