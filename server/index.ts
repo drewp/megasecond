@@ -10,7 +10,7 @@ import { WorldRoom } from "./WorldRoom";
 
 const log = createLogger("server");
 
-const port = 10001;
+const port = 10002;
 const app = express();
 app.use(express.json());
 
@@ -29,20 +29,21 @@ const entitiesViewer = (_req: express.Request, res: express.Response) => {
   res.send();
 };
 
-app.get("/entities/", entitiesViewer);
-app.use("/asset_build", express.static(dir("asset_build")));
-app.use("/lib/@trixt0r/ecs/", express.static(dir("node_modules/@trixt0r/ecs/build")));
-app.use("/lib/babylonjs-loaders/", express.static(dir("node_modules/babylonjs-loaders")));
-app.use("/lib/babylonjs-materials/", express.static(dir("node_modules/babylonjs-materials")));
-app.use("/lib/babylonjs/", express.static(dir("node_modules/babylonjs")));
-app.use("/lib/colyseus.js/", express.static(dir("node_modules/colyseus.js/dist")));
-app.use("/lib/golden-layout/", express.static(dir("node_modules/golden-layout/dist")));
-app.use("/lib/mobx/", express.static(dir("node_modules/mobx/dist")));
-app.use("/rollup_build", express.static(dir("rollup_build")));
-app.use("/rollup_build/src/client", express.static(dir("client")));
-app.use("/rollup_build/src/shared", express.static(dir("shared")));
+const root = "/server/";
+app.get(root + "entities/", entitiesViewer);
+app.use(root + "asset_build", express.static(dir("asset_build")));
+app.use(root + "lib/@trixt0r/ecs/", express.static(dir("node_modules/@trixt0r/ecs/build")));
+app.use(root + "lib/babylonjs-loaders/", express.static(dir("node_modules/babylonjs-loaders")));
+app.use(root + "lib/babylonjs-materials/", express.static(dir("node_modules/babylonjs-materials")));
+app.use(root + "lib/babylonjs/", express.static(dir("node_modules/babylonjs")));
+app.use(root + "lib/colyseus.js/", express.static(dir("node_modules/colyseus.js/dist")));
+app.use(root + "lib/golden-layout/", express.static(dir("node_modules/golden-layout/dist")));
+app.use(root + "lib/mobx/", express.static(dir("node_modules/mobx/dist")));
 
-app.use("/", express.static(dir("client_root")));
+app.get(root, (_, res) => {
+  res.write("megasecond server");
+  res.send();
+});
 
 const server = http.createServer(app);
 
@@ -51,6 +52,6 @@ gameServer.define("lobby", LobbyRoom);
 gameServer.define("world", WorldRoom).enableRealtimeListing();
 log.info("defined game world");
 
-app.use("/colyseus", monitor());
+app.use(root + "colyseus", monitor());
 gameServer.listen(port);
 log.info(`Listening on ${port}`);

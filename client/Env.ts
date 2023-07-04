@@ -16,6 +16,8 @@ import {
   TransformNode,
   Vector3,
 } from "babylonjs";
+import {GLTF2} from "babylonjs-loaders";
+export {GLTF2};
 import { GridMaterial, SkyMaterial } from "babylonjs-materials";
 import { AssetContainer } from "babylonjs/assetContainer";
 import createLogger from "../shared/logsetup";
@@ -127,7 +129,7 @@ class Collection {
   private insts: Map<string, Instance> = new Map(); // by instance name
   constructor(public owner: Instances, public path: string, public scene: Scene, public graphicsLevel: GraphicsLevel) {
     this.collectionLoaded = new Promise((res, _rej) => {
-      SceneLoader.LoadAssetContainerAsync("./asset_build/", path, scene).then((ctr) => {
+      SceneLoader.LoadAssetContainerAsync("./", path, scene).then((ctr) => {
         this.container = ctr;
         res();
       });
@@ -174,7 +176,7 @@ class Instances {
   bakedTx(path: string): Texture {
     let tx = this.textures.get(path);
     if (!tx) {
-      tx = new Texture(`./asset_build/` + path, this.scene);
+      tx = new Texture(`./` + path, this.scene);
       tx.vScale = -1;
       tx.coordinatesIndex = 0;
       this.textures.set(path, tx);
@@ -211,7 +213,7 @@ export class World3d {
     SceneLoader.ShowLoadingScreen = false;
     scene.clearColor = new Color4(0.419, 0.517, 0.545, 1);
 
-    this.groundBump = new Texture("./asset_build/map/normal1.png", scene);
+    this.groundBump = new Texture("./map/normal1.png", scene);
     this.groundBump.level = 0.43;
     this.groundBump.uScale = this.groundBump.vScale = 400;
 
@@ -236,7 +238,7 @@ export class World3d {
   }
 
   async loadNavmesh() {
-    await SceneLoader.AppendAsync("./asset_build/", "model/env/navmesh.glb", this.scene);
+    await SceneLoader.AppendAsync("./", "model/env/navmesh.glb", this.scene);
     const nav = this.scene.getMeshByName("navmesh") as Mesh;
     nav.updateFacetData();
 
@@ -253,7 +255,7 @@ export class World3d {
 
   async reloadLayoutInstances() {
     // read updates from layout.json but not necessarily from model glb files
-    const layout = (await (await fetch("./asset_build/layout.json")).json()) as LayoutJson;
+    const layout = (await (await fetch("./layout.json")).json()) as LayoutJson;
     const noLongerPresent = new Set<string>(this.instances.allInstanceNames());
     const allLoads: Promise<void>[] = [];
     for (let instDesc of layout.instances) {

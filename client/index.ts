@@ -18,7 +18,7 @@ class Game {
   worldRoom?: Colyseus.Room<WorldState>;
   constructor(private status: StatusLine, private world: Engine, private nick: string) {
     this.status.setConnection("connecting...");
-    this.client = new Colyseus.Client("wss://megasecond.club/");
+    this.client = new Colyseus.Client("wss://megasecond.club/server/");
   }
   async joinWorld() {
     const worldRoom = await this.client.joinOrCreate<WorldState>("world", {});

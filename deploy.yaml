@@ -14,25 +14,24 @@ spec:
       annotations:
         prometheus.io/scrape: "false"
     spec:
-      volumes:
-        - { name: rollup-build, emptyDir: {} }
       containers:
-        - name: megasecond
+      
+        - name: client-vite
           image: bang5:5000/megasecond_image
-          volumeMounts:
-            - { name: rollup-build, mountPath: /workspace/rollup_build }
+          command: ["client/run_client_vite.sh"]
+          ports: 
+          - { containerPort: 10001 }
+          - { containerPort: 9001 }
+
+        - name: server
+          image: bang5:5000/megasecond_image
           command: ["server/run_server.sh"]
-          ports: [{ containerPort: 10001}, {containerPort: 9002 }]
+          ports: 
+            - { containerPort: 10002 }
+            - { containerPort: 9002 }
           env:
             - name: DEBUG
               value: colyseus:matchmaking
-        # this container reads from client/** and outputs to rollup_build/
-        - name: rebuild-client
-          image: bang5:5000/megasecond_image
-          volumeMounts:
-            - { name: rollup-build, mountPath: /workspace/rollup_build }
-          command: ["server/rebuild_client_forever.sh"]
-          ports: [{ containerPort: 9001 }]
 
 ---
 apiVersion: v1
@@ -41,8 +40,9 @@ metadata:
   name: megasecond
 spec:
   ports:
-    - { port: 80, targetPort: 10001, name: http }
-    - { port: 9001, targetPort: 9001, name: cblog }
-    - { port: 9002, targetPort: 9002, name: servlog }
+    - { port: 10001, targetPort: 10001, name: client }
+    - { port: 10002, targetPort: 10002, name: server }
+    - { port: 9001, targetPort: 9001, name: clientvitelog }
+    - { port: 9002, targetPort: 9002, name: serverlog }
   selector:
     app: megasecond

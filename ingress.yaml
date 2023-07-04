@@ -16,13 +16,16 @@ spec:
         paths:
           - pathType: Prefix
             path: /
-            backend: { service: { name: megasecond, port: { number: 80 } } }
+            backend: { service: { name: megasecond, port: { name: 'client' } } }
+          - pathType: Prefix
+            path: /server/
+            backend: { service: { name: megasecond, port: { name: 'server' } } }
           - pathType: Prefix
             path: /log/rebuild/
-            backend: { service: { name: megasecond, port: { number: 9001 } } }
+            backend: { service: { name: megasecond, port: { name: 'clientvitelog' } } }
           - pathType: Prefix
             path: /log/server/
-            backend: { service: { name: megasecond, port: { number: 9002 } } }
+            backend: { service: { name: megasecond, port: { name: 'serverlog' } } }
   tls:
     - hosts: [megasecond.club]
       secretName: megasecond.club-tls

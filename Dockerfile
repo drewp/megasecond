@@ -21,18 +21,12 @@ RUN node /workspace/nodejs/bin/npm install -g pnpm
 COPY package.json pnpm-lock.yaml  ./
 RUN pnpm install
 
-COPY tsconfig.json rollup.config.js ./
-
-
-RUN mkdir -p rollup_build
-#            ^^^^^^^^^^^^ then k8s mounts a shared volume here.
+COPY tsconfig.json vite.config.ts ./
 
 COPY client ./client
 COPY client_root ./client_root
 COPY server ./server
 COPY shared ./shared
+RUN mkdir build
+COPY build/serve ./build/serve
 
-# built offline and synced into containers
-COPY build/serve ./asset_build
-
-CMD ["pnpm", "run_server"]

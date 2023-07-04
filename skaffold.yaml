@@ -11,7 +11,8 @@ build:
           - client/**
           - shared/**
           - client_root/**
-          - build/**
+          - build/serve/**
+          - vite.config.ts
   tagPolicy:
     dateTime:
       format: 2006-01-02_15-04-05
