@@ -1,63 +1,55 @@
-FROM ubuntu:18.04
+FROM ubuntu:23.04
 
 # based on https://github.com/nytimes/rd-blender-docker/blob/master/dist/2.92-cpu-ubuntu18.04/Dockerfile
 
 WORKDIR /workspace
 
+ENV LC_ALL C.UTF-8
+ENV LANG C.UTF-8
+
 ENV TZ=America/Los_Angeles
 ENV LANG=en_US.UTF-8
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-RUN echo run again 2021-03-04
-RUN apt-get update
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
-
-# Enviorment variables
+RUN echo 2023-07-03 && apt-get update
 ENV DEBIAN_FRONTEND noninteractive
-ENV LC_ALL C.UTF-8
-ENV LANG C.UTF-8
-ENV PATH "$PATH:/bin/2.92/python/bin/"
-ENV BLENDER_PATH "/bin/2.92"
-ENV BLENDERPIP "/bin/2.92/python/bin/pip3"
-ENV BLENDERPY "/bin/2.92/python/bin/python3.7m"
-ENV HW="CPU"
+RUN apt-get install -y tzdata
 
-# Install dependencies
-RUN apt-get install -y \ 
-	wget \ 
-	libopenexr-dev \ 
-	bzip2 \ 
-	build-essential \ 
-	zlib1g-dev \ 
-	libxmu-dev \ 
-	libxi-dev \ 
-	libxxf86vm-dev \ 
-	libfontconfig1 \ 
-	libxrender1 \ 
-	libgl1-mesa-glx \ 
-	xz-utils \
-	libjpeg8 \
+
+ENV BLENDER_DOWNLOAD_VERSION=4.0.0-alpha+main.a3bfd6e20d26
+ENV BLENDER_SHORT_VERSION=4.0
+
+RUN apt-get install -y \
+	build-essential \
+	bzip2 \
 	imagemagick-6.q16 \
-	strace
+	libfontconfig1 \
+	libgl1-mesa-glx \
+	libjpeg8 \
+	libopenexr-dev \
+	libxi-dev \
+	libxmu-dev \
+	libxrender1 \
+	libxxf86vm-dev \
+	strace \
+	wget \
+	xz-utils \
+	zlib1g-dev
 
-# Download and install Blender
-RUN wget https://mirror.clarkson.edu/blender/release/Blender2.92/blender-2.92.0-linux64.tar.xz \ 
-	&& tar -xvf blender-2.92.0-linux64.tar.xz --strip-components=1 -C /bin \ 
-	&& rm -rf blender-2.92.0-linux64.tar.xz \ 
-	&& rm -rf blender-2.92.0-linux64 
+RUN wget https://builder.blender.org/download/daily/blender-${BLENDER_DOWNLOAD_VERSION}-linux.x86_64-release.tar.xz \
+	&& tar -xvf blender-*.tar.xz --strip-components=1 -C /bin \
+	&& rm -rf blender-*.tar.xz \
+	&& rm -rf blender-*
 
-# Download the Python source since it is not bundled with Blender
-RUN wget https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tgz \ 
-	&& tar -xzf Python-3.7.0.tgz \ 
-	&& cp -r Python-3.7.0/Include/* $BLENDER_PATH/python/include/python3.7m/ \ 
-	&& rm -rf Python-3.7.0.tgz \ 
-	&& rm -rf Python-3.7.0 
+ENV BLENDER_PATH "/bin/${BLENDER_SHORT_VERSION}"
+ENV PATH "$PATH:${BLENDER_PATH}/python/bin"
+ENV BLENDERPY "${BLENDER_PATH}/python/bin/python3.10"
 
-# Blender comes with a super outdated version of numpy (which is needed for matplotlib / opencv) so override it with a modern one
-RUN rm -rf ${BLENDER_PATH}/python/lib/python3.7/site-packages/numpy 
-
-# Must first ensurepip to install Blender pip3 and then new numpy
-RUN ${BLENDERPY} -m ensurepip && ${BLENDERPIP} install --upgrade pip 
+RUN ${BLENDERPY} -m pip install -U pip
+ENV BLENDERPIP "${BLENDER_PATH}/python/bin/pip3"
 
 COPY requirements.txt ./
 RUN ${BLENDERPIP} install -r requirements.txt
+
+ENV HW="CPU"
+
+RUN apt-get install -y libxkbcommon0
