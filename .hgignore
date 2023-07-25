@@ -5,4 +5,5 @@ __pycache__
 .doit.db.dat
 .doit.db.dir
 doc/*webm
+doc/
 client/asset
