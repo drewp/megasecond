@@ -12,8 +12,10 @@ export class LocalCamFollow extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
     super(priority, [C_Transform, S_AimAt, LocalCam, LocallyDriven, BjsModel]);
   }
-
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
+  processEntity<U>(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: U | undefined): void {
+    this.processEntity2(entity, index!, entities, options as unknown as ClientWorldRunOptions)
+  }
+  processEntity2(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const cam = entity.components.get(LocalCam).cam;
     if (!cam) return;
 

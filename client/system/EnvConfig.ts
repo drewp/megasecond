@@ -11,8 +11,10 @@ export class EnvConfig extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
     super(priority, [LocallyDriven]);
   }
-
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
+  processEntity<U>(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: U | undefined): void {
+    this.processEntity2(entity, index!, entities, options as unknown as ClientWorldRunOptions)
+  }
+  processEntity2(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const ld = entity.components.get(LocallyDriven);
     ld.forAction(Action.ReloadEnv, () => {
       // todo

@@ -13,8 +13,10 @@ export class BattleRingPresence extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
     super(priority, [C_PlayerPose]);
   }
-
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
+  processEntity<U>(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: U | undefined): void {
+    this.processEntity2(entity, index!, entities, options as unknown as ClientWorldRunOptions)
+  }
+  processEntity2(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
     const pp = entity.getComponentReadonly(C_PlayerPose);
     const br = entity.components.get(BattleRing);
     if (pp.waving && !br) {
@@ -61,8 +63,10 @@ export class BattleRingAnim extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
     super(priority, [BattleRing, C_Transform]);
   }
-
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
+  processEntity<U>(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: U | undefined): void {
+    this.processEntity2(entity, index!, entities, options as unknown as ClientWorldRunOptions)
+  }
+  processEntity2(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
     const tr = entity.getComponentReadonly(C_Transform);
     const br = entity.components.get(BattleRing);
     if (!br.cyl) {

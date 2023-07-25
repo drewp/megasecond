@@ -11,8 +11,10 @@ export class CorrectLocalSimulation extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
     super(priority, [S_Transform, C_Transform, S_PlayerPose, C_PlayerPose]);
   }
-
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
+  processEntity<U>(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: U | undefined): void {
+    this.processEntity2(entity, index!, entities, options as unknown as ClientWorldRunOptions)
+  }
+  processEntity2(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
     if (entity.components.get(LocallyDriven)) {
       // it's me; server is not authoritative yet, and we don't have correction code
       return;

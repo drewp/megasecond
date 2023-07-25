@@ -10,9 +10,11 @@ export class TouchItem extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
     super(priority, undefined, undefined, /*one=*/ [S_Toucher, S_Touchable]);
   }
-
+process<U>(options?: U | undefined): void {
+  this.process2(options as unknown as CommonWorldRunOptions)
+}
   // see https://github.com/Trixt0r/ecsts/blob/master/examples/rectangles/src/systems/renderer.ts#L13
-  process(options: CommonWorldRunOptions) {
+  process2(options: CommonWorldRunOptions) {
     if (!this._engine) return;
     const entities = this.aspect!.entities;
     const touchers: IdEntity[] = [];

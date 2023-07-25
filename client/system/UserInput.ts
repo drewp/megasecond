@@ -1,5 +1,5 @@
 import { AbstractEntitySystem } from "@trixt0r/ecs";
-import { ActionEvent, ActionManager, ExecuteCodeAction, PickingInfo, PointerEventTypes, Scene, Vector2, VirtualJoystick } from "babylonjs";
+import { ActionEvent, ActionManager, ExecuteCodeAction, IPointerEvent, PickingInfo, PointerEventTypes, Scene, Vector2, VirtualJoystick } from "babylonjs";
 import { action, makeObservable } from "mobx";
 import { IdEntity } from "../../shared/IdEntity";
 import createLogger from "../../shared/logsetup";
@@ -34,7 +34,11 @@ export class UserInput extends AbstractEntitySystem<IdEntity> {
     super(priority, [LocallyDriven, C_PlayerPose]);
     makeObservable(this, { processEntity: action }); // todo- move to a system subclass and apply everywhere?
   }
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
+  processEntity<U>(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: U | undefined): void {
+    this.processEntity2(entity, index, entities, options as unknown as ClientWorldRunOptions);
+  }
+  processEntity2(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: ClientWorldRunOptions): void {
+    if (!options) throw 'options';
     const ld = entity.components.get(LocallyDriven);
     const pp = entity.components.get(C_PlayerPose);
     if (!ld.sceneIsInit) {
@@ -87,7 +91,7 @@ export class UserInput extends AbstractEntitySystem<IdEntity> {
   }
 
   // not called during processEntity
-  onMove(ld: LocallyDriven, ev: PointerEvent, pickInfo: PickingInfo, type: PointerEventTypes) {
+  onMove(ld: LocallyDriven, ev: IPointerEvent, pickInfo: PickingInfo, type: PointerEventTypes) {
     if (!document.pointerLockElement) {
       return;
     }

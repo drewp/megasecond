@@ -13,8 +13,10 @@ export class SimpleMove extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
     super(priority, [BjsModel, S_Transform, C_Transform, S_Twirl]);
   }
-
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
+  processEntity<U>(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: U | undefined): void {
+    this.processEntity2(entity, index!, entities, options as unknown as ClientWorldRunOptions)
+  }
+  processEntity2(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const tw = entity.getComponentReadonly(S_Twirl);
     const st = entity.getComponentReadonly(S_Transform);
     const ct = entity.components.get(C_Transform);

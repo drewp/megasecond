@@ -13,8 +13,10 @@ export class SendUntrustedLocalPos extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
     super(priority, [ServerRepresented, C_Transform, LocallyDriven]);
   }
-
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
+  processEntity<U>(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: U | undefined): void {
+    this.processEntity2(entity, index!, entities, options as unknown as ClientWorldRunOptions)
+  }
+  processEntity2(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
     const pt = entity.components.get(C_Transform);
     const ld = entity.components.get(LocallyDriven);
     const sr = entity.components.get(ServerRepresented);

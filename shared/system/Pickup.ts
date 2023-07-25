@@ -12,7 +12,10 @@ export class Pickup extends AbstractEntitySystem<IdEntity> {
     super(priority, [S_Toucher]);
   }
 
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: CommonWorldRunOptions) {
+  processEntity<U>(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: U | undefined): void {
+    this.processEntity2(entity, index!, entities, options as unknown as CommonWorldRunOptions)
+  }
+    processEntity2(entity: IdEntity, _index: number, _entities: unknown, _options: CommonWorldRunOptions) {
     if (!this.engine) return;
     const tu = entity.getComponentReadonly(S_Toucher);
     if (tu.currentlyTouching.size > 0) {

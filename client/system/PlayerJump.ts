@@ -10,8 +10,10 @@ export class PlayerJump extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
     super(priority, [LocallyDriven, C_Sim, C_UsesNav]);
   }
-
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
+  processEntity<U>(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: U | undefined): void {
+    this.processEntity2(entity, index!, entities, options as unknown as ClientWorldRunOptions)
+  }
+  processEntity2(entity: IdEntity, _index: number, _entities: unknown, _options: ClientWorldRunOptions) {
     const ld = entity.components.get(LocallyDriven);
     ld.forAction(Action.Jump, () => {
       const si = entity.getComponentReadonly(C_Sim);

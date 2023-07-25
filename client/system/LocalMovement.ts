@@ -13,8 +13,10 @@ export class LocalMovement extends AbstractEntitySystem<IdEntity> {
   constructor(priority: number) {
     super(priority, [C_Transform, C_Sim, PlayerDebug, LocallyDriven, C_UsesNav]);
   }
-
-  processEntity(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
+  processEntity<U>(entity: IdEntity, index?: number | undefined, entities?: IdEntity[] | undefined, options?: U | undefined): void {
+    this.processEntity2(entity, index!, entities, options as unknown as ClientWorldRunOptions)
+  }
+  processEntity2(entity: IdEntity, _index: number, _entities: unknown, options: ClientWorldRunOptions) {
     const ct = entity.components.get(C_Transform);
     const si = entity.components.get(C_Sim);
     const pd = entity.components.get(PlayerDebug);
