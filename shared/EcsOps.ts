@@ -14,10 +14,6 @@ export function removeComponentsOfType(entity: IdEntity, component: Component) {
   });
 }
 
-export function componentNameList(comps: Component[] | ComponentCollection<Component>): string {
-  return comps.map((c: Component) => c.constructor.name).join(",");
-}
-
 export function entityIdList(entities: IdEntity[]): string {
   return entities.map((e: IdEntity) => "e" + e.id).join(",");
 }

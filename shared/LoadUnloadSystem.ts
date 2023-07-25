@@ -1,5 +1,5 @@
 import { Aspect, Component, ComponentCollection, Engine, System } from "@trixt0r/ecs";
-import { combineComponentCollections, componentNameList, entityIdList } from "./EcsOps";
+import { combineComponentCollections, entityIdList } from "./EcsOps";
 import { IdEntity } from "./IdEntity";
 import createLogger from "./logsetup";
 import { ClientWorldRunOptions } from "./types";
