@@ -11,7 +11,7 @@ export function setupScene(canvasId: string, resizeEvents: EventEmitter): Scene 
   (window as any).scene = scene;
   scene.clearColor = new Color4(0, 0, 0, 0);
   const handleResize = engine.resize.bind(engine);
-  window.addEventListener("resize", handleResize);
+  window.addEventListener("resize", ()=>handleResize());
   resizeEvents.addEventListener("resize", handleResize);
 
   const url = new URL(window.location.href);

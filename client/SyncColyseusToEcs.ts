@@ -127,12 +127,14 @@ class TrackComponentAttrs<TC extends Component> {
 
   syncFieldType(attrsOfThisType: (keyof TC & string)[], servType: keyof ServerComponent) {
     const servSchemaMap = this.sourceComp[servType] as MapSchema;
-    if (servSchemaMap.onChange) throw new Error(`not the first schema watcher for ${attrsOfThisType}`);
-    servSchemaMap.onChange = () => this.onSourceChange(attrsOfThisType, servSchemaMap, servType);
-    this.onSourceChange(attrsOfThisType, servSchemaMap, servType);
+    servSchemaMap.onChange((item:any,key:string) => 
+    this.onSourceChange(attrsOfThisType, servSchemaMap, servType, key));
+    this.onSourceChange(attrsOfThisType, servSchemaMap, servType, null);
   }
 
-  onSourceChange(attrsOfThisType: (keyof TC & string)[], servSchemaMap: MapSchema, servType: keyof ServerComponent) {
+  onSourceChange(attrsOfThisType: (keyof TC & string)[], servSchemaMap: MapSchema, servType: keyof ServerComponent,
+  key: string|null) {
+    //key is from a new api- not sure if it's useful here.
     attrsOfThisType.forEach((attr) => {
       this.copySourceToTargetValue(servSchemaMap, attr, servType);
     });
